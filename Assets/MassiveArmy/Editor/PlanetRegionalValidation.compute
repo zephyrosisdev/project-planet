@@ -1,0 +1,4 @@
+#pragma kernel Record
+#include "../Resources/MassiveArmy/ArmyCommon.hlsl"
+StructuredBuffer<UnitState> _Units;RWStructuredBuffer<float4> _Trace;uint _Step;
+[numthreads(1,1,1)]void Record(uint3 id:SV_DispatchThreadID){UnitState u=_Units[0];_Trace[_Step]=float4(u.position,u.velocity);}

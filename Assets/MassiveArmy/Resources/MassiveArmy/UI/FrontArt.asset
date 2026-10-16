@@ -1,0 +1,435 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec70f924346ae764aa9251d0ccdffeaa, type: 3}
+  m_Name: FrontArt
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.RtsUiArt
+  entries:
+  - kind: building
+    id: command
+    portrait: {fileID: 2800000, guid: f8e49f1fa41eb5d46bd7931e1da30026, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: outpost
+    portrait: {fileID: 2800000, guid: eb8362fabc2cf304cb3d97ff1f07baa3, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: barracks
+    portrait: {fileID: 2800000, guid: 5ca690e93f3b3c944a7515f4c3bd9041, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: light_depot
+    portrait: {fileID: 2800000, guid: d6195ea068168424a90d7c59f1882414, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: factory
+    portrait: {fileID: 2800000, guid: ffb1d4e2a201d6e408d8d9f333e1c3f0, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: ordnance
+    portrait: {fileID: 2800000, guid: 75a01d63f4f2a524e88999ec916dd2da, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: helipad
+    portrait: {fileID: 2800000, guid: 3dc2f23b04cb193488bc205ef157d772, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: airbase
+    portrait: {fileID: 2800000, guid: abc27272d04378f4f842cded158d43df, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: naval_yard
+    portrait: {fileID: 2800000, guid: 10ea364fdd8128e4495b27f8e241dcbe, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: lab
+    portrait: {fileID: 2800000, guid: 26d9f72abbf739f44a7de48a7957c590, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: advanced_lab
+    portrait: {fileID: 2800000, guid: a31c3f465eb7bfe47a45c48bb32fed71, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: strategic_lab
+    portrait: {fileID: 2800000, guid: 49a4722f68d88054f9fe9f5e8ae254d5, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: logistics
+    portrait: {fileID: 2800000, guid: e8d621318a1f60444aeb6bddb8f7dece, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: repair_depot
+    portrait: {fileID: 2800000, guid: 2488153e9b0387b4ea49afd2df812329, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: field_command
+    portrait: {fileID: 2800000, guid: 771b4110a193c294c9e2647367722941, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: radar_station
+    portrait: {fileID: 2800000, guid: a8cb9c9606e550440add1cfeba03c498, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: phased_radar
+    portrait: {fileID: 2800000, guid: f773cbf42e7fde048bc6769962721940, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: horizon_radar
+    portrait: {fileID: 2800000, guid: a692333a3cabf2e4d8f6ca3fce8c92a0, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: counter_radar
+    portrait: {fileID: 2800000, guid: f1c989d23e5e23d4282c67c0b9a47a52, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: mine
+    portrait: {fileID: 2800000, guid: 897aa93c586c07643b7c738b5bb47a41, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: oil
+    portrait: {fileID: 2800000, guid: d1e68a673e1858648bd704ded2bdf651, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: gas
+    portrait: {fileID: 2800000, guid: 237a44b258253d942a8a9b51c9cb0bc6, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: rare
+    portrait: {fileID: 2800000, guid: c711050ede0f98f4d8a6012619edb21c, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: isotope
+    portrait: {fileID: 2800000, guid: bcef15680b9ab4b46b3b2aa0c62af727, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: synthetic
+    portrait: {fileID: 2800000, guid: a45e468379ae5c34f9895d8caee8096c, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: material_storage
+    portrait: {fileID: 2800000, guid: 8556dfc257636c64799919be2df06dd6, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: fuel_storage
+    portrait: {fileID: 2800000, guid: f9ef7675110d51f438e7cecc561b6118, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: rare_storage
+    portrait: {fileID: 2800000, guid: 54c6e87ccda37394182d00992521017b, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: isotope_storage
+    portrait: {fileID: 2800000, guid: 874c9d43177d5384db4ef9ae33ce7b83, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: wind
+    portrait: {fileID: 2800000, guid: 540bcd8365bf67d44b56460c6d4429d6, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: solar
+    portrait: {fileID: 2800000, guid: 946d0ef2b729dcc4bbe22cf32d7a3339, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: gas_turbine
+    portrait: {fileID: 2800000, guid: b6f0737920de3d04885e55bf9e5616fd, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: reactor
+    portrait: {fileID: 2800000, guid: e41d862fcfda2254298d8a8a85ce1fab, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: fusion
+    portrait: {fileID: 2800000, guid: 47dd317234b0e994894ce897f0679d2d, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: exotic
+    portrait: {fileID: 2800000, guid: 706b7a98b08cb824c8e07cc2ca9c4e3d, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: battery
+    portrait: {fileID: 2800000, guid: 92de12cf6bcb2ed4da92885cf7c16a22, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: wall
+    portrait: {fileID: 2800000, guid: dad39fbe22991674ca476fad69f23600, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: gate
+    portrait: {fileID: 2800000, guid: bf034b7ed4551a149ae4c07ac4b89347, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: autocannon
+    portrait: {fileID: 2800000, guid: a8fce37b3ea5bef46acc212cda861f4e, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: at_turret
+    portrait: {fileID: 2800000, guid: 1bc8177e165844045a30c7ecab2434cd, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: aa_turret
+    portrait: {fileID: 2800000, guid: 4997a3fc6dc8287488a170d34ac15276, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: sam
+    portrait: {fileID: 2800000, guid: 3fa5c745047ffbc4ea402948b52e9339, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: advanced_sam
+    portrait: {fileID: 2800000, guid: 2c84fb83e5a5ce941b522cbd4369fafa, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: point_defence
+    portrait: {fileID: 2800000, guid: 320ec47ac4da8ae40ab34849920b9740, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: artillery_battery
+    portrait: {fileID: 2800000, guid: e9b9e5325f87bbe4ea681bf9bfbc2b03, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: missile_defence
+    portrait: {fileID: 2800000, guid: 2274eca2ae8eabe4d8769de4efe89ec0, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: laser
+    portrait: {fileID: 2800000, guid: d25406c94de4f154e85ece04a353e13b, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: shield
+    portrait: {fileID: 2800000, guid: 15c1770a659b0e645ab2ffd29f8dad76, type: 3}
+    icon: {fileID: 0}
+  - kind: building
+    id: silo
+    portrait: {fileID: 2800000, guid: 16e85fa4a914b2441bd55777678e32d1, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: infantry
+    portrait: {fileID: 2800000, guid: e1fb242e002d04b42862ecef98b69b1a, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: engineer
+    portrait: {fileID: 2800000, guid: 82ef1f8e35498b94592988c9aa463eee, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: heavy_infantry
+    portrait: {fileID: 2800000, guid: b83a872fc27109c4494650810c623201, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: scout
+    portrait: {fileID: 2800000, guid: 38c6fff6ca0abbc46be327938b2a2bb2, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: apc
+    portrait: {fileID: 2800000, guid: 7003806bfc782c04f96d3b6e170557b3, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: tank
+    portrait: {fileID: 2800000, guid: ce0af9ed8f01d34479f99cb13dcb1a13, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: heavy_tank
+    portrait: {fileID: 2800000, guid: 92ce5a0bb312bb64ba9afba22a8a98f3, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: at
+    portrait: {fileID: 2800000, guid: b7db8e3077b6cb9499a1702e65d51269, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: aa
+    portrait: {fileID: 2800000, guid: 390ac6657bdeabb4786e3a539a6c60b9, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: artillery_unit
+    portrait: {fileID: 2800000, guid: 2e78df5f44a58f6439f57a8504c7f03a, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: mlrs
+    portrait: {fileID: 2800000, guid: 459a90e3e7345f641b548f5b7eb83514, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: supply
+    portrait: {fileID: 2800000, guid: cfbf5cb29194b094e9c59d73705e8051, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: repair
+    portrait: {fileID: 2800000, guid: 75fa6b45e0733ac4f94d72db3a4775d5, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: command_vehicle
+    portrait: {fileID: 2800000, guid: f7211fdd700f65f43baac8e43ae88506, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: fighter
+    portrait: {fileID: 2800000, guid: 2f8f654af2432604ab045f0c11c7b7fd, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: attack_heli
+    portrait: {fileID: 2800000, guid: b89de41b45c5fc049bfe4d15f6582739, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: gunship
+    portrait: {fileID: 2800000, guid: 1bf075386d44ca843b5374266013f5ff, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: bomber
+    portrait: {fileID: 2800000, guid: 3d5f341235221fa459b784ad48165a19, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: transport_heli
+    portrait: {fileID: 2800000, guid: e01fb8d2d9bfdb445b72d7bd4214cee8, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: recon_air
+    portrait: {fileID: 2800000, guid: 19b4ddcc2569e8941a0be36a5d3e2f4b, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: patrol_boat
+    portrait: {fileID: 2800000, guid: de2efac5001653e45a1ff3e7347be5d1, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: gunboat
+    portrait: {fileID: 2800000, guid: ed26e90b9071c7e48bb617c0309b4535, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: transport_ship
+    portrait: {fileID: 2800000, guid: 3526f1ecf922a2c47b6dae609df3a2b6, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: destroyer
+    portrait: {fileID: 2800000, guid: 212cd659ef2d47141806390103d2c312, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: submarine
+    portrait: {fileID: 2800000, guid: 17cc1e4c1b53313448c1f0d4344e06c9, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: cruiser
+    portrait: {fileID: 2800000, guid: 67dbda97a22bd634cb0706e2906811a0, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: battleship
+    portrait: {fileID: 2800000, guid: f4259ce5e2705f24ab5e456301e65cab, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: carrier_unit
+    portrait: {fileID: 2800000, guid: 782c83620283e7044a6f773cf760f3fd, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: mobile_missile
+    portrait: {fileID: 2800000, guid: f596a99548365eb42ab8570fa50f69cd, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: mobile_radar
+    portrait: {fileID: 2800000, guid: dc2372974fcbfb642bb3f715cf4a7f2a, type: 3}
+    icon: {fileID: 0}
+  - kind: unit
+    id: strategic_platform
+    portrait: {fileID: 2800000, guid: 33016895577b0a047ad8b902387eee9a, type: 3}
+    icon: {fileID: 0}
+  - kind: technology
+    id: mechanized
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 2d3f633884082d54ab448103ccfde6e0, type: 3}
+  - kind: technology
+    id: radar
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: f3076277104f91a48979ffb3f98c5017, type: 3}
+  - kind: technology
+    id: aviation
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 637eca81d1d66f34795db1695db889ca, type: 3}
+  - kind: technology
+    id: economy
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 6b4bd75be476cb343a083a42ec048f17, type: 3}
+  - kind: technology
+    id: logistics
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: ffbf4b43614c17e43b43fc84fdaf7618, type: 3}
+  - kind: technology
+    id: gas_power
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 8214f608ed95e414a89d4ce5cae3d310, type: 3}
+  - kind: technology
+    id: naval
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: d37261203c569724e8d7ed93245b7e50, type: 3}
+  - kind: technology
+    id: heavy_armour
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: e7dae4f2a3841bf41b37e88091b0cf52, type: 3}
+  - kind: technology
+    id: artillery
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: c04fc63a72b1bc54aa598664beaa7424, type: 3}
+  - kind: technology
+    id: advanced_air
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 0e4c274096943294d962423c85832419, type: 3}
+  - kind: technology
+    id: reactor
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: de990c2ef58334e48adb1db5621aa755, type: 3}
+  - kind: technology
+    id: advanced_naval
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: cb758dfcd55744142afd5865542b2e1f, type: 3}
+  - kind: technology
+    id: air_defence
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: ad5d44485df71b64bae42afe07e4f671, type: 3}
+  - kind: technology
+    id: command
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: ca9298a0aada84f46b35738892e713d7, type: 3}
+  - kind: technology
+    id: fusion
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: fe365535d35cc0045872a39bb3d8d9f6, type: 3}
+  - kind: technology
+    id: strategic_radar
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 41713135bb3ea72409a31d40f9ebe36d, type: 3}
+  - kind: technology
+    id: missiles
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 2649db10b92c2d346bf0a7f284eb2032, type: 3}
+  - kind: technology
+    id: missile_defence
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: bc66b2cf0b90cea4aa434fed74d32b23, type: 3}
+  - kind: technology
+    id: carrier
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 5230dc0c7c872bf419207c5eccbea61b, type: 3}
+  - kind: technology
+    id: stealth
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 0fe37ba33e5fc774b8029e80987f8bbc, type: 3}
+  - kind: technology
+    id: nuclear
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: e6475d71e2813974d8ee861e9956a9c1, type: 3}
+  - kind: technology
+    id: energy
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: 489d5dd45dc02884d86d988a952dc7c7, type: 3}
+  - kind: technology
+    id: shields
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: c0ed52b4b72d86e4d8fd5f4ac80a1722, type: 3}
+  - kind: technology
+    id: experimental
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: d9e792ae4d2b6924e80c94ba59c0cd9f, type: 3}
+  - kind: technology
+    id: exotic
+    portrait: {fileID: 0}
+    icon: {fileID: 7388822144124034973, guid: d7c99c07f2eea5b4e816f708d7cee79c, type: 3}

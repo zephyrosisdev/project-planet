@@ -1,0 +1,49 @@
+#pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
+#define PLANET_SPECIALIZE_TERRAIN 1
+#pragma kernel Generate
+#pragma target 5.0
+#include "PlanetTopology.hlsl"
+#include "PlanetSurface.hlsl"
+struct Candidate {float4 patch;float score;uint level;uint2 padding;};
+RWStructuredBuffer<Candidate> _Queue;
+RWStructuredBuffer<float4> _Patches;
+RWStructuredBuffer<uint> _Stats,_DrawArgs;
+float4 _Planes[6];float3 _Observer;float _Projection,_Error;
+uint _Budget,_Vertices;
+float3 Direction(float4 patch,float2 offset){return PlanetDirection((uint)patch.w,patch.xy+offset*patch.z);}
+bool Visible(float4 patch,out float distance){
+    float3 axis=Direction(patch,.5),centre=axis*_PlanetRadius;float minimum=1;
+    [unroll]for(uint y=0;y<2;y++)[unroll]for(uint x=0;x<2;x++)minimum=min(minimum,dot(axis,Direction(patch,float2(x,y))));
+    float bound=_PlanetRadius*sqrt(max(0,2-2*minimum))+_PlanetReliefBound*3+abs(_PlanetOcean);
+    distance=max(1,length(_Observer-centre)-bound);
+    [unroll]for(uint i=0;i<6;i++)if(dot(_Planes[i].xyz,centre)+_Planes[i].w < -bound)return false;
+    float rmin=max(1,_PlanetRadius-_PlanetReliefBound),lengthObserver=length(_Observer);
+    if(lengthObserver>rmin&&dot(centre,_Observer/lengthObserver)+bound<rmin*rmin/lengthObserver-_PlanetReliefBound*2)return false;
+    return true;
+}
+float Score(float4 patch,uint level){float distance;if(level>=20||!Visible(patch,distance))return 0;
+    float segment=_PlanetRadius*patch.z/16;
+    float curvature=max((.125+80*_PlanetReliefBound/max(1,_PlanetRadius))/max(1,_PlanetRadius),PlanetReliefCurvature());
+    if(_PlanetCraterCount>0){float3 axis=Direction(patch,.5);float minimum=1;[unroll]for(uint y=0;y<2;y++)[unroll]for(uint x=0;x<2;x++)minimum=min(minimum,dot(axis,Direction(patch,float2(x,y))));float bound=_PlanetRadius*sqrt(max(0,2-2*minimum))+_PlanetReliefBound*3+abs(_PlanetOcean);curvature=max(curvature,PlanetFeatureCurvature(axis*_PlanetRadius,bound));}
+    return segment*segment*curvature*_Projection/distance/_Error;
+}
+void Push(float4 patch,uint level,inout uint count){
+    Candidate value;value.patch=patch;value.level=level;value.score=Score(patch,level);value.padding=0;
+    uint index=count++;while(index>0){uint parent=(index-1)/2;if(_Queue[parent].score>=value.score)break;_Queue[index]=_Queue[parent];index=parent;}_Queue[index]=value;
+}
+Candidate Pop(inout uint count){Candidate result=_Queue[0],last=_Queue[--count];if(count==0)return result;uint index=0;
+    while(index*2+1<count){uint child=index*2+1;if(child+1<count&&_Queue[child+1].score>_Queue[child].score)child++;if(_Queue[child].score<=last.score)break;_Queue[index]=_Queue[child];index=child;}_Queue[index]=last;return result;
+}
+// Small bounded residency heap; surface vertices and all LOD decisions remain on the GPU.
+// Cost depends on the resident budget, never on the number of potential planetary tiles.
+[numthreads(1,1,1)]void Generate(uint3 id:SV_DispatchThreadID){
+    uint count=0,leaves=0,resident=0,deepest=0,limited=0;
+    for(uint face=0;face<6;face++)Push(float4(-1,-1,2,face),0,count);
+    while(count>0){Candidate candidate=Pop(count);
+        if(candidate.score>1&&leaves+count+4<=_Budget){float4 p=candidate.patch;p.z*=.5;
+            for(uint y=0;y<2;y++)for(uint x=0;x<2;x++)Push(float4(p.xy+float2(x,y)*p.z,p.z,p.w),candidate.level+1,count);
+        }else{if(candidate.score>1)limited=1;leaves++;deepest=max(deepest,candidate.level);float distance;if(Visible(candidate.patch,distance))_Patches[resident++]=candidate.patch;}
+    }
+    _Stats[0]=resident;_Stats[1]=leaves;_Stats[2]=deepest;_Stats[3]=limited;
+    _DrawArgs[0]=_Vertices;_DrawArgs[1]=resident;_DrawArgs[2]=0;_DrawArgs[3]=0;
+}

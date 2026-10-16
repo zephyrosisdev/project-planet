@@ -1,0 +1,489 @@
+{
+  "buildings": 49,
+  "units": 31,
+  "technologies": 25,
+  "portraitResolution": 512,
+  "review": "Every portrait visually inspected in seven contact sheets; consistent metallic cyan art, distinct role silhouette, transparent cutout.",
+  "portraits": [
+    {
+      "id": "building-aa_turret",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-aa_turret.png",
+      "source": "Documentation/UI/PortraitSources/building-aa_turret.png",
+      "prompt": "Documentation/UI/PortraitSources/building-aa_turret.txt"
+    },
+    {
+      "id": "building-advanced_lab",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-advanced_lab.png",
+      "source": "Documentation/UI/PortraitSources/building-advanced_lab.png",
+      "prompt": "Documentation/UI/PortraitSources/building-advanced_lab.txt"
+    },
+    {
+      "id": "building-advanced_sam",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-advanced_sam.png",
+      "source": "Documentation/UI/PortraitSources/building-advanced_sam.png",
+      "prompt": "Documentation/UI/PortraitSources/building-advanced_sam.txt"
+    },
+    {
+      "id": "building-airbase",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-airbase.png",
+      "source": "Documentation/UI/PortraitSources/building-airbase.png",
+      "prompt": "Documentation/UI/PortraitSources/building-airbase.txt"
+    },
+    {
+      "id": "building-artillery_battery",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-artillery_battery.png",
+      "source": "Documentation/UI/PortraitSources/building-artillery_battery.png",
+      "prompt": "Documentation/UI/PortraitSources/building-artillery_battery.txt"
+    },
+    {
+      "id": "building-at_turret",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-at_turret.png",
+      "source": "Documentation/UI/PortraitSources/building-at_turret.png",
+      "prompt": "Documentation/UI/PortraitSources/building-at_turret.txt"
+    },
+    {
+      "id": "building-autocannon",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-autocannon.png",
+      "source": "Documentation/UI/PortraitSources/building-autocannon.png",
+      "prompt": "Documentation/UI/PortraitSources/building-autocannon.txt"
+    },
+    {
+      "id": "building-barracks",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-barracks.png",
+      "source": "Documentation/UI/PortraitSources/building-barracks.png",
+      "prompt": "Documentation/UI/PortraitSources/building-barracks.txt"
+    },
+    {
+      "id": "building-battery",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-battery.png",
+      "source": "Documentation/UI/PortraitSources/building-battery.png",
+      "prompt": "Documentation/UI/PortraitSources/building-battery.txt"
+    },
+    {
+      "id": "building-command",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-command.png",
+      "source": "Documentation/UI/PortraitSources/building-command.png",
+      "prompt": "Documentation/UI/PortraitSources/building-command.txt"
+    },
+    {
+      "id": "building-counter_radar",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-counter_radar.png",
+      "source": "Documentation/UI/PortraitSources/building-counter_radar.png",
+      "prompt": "Documentation/UI/PortraitSources/building-counter_radar.txt"
+    },
+    {
+      "id": "building-exotic",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-exotic.png",
+      "source": "Documentation/UI/PortraitSources/building-exotic.png",
+      "prompt": "Documentation/UI/PortraitSources/building-exotic.txt"
+    },
+    {
+      "id": "building-factory",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-factory.png",
+      "source": "Documentation/UI/PortraitSources/building-factory.png",
+      "prompt": "Documentation/UI/PortraitSources/building-factory.txt"
+    },
+    {
+      "id": "building-field_command",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-field_command.png",
+      "source": "Documentation/UI/PortraitSources/building-field_command.png",
+      "prompt": "Documentation/UI/PortraitSources/building-field_command.txt"
+    },
+    {
+      "id": "building-fuel_storage",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-fuel_storage.png",
+      "source": "Documentation/UI/PortraitSources/building-fuel_storage.png",
+      "prompt": "Documentation/UI/PortraitSources/building-fuel_storage.txt"
+    },
+    {
+      "id": "building-fusion",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-fusion.png",
+      "source": "Documentation/UI/PortraitSources/building-fusion.png",
+      "prompt": "Documentation/UI/PortraitSources/building-fusion.txt"
+    },
+    {
+      "id": "building-gas",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-gas.png",
+      "source": "Documentation/UI/PortraitSources/building-gas.png",
+      "prompt": "Documentation/UI/PortraitSources/building-gas.txt"
+    },
+    {
+      "id": "building-gas_turbine",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-gas_turbine.png",
+      "source": "Documentation/UI/PortraitSources/building-gas_turbine.png",
+      "prompt": "Documentation/UI/PortraitSources/building-gas_turbine.txt"
+    },
+    {
+      "id": "building-gate",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-gate.png",
+      "source": "Documentation/UI/PortraitSources/building-gate.png",
+      "prompt": "Documentation/UI/PortraitSources/building-gate.txt"
+    },
+    {
+      "id": "building-helipad",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-helipad.png",
+      "source": "Documentation/UI/PortraitSources/building-helipad.png",
+      "prompt": "Documentation/UI/PortraitSources/building-helipad.txt"
+    },
+    {
+      "id": "building-horizon_radar",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-horizon_radar.png",
+      "source": "Documentation/UI/PortraitSources/building-horizon_radar.png",
+      "prompt": "Documentation/UI/PortraitSources/building-horizon_radar.txt"
+    },
+    {
+      "id": "building-isotope",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-isotope.png",
+      "source": "Documentation/UI/PortraitSources/building-isotope.png",
+      "prompt": "Documentation/UI/PortraitSources/building-isotope.txt"
+    },
+    {
+      "id": "building-isotope_storage",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-isotope_storage.png",
+      "source": "Documentation/UI/PortraitSources/building-isotope_storage.png",
+      "prompt": "Documentation/UI/PortraitSources/building-isotope_storage.txt"
+    },
+    {
+      "id": "building-lab",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-lab.png",
+      "source": "Documentation/UI/PortraitSources/building-lab.png",
+      "prompt": "Documentation/UI/PortraitSources/building-lab.txt"
+    },
+    {
+      "id": "building-laser",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-laser.png",
+      "source": "Documentation/UI/PortraitSources/building-laser.png",
+      "prompt": "Documentation/UI/PortraitSources/building-laser.txt"
+    },
+    {
+      "id": "building-light_depot",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-light_depot.png",
+      "source": "Documentation/UI/PortraitSources/building-light_depot.png",
+      "prompt": "Documentation/UI/PortraitSources/building-light_depot.txt"
+    },
+    {
+      "id": "building-logistics",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-logistics.png",
+      "source": "Documentation/UI/PortraitSources/building-logistics.png",
+      "prompt": "Documentation/UI/PortraitSources/building-logistics.txt"
+    },
+    {
+      "id": "building-material_storage",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-material_storage.png",
+      "source": "Documentation/UI/PortraitSources/building-material_storage.png",
+      "prompt": "Documentation/UI/PortraitSources/building-material_storage.txt"
+    },
+    {
+      "id": "building-mine",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-mine.png",
+      "source": "Documentation/UI/PortraitSources/building-mine.png",
+      "prompt": "Documentation/UI/PortraitSources/building-mine.txt"
+    },
+    {
+      "id": "building-missile_defence",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-missile_defence.png",
+      "source": "Documentation/UI/PortraitSources/building-missile_defence.png",
+      "prompt": "Documentation/UI/PortraitSources/building-missile_defence.txt"
+    },
+    {
+      "id": "building-naval_yard",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-naval_yard.png",
+      "source": "Documentation/UI/PortraitSources/building-naval_yard.png",
+      "prompt": "Documentation/UI/PortraitSources/building-naval_yard.txt"
+    },
+    {
+      "id": "building-oil",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-oil.png",
+      "source": "Documentation/UI/PortraitSources/building-oil.png",
+      "prompt": "Documentation/UI/PortraitSources/building-oil.txt"
+    },
+    {
+      "id": "building-ordnance",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-ordnance.png",
+      "source": "Documentation/UI/PortraitSources/building-ordnance.png",
+      "prompt": "Documentation/UI/PortraitSources/building-ordnance.txt"
+    },
+    {
+      "id": "building-outpost",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-outpost.png",
+      "source": "Documentation/UI/PortraitSources/building-outpost.png",
+      "prompt": "Documentation/UI/PortraitSources/building-outpost.txt"
+    },
+    {
+      "id": "building-phased_radar",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-phased_radar.png",
+      "source": "Documentation/UI/PortraitSources/building-phased_radar.png",
+      "prompt": "Documentation/UI/PortraitSources/building-phased_radar.txt"
+    },
+    {
+      "id": "building-point_defence",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-point_defence.png",
+      "source": "Documentation/UI/PortraitSources/building-point_defence.png",
+      "prompt": "Documentation/UI/PortraitSources/building-point_defence.txt"
+    },
+    {
+      "id": "building-radar_station",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-radar_station.png",
+      "source": "Documentation/UI/PortraitSources/building-radar_station.png",
+      "prompt": "Documentation/UI/PortraitSources/building-radar_station.txt"
+    },
+    {
+      "id": "building-rare",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-rare.png",
+      "source": "Documentation/UI/PortraitSources/building-rare.png",
+      "prompt": "Documentation/UI/PortraitSources/building-rare.txt"
+    },
+    {
+      "id": "building-rare_storage",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-rare_storage.png",
+      "source": "Documentation/UI/PortraitSources/building-rare_storage.png",
+      "prompt": "Documentation/UI/PortraitSources/building-rare_storage.txt"
+    },
+    {
+      "id": "building-reactor",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-reactor.png",
+      "source": "Documentation/UI/PortraitSources/building-reactor.png",
+      "prompt": "Documentation/UI/PortraitSources/building-reactor.txt"
+    },
+    {
+      "id": "building-repair_depot",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-repair_depot.png",
+      "source": "Documentation/UI/PortraitSources/building-repair_depot.png",
+      "prompt": "Documentation/UI/PortraitSources/building-repair_depot.txt"
+    },
+    {
+      "id": "building-sam",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-sam.png",
+      "source": "Documentation/UI/PortraitSources/building-sam.png",
+      "prompt": "Documentation/UI/PortraitSources/building-sam.txt"
+    },
+    {
+      "id": "building-shield",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-shield.png",
+      "source": "Documentation/UI/PortraitSources/building-shield.png",
+      "prompt": "Documentation/UI/PortraitSources/building-shield.txt"
+    },
+    {
+      "id": "building-silo",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-silo.png",
+      "source": "Documentation/UI/PortraitSources/building-silo.png",
+      "prompt": "Documentation/UI/PortraitSources/building-silo.txt"
+    },
+    {
+      "id": "building-solar",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-solar.png",
+      "source": "Documentation/UI/PortraitSources/building-solar.png",
+      "prompt": "Documentation/UI/PortraitSources/building-solar.txt"
+    },
+    {
+      "id": "building-strategic_lab",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-strategic_lab.png",
+      "source": "Documentation/UI/PortraitSources/building-strategic_lab.png",
+      "prompt": "Documentation/UI/PortraitSources/building-strategic_lab.txt"
+    },
+    {
+      "id": "building-synthetic",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-synthetic.png",
+      "source": "Documentation/UI/PortraitSources/building-synthetic.png",
+      "prompt": "Documentation/UI/PortraitSources/building-synthetic.txt"
+    },
+    {
+      "id": "building-wall",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-wall.png",
+      "source": "Documentation/UI/PortraitSources/building-wall.png",
+      "prompt": "Documentation/UI/PortraitSources/building-wall.txt"
+    },
+    {
+      "id": "building-wind",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/building-wind.png",
+      "source": "Documentation/UI/PortraitSources/building-wind.png",
+      "prompt": "Documentation/UI/PortraitSources/building-wind.txt"
+    },
+    {
+      "id": "unit-aa",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-aa.png",
+      "source": "Documentation/UI/PortraitSources/unit-aa.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-aa.txt"
+    },
+    {
+      "id": "unit-apc",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-apc.png",
+      "source": "Documentation/UI/PortraitSources/unit-apc.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-apc.txt"
+    },
+    {
+      "id": "unit-artillery_unit",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-artillery_unit.png",
+      "source": "Documentation/UI/PortraitSources/unit-artillery_unit.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-artillery_unit.txt"
+    },
+    {
+      "id": "unit-at",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-at.png",
+      "source": "Documentation/UI/PortraitSources/unit-at.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-at.txt"
+    },
+    {
+      "id": "unit-attack_heli",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-attack_heli.png",
+      "source": "Documentation/UI/PortraitSources/unit-attack_heli.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-attack_heli.txt"
+    },
+    {
+      "id": "unit-battleship",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-battleship.png",
+      "source": "Documentation/UI/PortraitSources/unit-battleship.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-battleship.txt"
+    },
+    {
+      "id": "unit-bomber",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-bomber.png",
+      "source": "Documentation/UI/PortraitSources/unit-bomber.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-bomber.txt"
+    },
+    {
+      "id": "unit-carrier_unit",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-carrier_unit.png",
+      "source": "Documentation/UI/PortraitSources/unit-carrier_unit.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-carrier_unit.txt"
+    },
+    {
+      "id": "unit-command_vehicle",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-command_vehicle.png",
+      "source": "Documentation/UI/PortraitSources/unit-command_vehicle.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-command_vehicle.txt"
+    },
+    {
+      "id": "unit-cruiser",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-cruiser.png",
+      "source": "Documentation/UI/PortraitSources/unit-cruiser.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-cruiser.txt"
+    },
+    {
+      "id": "unit-destroyer",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-destroyer.png",
+      "source": "Documentation/UI/PortraitSources/unit-destroyer.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-destroyer.txt"
+    },
+    {
+      "id": "unit-engineer",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-engineer.png",
+      "source": "Documentation/UI/PortraitSources/unit-engineer.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-engineer.txt"
+    },
+    {
+      "id": "unit-fighter",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-fighter.png",
+      "source": "Documentation/UI/PortraitSources/unit-fighter.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-fighter.txt"
+    },
+    {
+      "id": "unit-gunboat",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-gunboat.png",
+      "source": "Documentation/UI/PortraitSources/unit-gunboat.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-gunboat.txt"
+    },
+    {
+      "id": "unit-gunship",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-gunship.png",
+      "source": "Documentation/UI/PortraitSources/unit-gunship.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-gunship.txt"
+    },
+    {
+      "id": "unit-heavy_infantry",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-heavy_infantry.png",
+      "source": "Documentation/UI/PortraitSources/unit-heavy_infantry.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-heavy_infantry.txt"
+    },
+    {
+      "id": "unit-heavy_tank",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-heavy_tank.png",
+      "source": "Documentation/UI/PortraitSources/unit-heavy_tank.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-heavy_tank.txt"
+    },
+    {
+      "id": "unit-infantry",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-infantry.png",
+      "source": "Documentation/UI/PortraitSources/unit-infantry.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-infantry.txt"
+    },
+    {
+      "id": "unit-mlrs",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-mlrs.png",
+      "source": "Documentation/UI/PortraitSources/unit-mlrs.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-mlrs.txt"
+    },
+    {
+      "id": "unit-mobile_missile",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-mobile_missile.png",
+      "source": "Documentation/UI/PortraitSources/unit-mobile_missile.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-mobile_missile.txt"
+    },
+    {
+      "id": "unit-mobile_radar",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-mobile_radar.png",
+      "source": "Documentation/UI/PortraitSources/unit-mobile_radar.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-mobile_radar.txt"
+    },
+    {
+      "id": "unit-patrol_boat",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-patrol_boat.png",
+      "source": "Documentation/UI/PortraitSources/unit-patrol_boat.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-patrol_boat.txt"
+    },
+    {
+      "id": "unit-recon_air",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-recon_air.png",
+      "source": "Documentation/UI/PortraitSources/unit-recon_air.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-recon_air.txt"
+    },
+    {
+      "id": "unit-repair",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-repair.png",
+      "source": "Documentation/UI/PortraitSources/unit-repair.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-repair.txt"
+    },
+    {
+      "id": "unit-scout",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-scout.png",
+      "source": "Documentation/UI/PortraitSources/unit-scout.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-scout.txt"
+    },
+    {
+      "id": "unit-strategic_platform",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-strategic_platform.png",
+      "source": "Documentation/UI/PortraitSources/unit-strategic_platform.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-strategic_platform.txt"
+    },
+    {
+      "id": "unit-submarine",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-submarine.png",
+      "source": "Documentation/UI/PortraitSources/unit-submarine.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-submarine.txt"
+    },
+    {
+      "id": "unit-supply",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-supply.png",
+      "source": "Documentation/UI/PortraitSources/unit-supply.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-supply.txt"
+    },
+    {
+      "id": "unit-tank",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-tank.png",
+      "source": "Documentation/UI/PortraitSources/unit-tank.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-tank.txt"
+    },
+    {
+      "id": "unit-transport_heli",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-transport_heli.png",
+      "source": "Documentation/UI/PortraitSources/unit-transport_heli.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-transport_heli.txt"
+    },
+    {
+      "id": "unit-transport_ship",
+      "runtime": "Assets/MassiveArmy/Resources/MassiveArmy/UI/Portraits/unit-transport_ship.png",
+      "source": "Documentation/UI/PortraitSources/unit-transport_ship.png",
+      "prompt": "Documentation/UI/PortraitSources/unit-transport_ship.txt"
+    }
+  ]
+}

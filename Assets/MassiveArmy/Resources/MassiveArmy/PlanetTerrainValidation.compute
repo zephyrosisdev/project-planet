@@ -1,0 +1,6 @@
+#pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
+#define PLANET_SPECIALIZE_TERRAIN 1
+#pragma kernel Sample
+#include "PlanetSurface.hlsl"
+StructuredBuffer<float4> _Directions;RWStructuredBuffer<float4> _Samples;uint _SampleCount;
+[numthreads(128,1,1)]void Sample(uint3 id:SV_DispatchThreadID){if(id.x>=_SampleCount)return;float3 d=normalize(_Directions[id.x].xyz);_Samples[id.x]=float4(PlanetHeight(d),PlanetSurfaceNormal(d));}

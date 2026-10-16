@@ -1,0 +1,19 @@
+#pragma kernel Clear
+#pragma kernel Scan
+#pragma target 5.0
+#include "ArmyCommon.hlsl"
+StructuredBuffer<UnitState> _Units;StructuredBuffer<UnitArchetype> _Types;
+StructuredBuffer<uint> _CellCounts,_CellOffsets,_Indices,_Fog;
+RWStructuredBuffer<uint> _Result;
+uint _GridRes,_FogRes,_Team,_Ring,_Side,_Active;float _WorldSize;float4 _Area;
+[numthreads(4,1,1)]void Clear(uint3 id:SV_DispatchThreadID){_Result[id.x]=0;}
+[numthreads(128,1,1)]void Scan(uint3 group:SV_GroupID,uint lane:SV_GroupIndex){
+ int2 centre=(int2)(WorldUV(_Area.xy,_WorldSize)*_GridRes);
+ int2 cell=WrapCell(centre+int2(group.x%_Side,group.x/_Side)-(int)_Ring,_GridRes);uint index=cell.x+cell.y*_GridRes;
+ float2 p=((cell+.5)/_GridRes-.5)*_WorldSize;
+ if(lane==0&&WorldDistance(p,_Area.xy,_WorldSize)<=_Area.z){uint2 q=(uint2)(WorldUV(p,_WorldSize)*_FogRes);InterlockedAdd(_Result[3],1);if(_Fog[_Team*_FogRes*_FogRes+q.x+q.y*_FogRes]==2)InterlockedAdd(_Result[2],1);}
+ for(uint j=lane;j<_CellCounts[index];j+=128){uint at=_Indices[_CellOffsets[index]+j];if(at>=_Active)continue;UnitState u=_Units[at];if((u.flags&(ALIVE|32768))!=ALIVE||WorldDistance(u.position,_Area.xy,_WorldSize)>_Area.z)continue;
+  if(Team(u)==_Team){if(_Types[Type(u)].movement<3&&_Types[Type(u)].damage>0)InterlockedAdd(_Result[1],1);}
+  else {uint2 q=(uint2)(WorldUV(u.position,_WorldSize)*_FogRes);if(_Fog[_Team*_FogRes*_FogRes+q.x+q.y*_FogRes]==2)InterlockedAdd(_Result[0],1);}
+ }
+}

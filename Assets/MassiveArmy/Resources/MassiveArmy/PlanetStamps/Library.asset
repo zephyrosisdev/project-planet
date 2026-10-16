@@ -1,0 +1,75 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 299434e861d750e48a643dfe5e3074ab, type: 3}
+  m_Name: Library
+  m_EditorClassIdentifier: 
+  definitions:
+  - name: mountain01
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/mountain01.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: mountain03
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/mountain03.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: mountain05
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/mountain05.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: mountain08
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/mountain08.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: ridge01
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/ridge01.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: ridge03
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/ridge03.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: plateau01
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/plateau01.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: plateau03
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/plateau03.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: flat_mountain01
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/flat_mountain01.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: rolling_hills01
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/rolling_hills01.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: island01
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/island01.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0
+  - name: canyon01
+    sourceAsset: Assets/TerrainSampleAssets/TerrainBrushes/Heightmaps/canyon01.tif
+    heightGain: 1
+    footprint: 1.5
+    heightOffset: 0

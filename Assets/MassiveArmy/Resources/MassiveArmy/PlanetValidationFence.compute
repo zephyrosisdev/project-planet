@@ -1,0 +1,8 @@
+#pragma kernel Complete
+#include "ArmyCommon.hlsl"
+StructuredBuffer<UnitState> _Units;
+RWStructuredBuffer<uint> _Completion;
+uint _Count,_Tick;
+// A separate SRV consumer makes the complete army UAV dependency explicit.
+// Read back whole uint elements, and verify the changing tick to reject stale data.
+[numthreads(1,1,1)]void Complete(uint3 id:SV_DispatchThreadID){_Completion[0]=_Tick;_Completion[1]=_Count>0?_Units[_Count-1].flags:0;}

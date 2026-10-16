@@ -1,0 +1,13 @@
+{
+  "triangles": 169867,
+  "vertices": 509601,
+  "components": 854,
+  "boundsMetres": [
+    39.40093803405762,
+    25.42375000938773,
+    28.930877685546875
+  ],
+  "textureSize": 2048,
+  "trimStrips": 8,
+  "aoSamples": 12
+}

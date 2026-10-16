@@ -1,0 +1,10 @@
+#pragma kernel Closest
+#pragma kernel Resolve
+#include "PlanetTopology.hlsl"
+StructuredBuffer<float> _Costs;
+RWStructuredBuffer<uint> _Pick;
+uint _Res,_Movement;float3 _Direction;
+uint Requested(){return PlanetIndex(PlanetPositionCell(PlanetEncode(_Direction),_Res),_Res);}
+bool Valid(uint i){return _Costs[_Movement*6*_Res*_Res+i]<5e19;}
+[numthreads(128,1,1)]void Closest(uint3 id:SV_DispatchThreadID){if(id.x>=6*_Res*_Res)return;if(Valid(Requested())){if(id.x==0){_Pick[0]=0;_Pick[1]=Requested();}return;}if(!Valid(id.x))return;float3 delta=PlanetCellDirection(PlanetCell(id.x,_Res),_Res)-_Direction;InterlockedMin(_Pick[0],asuint(dot(delta,delta)));}
+[numthreads(128,1,1)]void Resolve(uint3 id:SV_DispatchThreadID){if(id.x>=6*_Res*_Res||Valid(Requested())||!Valid(id.x))return;float3 delta=PlanetCellDirection(PlanetCell(id.x,_Res),_Res)-_Direction;if(asuint(dot(delta,delta))==_Pick[0])InterlockedMin(_Pick[1],id.x);}

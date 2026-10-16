@@ -1,0 +1,28 @@
+#pragma kernel Clear
+#pragma kernel Paint
+#include "PlanetTopology.hlsl"
+RWTexture2DArray<float4> _ScorchColour,_ScorchRelief;
+Texture2DArray<float4> _NukeColours,_NukeNormals;
+SamplerState sampler_LinearClamp;
+float4 _Impact,_NukeNeutral;float3 _ImpactRight;float _ScorchRadius;
+int _ScorchSize,_ScorchFace,_SourceSize;int4 _ScorchRect;
+[numthreads(8,8,1)]void Clear(uint3 id:SV_DispatchThreadID){if(any(id.xy>=(uint)_ScorchSize)||id.z>=6)return;_ScorchColour[id]=float4(1,1,1,0);_ScorchRelief[id]=float4(128.0/255,128.0/255,128.0/255,0);}
+[numthreads(8,8,1)]void Paint(uint3 id:SV_DispatchThreadID){
+ if(any(id.xy>=(uint2)_ScorchRect.zw))return;uint3 pixel=uint3(id.xy+(uint2)_ScorchRect.xy,_ScorchFace);
+ float3 d=PlanetDirection(_ScorchFace,(float2(pixel.xy)+.5)*2/_ScorchSize-1);
+ // Angular rejection prevents the back hemisphere projecting into the same footprint.
+ if(dot(d,_Impact.xyz)<=0)return;
+ float3 forward=cross(_Impact.xyz,_ImpactRight),delta=(d-_Impact.xyz)*_ScorchRadius;
+ float2 uv=float2(dot(delta,_ImpactRight),dot(delta,forward))/(2*_Impact.w)+.5;
+ if(any(uv<0)||any(uv>1))return;
+ float mip=max(0,log2(_SourceSize*_ScorchRadius/(_ScorchSize*_Impact.w)));
+ float4 source=_NukeColours.SampleLevel(sampler_LinearClamp,float3(uv,0),mip);if(source.a<=0)return;
+ float4 old=_ScorchColour[pixel];float coverage=1-(1-old.a)*(1-source.a);
+ // Multiplicative burn cannot brighten or clear an earlier impact, including at transparent edges.
+ _ScorchColour[pixel]=float4(old.rgb*lerp(1,source.rgb,source.a),coverage);
+ float3 bump=_NukeNormals.SampleLevel(sampler_LinearClamp,float3(uv,0),mip).xyz;
+ float2 slope=(bump.xy-_NukeNeutral.xy)*2/max(.25,bump.z*2-1);
+ float3 oldRelief=(_ScorchRelief[pixel].xyz-128.0/255)*4;
+ float3 added=(_ImpactRight*slope.x+forward*slope.y)*source.a;
+ _ScorchRelief[pixel]=float4(clamp(oldRelief+added,-2,1.99)*.25+128.0/255,coverage);
+}

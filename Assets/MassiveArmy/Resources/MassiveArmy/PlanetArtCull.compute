@@ -1,0 +1,35 @@
+#pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
+#define PLANET_SPECIALIZE_TERRAIN 1
+#pragma kernel Cull
+#include "ArmyCommon.hlsl"
+#include "PlanetTopology.hlsl"
+#include "PlanetSurface.hlsl"
+StructuredBuffer<UnitState> _PlanetUnits;StructuredBuffer<UnitTraits> _Traits;
+RWStructuredBuffer<uint> _Visible;RWBuffer<uint> _Arguments;
+float4 _Frustum[6];float3 _CameraLocal;float _ProjectionScale;uint _Count,_Capacity,_ConservativeCull;
+// This inflated sphere contains every possible terrain-displaced unit bound.
+// Reject only when it is wholly outside the view or behind the opaque planet.
+bool CoarseVisible(float3 up,float radius,float altitude){
+ float margin=radius+max(_PlanetReliefBound,abs(_PlanetOcean)),inner=max(0,_PlanetRadius-_PlanetReliefBound);
+ float3 mean=up*(_PlanetRadius+altitude+radius*.5);
+ [unroll]for(uint f=0;f<6;f++)if(dot(_Frustum[f].xyz,mean)+_Frustum[f].w < -margin-1)return false;
+ float cameraRadius=length(_CameraLocal);
+ [branch]if(cameraRadius>inner&&dot(mean,_CameraLocal)<-(margin+1)*cameraRadius){
+  float3 delta=mean-_CameraLocal;float inverseDistance=rsqrt(max(dot(delta,delta),1e-10));
+  float unitSine=margin*inverseDistance,planetSine=inner/cameraRadius;
+  [branch]if(unitSine<planetSine-1e-5){float cosine=-dot(delta,_CameraLocal)*inverseDistance/cameraRadius;
+   float limit=sqrt(max(0,1-planetSine*planetSine))*sqrt(max(0,1-unitSine*unitSine))+planetSine*unitSine;
+   if(cosine>limit+1e-5)return false;}}
+ return true;
+}
+[numthreads(128,1,1)]void Cull(uint3 id:SV_DispatchThreadID){
+ if(id.x>=_Count)return;UnitState u=_PlanetUnits[id.x];if((u.flags&ALIVE)==0)return;
+ UnitTraits traits=_Traits[Type(u)];float3 up=PlanetDecode(u.position);float r=max(4,max(traits.scale.x,traits.scale.z)*5);
+ [branch]if(_ConservativeCull!=0&&!CoarseVisible(up,r,traits.altitude))return;
+ float h=PlanetHeight(up);if(traits.scale.w==4)h=max(h,_PlanetOcean);h+=traits.altitude;
+ float distance=length(_CameraLocal-up*(_PlanetRadius+h));float3 p=up*(_PlanetRadius+h+r*.5);
+ for(uint f=0;f<6;f++)if(dot(_Frustum[f].xyz,p)+_Frustum[f].w < -r)return;
+ float3 delta=p-_CameraLocal;float lengthD=length(delta);float3 ray=delta/max(lengthD,1e-5);float b=dot(_CameraLocal,ray),inner=max(0,_PlanetRadius-_PlanetReliefBound),disc=b*b-dot(_CameraLocal,_CameraLocal)+inner*inner;
+ if(disc>0){float entry=-b-sqrt(disc);if(entry>0&&entry<lengthD-r)return;}
+ float pixels=_ProjectionScale*r/max(1,distance);uint mode=pixels>20?0:pixels>5?1:2;uint rank;InterlockedAdd(_Arguments[mode*5+1],1,rank);_Visible[mode*_Capacity+rank]=id.x;
+}

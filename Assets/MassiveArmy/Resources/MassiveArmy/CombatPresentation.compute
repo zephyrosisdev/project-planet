@@ -1,0 +1,50 @@
+#pragma kernel ClearEvents
+#pragma kernel ClearDecalMap
+#pragma kernel StampDecals
+#pragma kernel FinalizeDeaths
+#pragma kernel ValidateHeight
+#pragma kernel ClearCraterAtlas
+#pragma kernel BakeCrater
+#include "ArmyCommon.hlsl"
+struct CombatVisualEvent {float4 positionSize;uint kind,team,seed,rotation;};
+RWStructuredBuffer<CombatVisualEvent> _CombatEvents;
+struct CombatStamp {float4 positionSize;float4 appearance;float4 timing;};
+StructuredBuffer<CombatStamp> _CombatStamps;
+StructuredBuffer<uint> _StampSlots;
+StructuredBuffer<uint2> _TileUpdates;
+RWTexture2DArray<uint> _CombatIndexWrite;
+uint _IndexResolution,_StampCount;float _WorldSize;
+StructuredBuffer<UnitArchetype> _Types;
+Texture2D<float4> _Terrain;uint _NavRes;
+float4x4 _VisualVP;float3 _VisualFocus;
+float CombatHeight(float2 position){float2 f=WorldUV(position,_WorldSize)*_NavRes-.5;int2 a=WrapCell((int2)floor(f),_NavRes),b=WrapCell(a+1,_NavRes);float2 t=frac(f);return lerp(lerp(_Terrain.Load(int3(a,0)).x,_Terrain.Load(int3(b.x,a.y,0)).x,t.x),lerp(_Terrain.Load(int3(a.x,b.y,0)).x,_Terrain.Load(int3(b,0)).x,t.x),t.y);}
+float2 _CheckPosition;RWStructuredBuffer<float> _CheckHeight;
+[numthreads(1,1,1)]void ValidateHeight(uint3 id:SV_DispatchThreadID){_CheckHeight[0]=CombatHeight(_CheckPosition);}
+[numthreads(64,1,1)]void FinalizeDeaths(uint3 id:SV_DispatchThreadID){
+    if(id.x>=min(128u,_CombatEvents[0].team))return;uint slot=129+id.x;CombatVisualEvent e=_CombatEvents[slot];
+    UnitArchetype type=_Types[(uint)e.positionSize.w];e.kind=e.kind==2?2:type.movement==0?3:type.movement==2?4:5;e.positionSize.w=max(1.8,type.radius*2.5);e.positionSize.y=CombatHeight(e.positionSize.xz)+1;
+    float3 image=NearestWorld(e.positionSize.xyz,_VisualFocus,_WorldSize);float4 clip=mul(_VisualVP,float4(image,1));if(clip.w<=0||any(abs(clip.xy)>clip.w*1.08)||clip.z<0||clip.z>clip.w)e.kind=7;
+    _CombatEvents[slot]=e;
+}
+[numthreads(1,1,1)]void ClearEvents(uint3 id:SV_DispatchThreadID){_CombatEvents[0]=(CombatVisualEvent)0;}
+[numthreads(8,8,1)]void ClearDecalMap(uint3 id:SV_DispatchThreadID){if(any(id.xy>=_IndexResolution)||id.z>=2)return;_CombatIndexWrite[id]=0;}
+[numthreads(64,1,1)]void StampDecals(uint3 id:SV_DispatchThreadID){
+    if(id.x>=_StampCount)return;uint2 update=_TileUpdates[id.x];uint area=_IndexResolution*_IndexResolution;
+    uint cell=update.x%area;_CombatIndexWrite[uint3(cell%_IndexResolution,cell/_IndexResolution,update.x/area)]=update.y;
+}
+RWTexture2D<float4> _CraterColourWrite,_CraterNormalWrite;
+Texture2DArray<float4> _CraterArt,_CraterNormals;SamplerState sampler_CraterArt;
+uint _AtlasResolution;int2 _BakeOrigin;uint2 _BakeSize;float4 _BakePosition,_BakeRotation,_BakeNeutral;
+[numthreads(8,8,1)]void ClearCraterAtlas(uint3 id:SV_DispatchThreadID){if(any(id.xy>=_AtlasResolution))return;_CraterColourWrite[id.xy]=0;_CraterNormalWrite[id.xy]=float4(128.0/255,128.0/255,0,0);}
+[numthreads(8,8,1)]void BakeCrater(uint3 id:SV_DispatchThreadID){
+    if(any(id.xy>=_BakeSize))return;int2 pixel=WrapCell(_BakeOrigin+(int2)id.xy,_AtlasResolution);
+    float2 p=((pixel+.5)/_AtlasResolution-.5)*_WorldSize,delta=WorldDelta(_BakePosition.xz,p,_WorldSize);
+    float2x2 rotation=float2x2(_BakeRotation.x,_BakeRotation.y,-_BakeRotation.y,_BakeRotation.x);
+    float2 uv=mul(rotation,delta)/_BakePosition.w+.5;if(any(uv<0)||any(uv>1))return;
+    float lod=max(0,log2(_WorldSize/_AtlasResolution/_BakePosition.w*512));
+    float4 mark=_CraterArt.SampleLevel(sampler_CraterArt,float3(uv,0),lod),old=_CraterColourWrite[pixel];
+    _CraterColourWrite[pixel]=float4(mark.rgb*mark.a+old.rgb*(1-mark.a),mark.a+old.a*(1-mark.a));
+    float3 n=_CraterNormals.SampleLevel(sampler_CraterArt,float3(uv,0),lod).xyz;n=float3((n.xy-_BakeNeutral.xy)*2,max(.25,n.z*2-1));
+    float2 relief=mul(transpose(rotation),n.xy/n.z)*.25;
+    float4 previous=_CraterNormalWrite[pixel];_CraterNormalWrite[pixel]=float4((relief*mark.a+(previous.xy-128.0/255)*4*(1-mark.a))*.25+128.0/255,0,mark.a+previous.a*(1-mark.a));
+}

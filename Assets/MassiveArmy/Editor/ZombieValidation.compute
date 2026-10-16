@@ -1,0 +1,25 @@
+#pragma kernel Explosion
+#pragma kernel GateQueries
+#pragma kernel RefugeAudit
+#pragma target 5.0
+#include "../Resources/MassiveArmy/ArmyCommon.hlsl"
+float _WorldSize;float4 _Explosion;
+#define ZOMBIES
+#include "../Resources/MassiveArmy/ExplosionNoise.hlsl"
+#include "../Resources/MassiveArmy/BuildingObstacles.hlsl"
+RWStructuredBuffer<uint> _GateResults;float4 _GatePoint;
+[numthreads(1,1,1)]void Explosion(uint3 id:SV_DispatchThreadID){EmitExplosionNoise(_Explosion.xy,_Explosion.z,_Explosion.w);}
+[numthreads(3,1,1)]void GateQueries(uint3 id:SV_DispatchThreadID){if(id.x>=3)return;SetTraversalTeam(id.x);_GateResults[id.x]=BuildingPointClear(_GatePoint.xy,0)?1:0;}
+StructuredBuffer<UnitState> _AuditUnits;
+RWStructuredBuffer<uint> _RefugeResults;
+uint _AuditCapacity,_HomeCount;float _RefugeRadius;float4 _Homes;
+[numthreads(128,1,1)]void RefugeAudit(uint3 id:SV_DispatchThreadID){
+ if(id.x>=_AuditCapacity)return;UnitState u=_AuditUnits[id.x];
+ if((u.flags&(ALIVE|ZOMBIE_UNIT))!=(ALIVE|ZOMBIE_UNIT))return;
+ InterlockedAdd(_RefugeResults[0],1);
+ for(uint t=0;t<_HomeCount;t++){
+  float d=WorldDistance(u.position,t==0?_Homes.xy:_Homes.zw,_WorldSize);
+  InterlockedMin(_RefugeResults[2+t],(uint)(d*1000));
+  if(d<_RefugeRadius)InterlockedAdd(_RefugeResults[1],1);
+ }
+}

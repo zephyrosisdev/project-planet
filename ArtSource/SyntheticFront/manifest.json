@@ -1,0 +1,1196 @@
+[
+  {
+    "kind": "building",
+    "id": "aa_turret",
+    "triangles": 918,
+    "vertices": 2754,
+    "width": 7.28000020980835,
+    "height": 9.5,
+    "depth": 7.28000020980835,
+    "farTriangles": 244,
+    "tiles": [
+      1,
+      1
+    ],
+    "reservedMetres": [
+      8,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "advanced_lab",
+    "triangles": 738,
+    "vertices": 2214,
+    "width": 29.1200008392334,
+    "height": 22.571199417114258,
+    "depth": 29.1200008392334,
+    "farTriangles": 242,
+    "tiles": [
+      4,
+      4
+    ],
+    "reservedMetres": [
+      32,
+      32
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "advanced_sam",
+    "triangles": 794,
+    "vertices": 2382,
+    "width": 14.5600004196167,
+    "height": 9.518699645996094,
+    "depth": 14.5600004196167,
+    "farTriangles": 236,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "airbase",
+    "triangles": 830,
+    "vertices": 2490,
+    "width": 43.68000030517578,
+    "height": 12.0,
+    "depth": 29.1200008392334,
+    "farTriangles": 242,
+    "tiles": [
+      6,
+      4
+    ],
+    "reservedMetres": [
+      48,
+      32
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "artillery_battery",
+    "triangles": 608,
+    "vertices": 1824,
+    "width": 21.84000015258789,
+    "height": 9.5,
+    "depth": 14.5600004196167,
+    "farTriangles": 216,
+    "tiles": [
+      3,
+      2
+    ],
+    "reservedMetres": [
+      24,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "at_turret",
+    "triangles": 648,
+    "vertices": 1944,
+    "width": 7.28000020980835,
+    "height": 9.5,
+    "depth": 7.28000020980835,
+    "farTriangles": 217,
+    "tiles": [
+      1,
+      1
+    ],
+    "reservedMetres": [
+      8,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "autocannon",
+    "triangles": 608,
+    "vertices": 1824,
+    "width": 7.28000020980835,
+    "height": 9.5,
+    "depth": 7.28000020980835,
+    "farTriangles": 217,
+    "tiles": [
+      1,
+      1
+    ],
+    "reservedMetres": [
+      8,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "barracks",
+    "triangles": 874,
+    "vertices": 2622,
+    "width": 21.84000015258789,
+    "height": 12.0,
+    "depth": 14.5600004196167,
+    "farTriangles": 242,
+    "tiles": [
+      3,
+      2
+    ],
+    "reservedMetres": [
+      24,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "battery",
+    "triangles": 856,
+    "vertices": 2568,
+    "width": 14.5600004196167,
+    "height": 11.0,
+    "depth": 7.28000020980835,
+    "farTriangles": 242,
+    "tiles": [
+      2,
+      1
+    ],
+    "reservedMetres": [
+      16,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "command",
+    "triangles": 169867,
+    "vertices": 509601,
+    "width": 39.40093803405762,
+    "height": 25.42375000938773,
+    "depth": 28.930877685546875,
+    "source": "ArtSource/HQ/CommandCentre.blend",
+    "prototypeNoDecimation": true,
+    "farTriangles": 169867,
+    "tiles": [
+      5,
+      5
+    ],
+    "reservedMetres": [
+      40,
+      40
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "counter_radar",
+    "triangles": 534,
+    "vertices": 1602,
+    "width": 14.5600004196167,
+    "height": 14.911999702453613,
+    "depth": 14.5600004196167,
+    "farTriangles": 217,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "exotic",
+    "triangles": 888,
+    "vertices": 2664,
+    "width": 43.68000030517578,
+    "height": 23.0,
+    "depth": 43.68000030517578,
+    "farTriangles": 242,
+    "tiles": [
+      6,
+      6
+    ],
+    "reservedMetres": [
+      48,
+      48
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "factory",
+    "triangles": 830,
+    "vertices": 2490,
+    "width": 29.1200008392334,
+    "height": 15.5,
+    "depth": 29.1200008392334,
+    "farTriangles": 242,
+    "tiles": [
+      4,
+      4
+    ],
+    "reservedMetres": [
+      32,
+      32
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "field_command",
+    "triangles": 698,
+    "vertices": 2094,
+    "width": 21.84000015258789,
+    "height": 24.0,
+    "depth": 14.5600004196167,
+    "farTriangles": 244,
+    "tiles": [
+      3,
+      2
+    ],
+    "reservedMetres": [
+      24,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "fuel_storage",
+    "triangles": 680,
+    "vertices": 2040,
+    "width": 14.5600004196167,
+    "height": 8.949999809265137,
+    "depth": 14.5600004196167,
+    "farTriangles": 216,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "fusion",
+    "triangles": 856,
+    "vertices": 2568,
+    "width": 36.400001525878906,
+    "height": 14.0,
+    "depth": 36.400001525878906,
+    "farTriangles": 242,
+    "tiles": [
+      5,
+      5
+    ],
+    "reservedMetres": [
+      40,
+      40
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "gas",
+    "triangles": 702,
+    "vertices": 2106,
+    "width": 14.5600004196167,
+    "height": 19.5,
+    "depth": 14.5600004196167,
+    "farTriangles": 217,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "gas_turbine",
+    "triangles": 766,
+    "vertices": 2298,
+    "width": 21.84000015258789,
+    "height": 18.61520004272461,
+    "depth": 14.5600004196167,
+    "farTriangles": 217,
+    "tiles": [
+      3,
+      2
+    ],
+    "reservedMetres": [
+      24,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "gate",
+    "triangles": 238,
+    "vertices": 714,
+    "width": 24.0,
+    "height": 12.0,
+    "depth": 7.28000020980835,
+    "farTriangles": 217,
+    "tiles": [
+      3,
+      1
+    ],
+    "reservedMetres": [
+      24,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "helipad",
+    "triangles": 504,
+    "vertices": 1512,
+    "width": 21.84000015258789,
+    "height": 5.368000030517578,
+    "depth": 21.84000015258789,
+    "farTriangles": 217,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "horizon_radar",
+    "triangles": 544,
+    "vertices": 1632,
+    "width": 29.1200008392334,
+    "height": 17.58639907836914,
+    "depth": 14.5600004196167,
+    "farTriangles": 216,
+    "tiles": [
+      4,
+      2
+    ],
+    "reservedMetres": [
+      32,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "isotope",
+    "triangles": 680,
+    "vertices": 2040,
+    "width": 21.84000015258789,
+    "height": 11.0,
+    "depth": 21.84000015258789,
+    "farTriangles": 216,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "isotope_storage",
+    "triangles": 702,
+    "vertices": 2106,
+    "width": 14.5600004196167,
+    "height": 10.5,
+    "depth": 14.5600004196167,
+    "farTriangles": 217,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "lab",
+    "triangles": 738,
+    "vertices": 2214,
+    "width": 21.84000015258789,
+    "height": 16.67840003967285,
+    "depth": 21.84000015258789,
+    "farTriangles": 242,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "laser",
+    "triangles": 636,
+    "vertices": 1908,
+    "width": 7.28000020980835,
+    "height": 9.655200004577637,
+    "depth": 7.28000020980835,
+    "farTriangles": 217,
+    "tiles": [
+      1,
+      1
+    ],
+    "reservedMetres": [
+      8,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "light_depot",
+    "triangles": 786,
+    "vertices": 2358,
+    "width": 21.84000015258789,
+    "height": 12.0,
+    "depth": 21.84000015258789,
+    "farTriangles": 242,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "logistics",
+    "triangles": 852,
+    "vertices": 2556,
+    "width": 21.84000015258789,
+    "height": 12.0,
+    "depth": 21.84000015258789,
+    "farTriangles": 242,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "material_storage",
+    "triangles": 786,
+    "vertices": 2358,
+    "width": 21.84000015258789,
+    "height": 12.0,
+    "depth": 14.5600004196167,
+    "farTriangles": 242,
+    "tiles": [
+      3,
+      2
+    ],
+    "reservedMetres": [
+      24,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "mine",
+    "triangles": 534,
+    "vertices": 1602,
+    "width": 21.84000015258789,
+    "height": 15.0,
+    "depth": 23.477999687194824,
+    "farTriangles": 217,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "missile_defence",
+    "triangles": 794,
+    "vertices": 2382,
+    "width": 14.5600004196167,
+    "height": 9.518699645996094,
+    "depth": 14.5600004196167,
+    "farTriangles": 236,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "naval_yard",
+    "triangles": 874,
+    "vertices": 2622,
+    "width": 36.400001525878906,
+    "height": 28.0,
+    "depth": 29.1200008392334,
+    "farTriangles": 242,
+    "tiles": [
+      5,
+      4
+    ],
+    "reservedMetres": [
+      40,
+      32
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "oil",
+    "triangles": 524,
+    "vertices": 1572,
+    "width": 14.5600004196167,
+    "height": 16.0,
+    "depth": 14.5600004196167,
+    "farTriangles": 216,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "ordnance",
+    "triangles": 830,
+    "vertices": 2490,
+    "width": 29.1200008392334,
+    "height": 15.5,
+    "depth": 21.84000015258789,
+    "farTriangles": 242,
+    "tiles": [
+      4,
+      3
+    ],
+    "reservedMetres": [
+      32,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "outpost",
+    "triangles": 698,
+    "vertices": 2094,
+    "width": 14.5600004196167,
+    "height": 24.0,
+    "depth": 14.5600004196167,
+    "farTriangles": 242,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "phased_radar",
+    "triangles": 544,
+    "vertices": 1632,
+    "width": 21.84000015258789,
+    "height": 17.58639907836914,
+    "depth": 14.5600004196167,
+    "farTriangles": 217,
+    "tiles": [
+      3,
+      2
+    ],
+    "reservedMetres": [
+      24,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "point_defence",
+    "triangles": 648,
+    "vertices": 1944,
+    "width": 7.28000020980835,
+    "height": 9.5,
+    "depth": 7.28000020980835,
+    "farTriangles": 217,
+    "tiles": [
+      1,
+      1
+    ],
+    "reservedMetres": [
+      8,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "radar_station",
+    "triangles": 544,
+    "vertices": 1632,
+    "width": 14.5600004196167,
+    "height": 16.057600021362305,
+    "depth": 14.5600004196167,
+    "farTriangles": 217,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "rare",
+    "triangles": 856,
+    "vertices": 2568,
+    "width": 21.84000015258789,
+    "height": 11.0,
+    "depth": 21.84000015258789,
+    "farTriangles": 242,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "rare_storage",
+    "triangles": 702,
+    "vertices": 2106,
+    "width": 14.5600004196167,
+    "height": 10.5,
+    "depth": 14.5600004196167,
+    "farTriangles": 217,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "reactor",
+    "triangles": 680,
+    "vertices": 2040,
+    "width": 29.1200008392334,
+    "height": 11.0,
+    "depth": 29.1200008392334,
+    "farTriangles": 217,
+    "tiles": [
+      4,
+      4
+    ],
+    "reservedMetres": [
+      32,
+      32
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "repair_depot",
+    "triangles": 830,
+    "vertices": 2490,
+    "width": 21.84000015258789,
+    "height": 14.5,
+    "depth": 21.84000015258789,
+    "farTriangles": 242,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "sam",
+    "triangles": 794,
+    "vertices": 2382,
+    "width": 14.5600004196167,
+    "height": 9.5,
+    "depth": 7.28000020980835,
+    "farTriangles": 236,
+    "tiles": [
+      2,
+      1
+    ],
+    "reservedMetres": [
+      16,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "shield",
+    "triangles": 758,
+    "vertices": 2274,
+    "width": 21.84000015258789,
+    "height": 24.67840003967285,
+    "depth": 21.84000015258789,
+    "farTriangles": 242,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "silo",
+    "triangles": 524,
+    "vertices": 1572,
+    "width": 29.1200008392334,
+    "height": 20.5,
+    "depth": 29.1200008392334,
+    "farTriangles": 216,
+    "tiles": [
+      4,
+      4
+    ],
+    "reservedMetres": [
+      32,
+      32
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "solar",
+    "triangles": 634,
+    "vertices": 1902,
+    "width": 29.1200008392334,
+    "height": 17.0,
+    "depth": 14.5600004196167,
+    "farTriangles": 242,
+    "tiles": [
+      4,
+      2
+    ],
+    "reservedMetres": [
+      32,
+      16
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "strategic_lab",
+    "triangles": 738,
+    "vertices": 2214,
+    "width": 36.400001525878906,
+    "height": 26.571199417114258,
+    "depth": 29.1200008392334,
+    "farTriangles": 242,
+    "tiles": [
+      5,
+      4
+    ],
+    "reservedMetres": [
+      40,
+      32
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "synthetic",
+    "triangles": 702,
+    "vertices": 2106,
+    "width": 21.84000015258789,
+    "height": 19.5,
+    "depth": 21.84000015258789,
+    "farTriangles": 217,
+    "tiles": [
+      3,
+      3
+    ],
+    "reservedMetres": [
+      24,
+      24
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "wall",
+    "triangles": 220,
+    "vertices": 660,
+    "width": 8.0,
+    "height": 6.0,
+    "depth": 8.0,
+    "farTriangles": 216,
+    "tiles": [
+      1,
+      1
+    ],
+    "reservedMetres": [
+      8,
+      8
+    ]
+  },
+  {
+    "kind": "building",
+    "id": "wind",
+    "triangles": 489,
+    "vertices": 1467,
+    "width": 14.5600004196167,
+    "height": 23.043731689453125,
+    "depth": 14.5600004196167,
+    "farTriangles": 217,
+    "tiles": [
+      2,
+      2
+    ],
+    "reservedMetres": [
+      16,
+      16
+    ]
+  },
+  {
+    "kind": "unit",
+    "id": "aa",
+    "triangles": 510,
+    "vertices": 1530,
+    "width": 3.2300000190734863,
+    "height": 2.096750058233738,
+    "depth": 5.199999809265137,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "apc",
+    "triangles": 230,
+    "vertices": 690,
+    "width": 3.2300000190734863,
+    "height": 1.7149999514222145,
+    "depth": 5.199999809265137,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "artillery_unit",
+    "triangles": 346,
+    "vertices": 1038,
+    "width": 3.619800090789795,
+    "height": 1.9499999806284904,
+    "depth": 6.597999811172485,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "at",
+    "triangles": 346,
+    "vertices": 1038,
+    "width": 3.619800090789795,
+    "height": 1.9499999806284904,
+    "depth": 5.349999904632568,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "attack_heli",
+    "triangles": 262,
+    "vertices": 786,
+    "width": 8.15625,
+    "height": 2.021994799375534,
+    "depth": 10.96875,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "battleship",
+    "triangles": 509,
+    "vertices": 1527,
+    "width": 18.143999099731445,
+    "height": 4.700191974639893,
+    "depth": 51.47999954223633,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "bomber",
+    "triangles": 320,
+    "vertices": 960,
+    "width": 7.875,
+    "height": 1.3784254044294357,
+    "depth": 9.993750095367432,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "carrier_unit",
+    "triangles": 189,
+    "vertices": 567,
+    "width": 20.15999984741211,
+    "height": 2.200000047683716,
+    "depth": 57.19999885559082,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "command_vehicle",
+    "triangles": 282,
+    "vertices": 846,
+    "width": 3.2300000190734863,
+    "height": 3.240000046789646,
+    "depth": 5.199999809265137,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "cruiser",
+    "triangles": 425,
+    "vertices": 1275,
+    "width": 14.112000465393066,
+    "height": 4.699999809265137,
+    "depth": 40.040000915527344,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "destroyer",
+    "triangles": 425,
+    "vertices": 1275,
+    "width": 10.079999923706055,
+    "height": 4.699999809265137,
+    "depth": 28.59999942779541,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "engineer",
+    "triangles": 488,
+    "vertices": 1464,
+    "width": 1.2699999809265137,
+    "height": 2.2999999038875103,
+    "depth": 1.3349999785423279,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "fighter",
+    "triangles": 156,
+    "vertices": 468,
+    "width": 7.875,
+    "height": 1.326250046491623,
+    "depth": 9.993750095367432,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "gunboat",
+    "triangles": 323,
+    "vertices": 969,
+    "width": 6.047999858856201,
+    "height": 4.699999809265137,
+    "depth": 17.15999984741211,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "gunship",
+    "triangles": 322,
+    "vertices": 966,
+    "width": 7.3125,
+    "height": 1.1369948089122772,
+    "depth": 9.75,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "heavy_infantry",
+    "triangles": 466,
+    "vertices": 1398,
+    "width": 1.1799999475479126,
+    "height": 2.2999999038875103,
+    "depth": 1.6600000262260437,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "heavy_tank",
+    "triangles": 386,
+    "vertices": 1158,
+    "width": 5.429699897766113,
+    "height": 2.24632690474391,
+    "depth": 7.950000286102295,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "infantry",
+    "triangles": 466,
+    "vertices": 1398,
+    "width": 1.1799999475479126,
+    "height": 2.2999999038875103,
+    "depth": 1.6600000262260437,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "mlrs",
+    "triangles": 460,
+    "vertices": 1380,
+    "width": 3.619800090789795,
+    "height": 2.0580000206828117,
+    "depth": 5.199999809265137,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "mobile_missile",
+    "triangles": 460,
+    "vertices": 1380,
+    "width": 3.619800090789795,
+    "height": 2.0580000206828117,
+    "depth": 5.199999809265137,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "mobile_radar",
+    "triangles": 252,
+    "vertices": 756,
+    "width": 3.2300000190734863,
+    "height": 3.619999922811985,
+    "depth": 5.199999809265137,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "patrol_boat",
+    "triangles": 323,
+    "vertices": 969,
+    "width": 4.0320000648498535,
+    "height": 4.699999809265137,
+    "depth": 11.440000057220459,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "recon_air",
+    "triangles": 188,
+    "vertices": 564,
+    "width": 7.875,
+    "height": 1.4015625417232513,
+    "depth": 9.993750095367432,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "repair",
+    "triangles": 230,
+    "vertices": 690,
+    "width": 3.2300000190734863,
+    "height": 2.190000094473362,
+    "depth": 5.199999809265137,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "scout",
+    "triangles": 230,
+    "vertices": 690,
+    "width": 2.365999937057495,
+    "height": 1.604999952018261,
+    "depth": 3.640000104904175,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "strategic_platform",
+    "triangles": 460,
+    "vertices": 1380,
+    "width": 3.619800090789795,
+    "height": 2.0580000206828117,
+    "depth": 5.199999809265137,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "submarine",
+    "triangles": 126,
+    "vertices": 378,
+    "width": 3.7799999713897705,
+    "height": 4.047496914863586,
+    "depth": 15.529799938201904,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "supply",
+    "triangles": 240,
+    "vertices": 720,
+    "width": 3.2300000190734863,
+    "height": 1.9399999752640724,
+    "depth": 5.199999809265137,
+    "farTriangles": 107
+  },
+  {
+    "kind": "unit",
+    "id": "tank",
+    "triangles": 346,
+    "vertices": 1038,
+    "width": 3.619800090789795,
+    "height": 1.9499999806284904,
+    "depth": 5.349999904632568,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "transport_heli",
+    "triangles": 160,
+    "vertices": 480,
+    "width": 8.15625,
+    "height": 1.9899999499320984,
+    "depth": 10.96875,
+    "farTriangles": 108
+  },
+  {
+    "kind": "unit",
+    "id": "transport_ship",
+    "triangles": 189,
+    "vertices": 567,
+    "width": 8.064000129699707,
+    "height": 3.0,
+    "depth": 22.880000114440918,
+    "farTriangles": 107
+  }
+]

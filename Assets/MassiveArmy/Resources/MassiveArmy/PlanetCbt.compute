@@ -1,0 +1,75 @@
+#pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
+#define PLANET_SPECIALIZE_TERRAIN 1
+#pragma kernel Initialize
+#pragma kernel ClearRequests
+#pragma kernel MergeCandidates
+#pragma kernel ApplyMerges
+#pragma kernel FoldCounts
+#pragma kernel BuildWork
+#pragma kernel RequestSplits
+#pragma kernel PropagateConformity
+#pragma kernel ApplySplits
+#pragma kernel EmitVisible
+#pragma kernel BuildDraw
+#pragma kernel ResetVisibleStats
+#pragma target 5.0
+#include "PlanetTopology.hlsl"
+#include "PlanetSurface.hlsl"
+#include "PlanetCbtTopology.hlsl"
+RWStructuredBuffer<uint> _CbtStates,_CbtCounts,_SplitRequests,_MergeRequests,_CbtStats;
+RWStructuredBuffer<uint> _CbtWorkArgs,_CbtDrawArgs;
+AppendStructuredBuffer<uint2> _CbtVisible;
+uint _CbtTreeWords,_CbtMaxDepth,_CbtVertexCount,_CbtRequestWords,_CbtDepth;
+float3 _CbtCamera;
+float4 _CbtPlanes[6];
+float _CbtProjection,_CbtErrorPixels;
+uint _CbtDisableCulling;
+uint MidpointKey(uint root,uint depth,int2 a,int2 c){return depth*_CbtVertexCount+CbtVertexIndex(root,(a+c)/2);}
+uint2 SelectLeaf(uint rank){uint root=0;for(;root<11;root++){uint count=_CbtCounts[root*_CbtTreeWords+1];if(rank<count)break;rank-=count;}
+    uint node=1;for(uint depth=0;depth<_CbtMaxDepth&&_CbtStates[root*_CbtTreeWords+node]==2;depth++){uint left=_CbtCounts[root*_CbtTreeWords+node*2];node*=2;if(rank>=left){rank-=left;node++;}}
+    return uint2(root,node);
+}
+bool Visible(uint root,int2 a,int2 b,int2 c){if(_CbtDisableCulling!=0)return true;
+    float3 da=CbtDirection(root,a),db=CbtDirection(root,b),dc=CbtDirection(root,c),axis=normalize(da+db+dc);
+    float cone=acos(clamp(min(dot(axis,da),min(dot(axis,db),dot(axis,dc))),-1,1));
+    float rmax=_PlanetRadius+_PlanetReliefBound,rmin=max(1,_PlanetRadius-_PlanetReliefBound);
+    float3 centre=axis*_PlanetRadius;float bound=rmax*sqrt(max(0,2-2*cos(cone)))+_PlanetReliefBound;
+    [unroll]for(uint i=0;i<6;i++)if(dot(_CbtPlanes[i].xyz,centre)+_CbtPlanes[i].w < -bound)return false;
+    float distance=length(_CbtCamera);if(distance>rmin){float k=clamp(rmin/distance,0,1),j=clamp(rmin/rmax,0,1);
+        float horizon=k*j-sqrt(max(0,1-k*k))*sqrt(max(0,1-j*j));
+        float angle=acos(clamp(dot(axis,_CbtCamera/distance),-1,1));float maximum=cos(max(0,angle-cone));if(maximum<horizon)return false;}
+    return true;
+}
+float Error(uint root,int2 a,int2 b,int2 c){float3 pa=PlanetPosition(CbtDirection(root,a)),pb=PlanetPosition(CbtDirection(root,b)),pc=PlanetPosition(CbtDirection(root,c));
+    float error=max(length(PlanetPosition(CbtDirectionFloat(root,(float2(a)+c)*.5))-(pa+pc)*.5),max(length(PlanetPosition(CbtDirectionFloat(root,(float2(a)+b)*.5))-(pa+pb)*.5),length(PlanetPosition(CbtDirectionFloat(root,(float2(b)+c)*.5))-(pb+pc)*.5)));
+    float distance=max(.1,min(length(pa-_CbtCamera),min(length(pb-_CbtCamera),length(pc-_CbtCamera))));return error*_CbtProjection/distance;
+}
+[numthreads(128,1,1)]void Initialize(uint3 id:SV_DispatchThreadID){if(id.x>=12*_CbtTreeWords)return;_CbtStates[id.x]=id.x%_CbtTreeWords==1?1:0;_CbtCounts[id.x]=0;}
+[numthreads(128,1,1)]void ClearRequests(uint3 id:SV_DispatchThreadID){if(id.x<_CbtRequestWords){_SplitRequests[id.x]=0;_MergeRequests[id.x]=0;}if(id.x<8)_CbtStats[id.x]=0;}
+[numthreads(128,1,1)]void MergeCandidates(uint3 id:SV_DispatchThreadID){if(id.x>=12*_CbtTreeWords)return;uint root=id.x/_CbtTreeWords,node=id.x%_CbtTreeWords;if(node==0||node*2+1>=_CbtTreeWords||_CbtStates[id.x]!=2)return;
+    if(_CbtStates[root*_CbtTreeWords+node*2]!=1||_CbtStates[root*_CbtTreeWords+node*2+1]!=1)return;
+    int2 a,b,c;CbtDecode(root,node,a,b,c);if(!Visible(root,a,b,c)||Error(root,a,b,c)<_CbtErrorPixels*.55)InterlockedAdd(_MergeRequests[MidpointKey(root,firstbithigh(node),a,c)],1);
+}
+[numthreads(128,1,1)]void ApplyMerges(uint3 id:SV_DispatchThreadID){if(id.x>=12*_CbtTreeWords)return;uint root=id.x/_CbtTreeWords,node=id.x%_CbtTreeWords;if(node==0||node*2+1>=_CbtTreeWords||_CbtStates[id.x]!=2)return;
+    int2 a,b,c;CbtDecode(root,node,a,b,c);if(_MergeRequests[MidpointKey(root,firstbithigh(node),a,c)]!=2)return;
+    _CbtStates[id.x]=1;_CbtStates[root*_CbtTreeWords+node*2]=0;_CbtStates[root*_CbtTreeWords+node*2+1]=0;InterlockedAdd(_CbtStats[3],1);
+}
+[numthreads(128,1,1)]void FoldCounts(uint3 id:SV_DispatchThreadID){uint width=1u<<_CbtDepth;if(id.x>=12*width)return;uint root=id.x/width,node=width+id.x%width,index=root*_CbtTreeWords+node,state=_CbtStates[index];
+    _CbtCounts[index]=state==1?1:state==2?_CbtCounts[root*_CbtTreeWords+node*2]+_CbtCounts[root*_CbtTreeWords+node*2+1]:0;
+}
+[numthreads(1,1,1)]void BuildWork(uint3 id:SV_DispatchThreadID){uint count=0;for(uint root=0;root<12;root++)count+=_CbtCounts[root*_CbtTreeWords+1];_CbtStats[0]=count;_CbtWorkArgs[0]=(count+127)/128;_CbtWorkArgs[1]=1;_CbtWorkArgs[2]=1;}
+[numthreads(128,1,1)]void RequestSplits(uint3 id:SV_DispatchThreadID){if(id.x>=_CbtStats[0])return;uint2 leaf=SelectLeaf(id.x);uint depth=firstbithigh(leaf.y);if(depth>=_CbtMaxDepth)return;
+    int2 a,b,c;CbtDecode(leaf.x,leaf.y,a,b,c);if(Visible(leaf.x,a,b,c)&&Error(leaf.x,a,b,c)>_CbtErrorPixels){InterlockedOr(_SplitRequests[MidpointKey(leaf.x,depth,a,c)],1);InterlockedAdd(_CbtStats[6],1);}
+}
+[numthreads(128,1,1)]void PropagateConformity(uint3 id:SV_DispatchThreadID){if(id.x>=_CbtStats[0])return;uint2 leaf=SelectLeaf(id.x);uint depth=firstbithigh(leaf.y);if(depth+1>=_CbtMaxDepth)return;
+    int2 a,b,c;CbtDecode(leaf.x,leaf.y,a,b,c);if(_SplitRequests[MidpointKey(leaf.x,depth+1,a,b)]!=0||_SplitRequests[MidpointKey(leaf.x,depth+1,b,c)]!=0)InterlockedOr(_SplitRequests[MidpointKey(leaf.x,depth,a,c)],1);
+}
+[numthreads(128,1,1)]void ApplySplits(uint3 id:SV_DispatchThreadID){uint width=1u<<_CbtDepth;if(id.x>=12*width)return;uint root=id.x/width,node=width+id.x%width,index=root*_CbtTreeWords+node;if(_CbtStates[index]!=1)return;
+    int2 a,b,c;CbtDecode(root,node,a,b,c);if(_SplitRequests[MidpointKey(root,_CbtDepth,a,c)]==0)return;
+    _CbtStates[index]=2;_CbtStates[root*_CbtTreeWords+node*2]=1;_CbtStates[root*_CbtTreeWords+node*2+1]=1;InterlockedAdd(_CbtStats[2],1);
+}
+[numthreads(128,1,1)]void EmitVisible(uint3 id:SV_DispatchThreadID){if(id.x>=_CbtStats[0])return;uint2 leaf=SelectLeaf(id.x);int2 a,b,c;CbtDecode(leaf.x,leaf.y,a,b,c);if(!Visible(leaf.x,a,b,c))return;
+    _CbtVisible.Append(leaf);uint depth=firstbithigh(leaf.y);InterlockedMax(_CbtStats[4],depth);if(depth==_CbtMaxDepth&&Error(leaf.x,a,b,c)>_CbtErrorPixels)InterlockedAdd(_CbtStats[5],1);
+}
+[numthreads(1,1,1)]void BuildDraw(uint3 id:SV_DispatchThreadID){_CbtStats[1]=_CbtDrawArgs[0];_CbtDrawArgs[0]=_CbtStats[1]*3;_CbtDrawArgs[1]=1;_CbtDrawArgs[2]=0;_CbtDrawArgs[3]=0;}
+[numthreads(1,1,1)]void ResetVisibleStats(uint3 id:SV_DispatchThreadID){_CbtStats[1]=0;_CbtStats[4]=0;_CbtStats[5]=0;}

@@ -1,0 +1,13 @@
+#pragma kernel Bake
+#pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
+#define PLANET_SPECIALIZE_TERRAIN 1
+#include "PlanetSurface.hlsl"
+RWTexture2DArray<float4> _PreviewSurface;
+uint _PreviewResolution;
+[numthreads(8,8,1)]void Bake(uint3 id:SV_DispatchThreadID){
+ uint extent=_PreviewResolution+2;if(id.x>=extent||id.y>=extent||id.z>=6)return;
+ // One gutter texel samples the continuation of the sphere, avoiding cube-face filter cracks.
+ float2 uv=((float2(id.xy)-.5)/_PreviewResolution)*2-1;
+ float3 d=PlanetDirection(id.z,uv);float h=PlanetHeight(d);
+ float3 normal=h<_PlanetOcean?d:PlanetSurfaceNormal(d);_PreviewSurface[id]=float4(normal,h);
+}

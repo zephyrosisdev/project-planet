@@ -1,0 +1,49 @@
+#pragma kernel BuildDensity
+#pragma kernel BuildDarkness
+#pragma kernel BuildFlow
+StructuredBuffer<uint> _Visibility;
+RWTexture2D<float> _DensityMask;
+int _Resolution;
+float4 _MaskSettings;
+RWTexture2D<float> _DarknessMask;
+RWTexture2D<float4> _FlowMap;
+Texture2D<float4> _TerrainHeight;
+SamplerState sampler_TerrainHeight;
+float4 _DarkSettings,_FlowSettings;
+float State(int2 p){p=(p%_Resolution+_Resolution)%_Resolution;uint value=_Visibility[p.x+p.y*_Resolution];return value>=2?_MaskSettings.w:value==1?_MaskSettings.x:1;}
+float Bilinear(float2 p){int2 c=(int2)floor(p);float2 f=frac(p);return lerp(lerp(State(c),State(c+int2(1,0)),f.x),lerp(State(c+int2(0,1)),State(c+1),f.x),f.y);}
+[numthreads(8,8,1)]
+void BuildDensity(uint3 id:SV_DispatchThreadID)
+{
+    if(any(id.xy>=(uint)_Resolution))return;
+    float value=0;
+    [unroll]for(int y=-1;y<=1;y++)[unroll]for(int x=-1;x<=1;x++)value+=Bilinear(id.xy+float2(x,y)*_MaskSettings.y)*(x==0?2:1)*(y==0?2:1)/16;
+    float oldValue=_MaskSettings.z>=1?value:_DensityMask[id.xy];
+    _DensityMask[id.xy]=lerp(oldValue,value,_MaskSettings.z);
+}
+float Darkness(int2 p){p=(p%_Resolution+_Resolution)%_Resolution;uint s=_Visibility[p.x+p.y*_Resolution];return s>=2?0:s==1?_DarkSettings.y:_DarkSettings.x;}
+float DarkBilinear(float2 p){int2 c=(int2)floor(p);float2 f=frac(p);return lerp(lerp(Darkness(c),Darkness(c+int2(1,0)),f.x),lerp(Darkness(c+int2(0,1)),Darkness(c+1),f.x),f.y);}
+[numthreads(8,8,1)]
+void BuildDarkness(uint3 id:SV_DispatchThreadID)
+{
+    if(any(id.xy>=(uint)_Resolution))return;
+    float value=0;
+    [unroll]for(int y=-1;y<=1;y++)[unroll]for(int x=-1;x<=1;x++)value+=DarkBilinear(id.xy+float2(x,y)*_MaskSettings.y)*(x==0?2:1)*(y==0?2:1)/16;
+    float oldValue=_MaskSettings.z>=1?value:_DarknessMask[id.xy];_DarknessMask[id.xy]=lerp(oldValue,value,_MaskSettings.z);
+}
+float2 Gradient(float2 p){uint2 c=(uint2)(int2)p;uint h=c.x*1597334677u^c.y*3812015801u;h^=h>>16;h*=2246822519u;return normalize(float2((h&1u)?1:-1,(h&2u)?1:-1));}
+float Perlin(float2 p){float2 c=floor(p),f=frac(p),u=f*f*f*(f*(f*6-15)+10);return lerp(lerp(dot(Gradient(c),f),dot(Gradient(c+float2(1,0)),f-float2(1,0)),u.x),lerp(dot(Gradient(c+float2(0,1)),f-float2(0,1)),dot(Gradient(c+1),f-1),u.x),u.y);}
+[numthreads(8,8,1)]
+void BuildFlow(uint3 id:SV_DispatchThreadID)
+{
+    if(any(id.xy>=(uint)_Resolution))return;
+    float2 uv=(id.xy+.5)/_Resolution,p=(uv-.5)*_FlowSettings.y/_FlowSettings.x+_FlowSettings.z;
+    float2 curl=float2(Perlin(p+float2(0,.1))-Perlin(p-float2(0,.1)),-Perlin(p+float2(.1,0))+Perlin(p-float2(.1,0)))*5;
+    float2 texel=1.0/_Resolution;
+    float dx=_TerrainHeight.SampleLevel(sampler_TerrainHeight,uv+float2(texel.x,0),0).r-_TerrainHeight.SampleLevel(sampler_TerrainHeight,uv-float2(texel.x,0),0).r;
+    float dz=_TerrainHeight.SampleLevel(sampler_TerrainHeight,uv+float2(0,texel.y),0).r-_TerrainHeight.SampleLevel(sampler_TerrainHeight,uv-float2(0,texel.y),0).r;
+    float2 contour=float2(-dz,dx)/max(2*_FlowSettings.y/_Resolution,1);
+    float2 velocity=curl*.7+contour*.6;velocity/=max(1,length(velocity));
+    _FlowMap[id.xy]=float4(velocity,0,1);
+}
+

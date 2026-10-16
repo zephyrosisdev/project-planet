@@ -1,0 +1,17 @@
+#pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
+#define PLANET_SPECIALIZE_TERRAIN 1
+#pragma kernel Generate
+#include "ArmyCommon.hlsl"
+#include "PlanetTopology.hlsl"
+#include "PlanetSurface.hlsl"
+StructuredBuffer<GroupOrder> _Groups;StructuredBuffer<float4> _Frames,_Buildings;
+RWStructuredBuffer<float> _Costs;RWStructuredBuffer<uint> _Pick;
+uint _Res,_Group,_BuildingCount;float _CellSize;
+[numthreads(128,1,1)]void Generate(uint3 id:SV_DispatchThreadID){
+ if(id.x>=_Res*_Res)return;int2 c=int2(id.x%_Res,id.x/_Res);float2 metres=(float2(c)+.5-_Res*.5)*_CellSize;
+ float3 d=normalize(_Frames[_Group*3].xyz+(_Frames[_Group*3+1].xyz*metres.x+_Frames[_Group*3+2].xyz*metres.y)/_PlanetRadius);
+ uint movement=_Groups[_Group].movement;float height=PlanetHeight(d);bool valid=movement==3||(movement==4?height<_PlanetOcean:height>=_PlanetOcean);
+ if(movement!=3)for(uint b=0;b<_BuildingCount;b++){float4 obstacle=_Buildings[b];float3 delta=(d-obstacle.xyz)*_PlanetRadius;float radius=obstacle.w+_CellSize*.7071068;if(obstacle.w>0&&dot(delta,delta)<radius*radius)valid=false;}
+ _Costs[_Group*_Res*_Res+id.x]=valid?1:INF;
+ if(valid){int2 offset=c-int2(_Res/2,_Res/2);uint rank=(uint)dot(offset,offset);InterlockedMin(_Pick[_Group],(rank<<16)|id.x);}
+}

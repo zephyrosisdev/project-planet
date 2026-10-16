@@ -1,0 +1,41 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+namespace MassiveArmy.Planetary
+{
+    /// <summary>One capsule observer. Ship occupants keep authoritative local feet/heading in ShipFrame.</summary>
+    public sealed class PlanetFirstPersonController
+    {
+        readonly PlanetSurface surface;readonly FloatingOrigin origin;readonly Camera camera;readonly GameObject avatar;readonly Rigidbody body;
+        readonly PlanetPlayerCollision collision;PlanetSpacecraft ship;Double3 position;Vector3 forward,shipPosition,carrierVelocity;float pitch,verticalSpeed;bool active,attached,grounded;
+        public float WalkSpeed=7,EyeHeight=1.7f;public bool CaptureCursor=true;
+        public readonly PlayerEnvironmentState Environment=new PlayerEnvironmentState();public readonly PlayerInventory Inventory=new PlayerInventory();
+        public bool Active=>active;public bool AttachedToShip=>attached;public bool Grounded=>grounded;
+        public Vector3 ShipLocalPosition=>shipPosition;public Double3 PreciseBodyPosition=>attached?ship.LocalToBodyPrecise(shipPosition):position;public Vector3 BodyPosition=>PreciseBodyPosition.Float;
+        public Vector3 Direction=>BodyPosition.normalized;internal PlanetPlayerCollision Collision=>collision;
+        public PlanetFirstPersonController(PlanetSurface surface,FloatingOrigin origin,Camera camera,Transform parent){this.surface=surface;this.origin=origin;this.camera=camera;avatar=new GameObject("Player physical avatar");avatar.layer=2;avatar.transform.SetParent(parent);var capsule=avatar.AddComponent<CapsuleCollider>();capsule.height=PlanetPlayerCollision.Height;capsule.radius=PlanetPlayerCollision.Radius;capsule.center=Vector3.up*.9f;body=avatar.AddComponent<Rigidbody>();body.isKinematic=true;body.useGravity=false;collision=new PlanetPlayerCollision(capsule);avatar.SetActive(false);Inventory.Add("repair-tool",1);Inventory.Add("suit-oxygen",1);}
+        internal void CopySessionFrom(PlanetFirstPersonController other){Inventory.CopyFrom(other.Inventory);Environment.Health=other.Environment.Health;Environment.Oxygen=other.Environment.Oxygen;Environment.ConsumptionPerSecond=other.Environment.ConsumptionPerSecond;Environment.Pressurized=other.Environment.Pressurized;}
+        public void BindShip(PlanetSpacecraft value){ship=value;}
+        public void Enter(Vector3 direction,Vector3 facing){attached=false;position=surface.GetSurfacePositionPrecise(direction,.05);forward=Vector3.ProjectOnPlane(facing,direction).normalized;if(forward.sqrMagnitude<.1f){CubeSphere.Project(direction,out var f,out _);forward=Vector3.ProjectOnPlane(CubeSphere.Up[(int)f],direction).normalized;}verticalSpeed=0;carrierVelocity=Vector3.zero;pitch=0;grounded=false;SetActive(true);PresentPlanet();}
+        internal void EnterBodyPosition(Vector3 feet,Vector3 facing)=>EnterBodyPosition(new Double3(feet),facing);
+        internal void EnterBodyPosition(Double3 feet,Vector3 facing){Enter(feet.Float.normalized,facing);position=feet;PresentPlanet();}
+        public void EnterShip(PlanetSpacecraft value,Vector3 feet,Vector3 facing){ship=value;attached=true;shipPosition=feet;forward=Vector3.ProjectOnPlane(facing,Vector3.up).normalized;if(forward.sqrMagnitude<.1f)forward=Vector3.forward;verticalSpeed=0;carrierVelocity=Vector3.zero;pitch=0;grounded=true;Environment.Pressurized=ship.PressurizedAt(feet);SetActive(true);PresentShip();}
+        public void Resume(){SetActive(true);if(attached)PresentShip();else PresentPlanet();}
+        public void SetActive(bool enabled){active=enabled;avatar.SetActive(enabled);if(CaptureCursor){Cursor.lockState=enabled?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!enabled;}}
+        void Attach(){shipPosition=ship.BodyToLocal(position);forward=Quaternion.Inverse(ship.Rotation)*forward;forward=Vector3.ProjectOnPlane(forward,Vector3.up).normalized;attached=true;verticalSpeed=0;carrierVelocity=Vector3.zero;}
+        void Detach(){position=ship.LocalToBodyPrecise(shipPosition);forward=Vector3.ProjectOnPlane(ship.Rotation*forward,position.Float.normalized).normalized;carrierVelocity=ship.VelocityAt(shipPosition);verticalSpeed=0;attached=false;Environment.Pressurized=false;}
+        public void Step(float dt,Vector2? movementOverride=null,Vector2? lookOverride=null){if(!active)return;dt=Mathf.Min(dt,.05f);var keyboard=Keyboard.current;var mouse=Mouse.current;Vector2 move=movementOverride??Vector2.zero;if(!movementOverride.HasValue&&keyboard!=null&&Application.isFocused){if(keyboard.wKey.isPressed)move.y++;if(keyboard.sKey.isPressed)move.y--;if(keyboard.dKey.isPressed)move.x++;if(keyboard.aKey.isPressed)move.x--;}
+            var up=attached?Vector3.up:position.Float.normalized;if(lookOverride.HasValue||mouse!=null&&Application.isFocused&&!movementOverride.HasValue){var delta=lookOverride??mouse.delta.ReadValue();forward=Quaternion.AngleAxis(delta.x*.12f,up)*forward;pitch=Mathf.Clamp(pitch-delta.y*.12f,-85,85);}
+            bool jump=grounded&&!movementOverride.HasValue&&keyboard!=null&&keyboard.spaceKey.wasPressedThisFrame;if(jump)verticalSpeed=5;var right=Vector3.Cross(up,forward).normalized;var horizontal=Vector3.ClampMagnitude(forward*move.y+right*move.x,1)*WalkSpeed;
+            if(attached){verticalSpeed-=9.81f*dt;var foot=ship.LocalToRender(shipPosition);var result=collision.Move(foot,ship.Rotation*Vector3.up,ship.Rotation*(horizontal+Vector3.up*verticalSpeed)*dt,verticalSpeed<=0,out var support);shipPosition+=Quaternion.Inverse(ship.Rotation)*(result-foot);grounded=ship.Owns(support);if(grounded&&verticalSpeed<0)verticalSpeed=0;if(!ship.NearDeck(shipPosition)){Detach();PresentPlanet();}else{Environment.Pressurized=ship.PressurizedAt(shipPosition);Environment.Step(surface.Definition,(float)(ship.Pose.position.Magnitude-surface.Definition.radius),dt);PresentShip();}return;}
+            double oldRadius=position.Magnitude;verticalSpeed-=(float)(surface.Definition.gravitationalParameter/System.Math.Max(1,oldRadius*oldRadius))*dt;var deltaWorld=(horizontal+carrierVelocity+up*verticalSpeed)*dt;var render=origin.RenderPosition(surface.Definition.position.Add(position));var moved=collision.Move(render,up,deltaWorld,verticalSpeed<=0,out var floor);
+            // Apply the small local contact displacement, never round-trip planet-sized floats.
+            var proposed=position+new Double3(moved-render);var nextUp=proposed.Float.normalized;double ground=surface.Definition.radius+(double)surface.SampleHeight(nextUp)+.05;grounded=floor!=null;
+            if(proposed.Magnitude<ground){if(ground-proposed.Magnitude>.03)floor=null;proposed=proposed*(ground/proposed.Magnitude);grounded=true;}if(grounded&&verticalSpeed<0){verticalSpeed=0;carrierVelocity=Vector3.zero;}
+            if(grounded&&floor==null&&Vector3.Dot(surface.SampleNormal(nextUp),nextUp)<.55f){proposed=position+new Double3(up)*System.Math.Max(0,proposed.Magnitude-oldRadius);nextUp=proposed.Float.normalized;}
+            forward=Quaternion.FromToRotation(up,nextUp)*forward;position=proposed;if(ship!=null&&ship.Owns(floor)&&ship.NearDeck(ship.BodyToLocal(position))){Attach();PresentShip();}else{Environment.Pressurized=false;Environment.Step(surface.Definition,(float)(position.Magnitude-surface.Definition.radius),dt);PresentPlanet();}
+        }
+        void PresentShip(){var feet=ship.ResolvePlayer(shipPosition,Quaternion.LookRotation(forward,Vector3.up));var eye=ship.ResolvePlayer(shipPosition+Vector3.up*EyeHeight,Quaternion.LookRotation(forward,Vector3.up)*Quaternion.Euler(pitch,0,0));origin.Anchor(eye.position);body.position=origin.RenderPosition(feet.position);body.rotation=feet.rotation;camera.transform.SetPositionAndRotation(Vector3.zero,eye.rotation);camera.nearClipPlane=.05f;camera.farClipPlane=Mathf.Max(30000,(float)ship.Pose.position.Magnitude*3);}
+        void PresentPlanet(){var up=position*(1/position.Magnitude);var eye=surface.Definition.position.Add(position+up*EyeHeight);origin.Anchor(eye);var rotation=Quaternion.LookRotation(forward,up.Float);body.position=origin.RenderPosition(surface.Definition.position.Add(position));body.rotation=rotation;camera.transform.SetPositionAndRotation(Vector3.zero,rotation*Quaternion.Euler(pitch,0,0));camera.nearClipPlane=.05f;camera.farClipPlane=30000;}
+        public void Dispose(){SetActive(false);ArmyLifetime.Destroy(avatar);}
+    }
+}

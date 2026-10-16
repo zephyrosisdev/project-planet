@@ -1,0 +1,32 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="FrontTheme.tss" />
+    <Style src="Front.uss" />
+    <ui:VisualElement name="front" class="front">
+        <ui:VisualElement name="menu" class="screen" />
+        <ui:VisualElement name="loading" class="screen" />
+        <ui:VisualElement name="setup" class="screen" />
+        <ui:VisualElement name="hud" class="hud">
+            <ui:VisualElement name="top" class="top panel">
+                <ui:VisualElement name="brand" class="brand" />
+                <ui:VisualElement name="resources" class="resources" />
+                <ui:VisualElement name="top-actions" class="top-actions" />
+            </ui:VisualElement>
+            <ui:VisualElement name="grid-status" class="grid-status" />
+            <ui:VisualElement name="construction" class="construction panel" />
+            <ui:VisualElement name="context" class="context panel" />
+            <ui:VisualElement name="quick-actions" class="quick-actions" />
+            <ui:VisualElement name="notifications" class="notifications" picking-mode="Ignore" />
+            <ui:VisualElement name="scout" class="scout panel" />
+            <ui:VisualElement name="bottom" class="bottom panel">
+                <ui:VisualElement name="selection" class="selection" />
+                <ui:VisualElement name="commands" class="commands" />
+                <ui:VisualElement name="minimap" class="minimap" />
+                <ui:VisualElement name="camera-help" class="camera-help" />
+            </ui:VisualElement>
+            <ui:VisualElement name="developer" class="developer panel" />
+        </ui:VisualElement>
+        <ui:VisualElement name="overlay" class="overlay" picking-mode="Ignore" />
+        <ui:VisualElement name="tooltip" class="tooltip panel" picking-mode="Ignore" />
+        <ui:VisualElement name="modal" class="modal-layer" />
+    </ui:VisualElement>
+</ui:UXML>

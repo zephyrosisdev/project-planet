@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-11T00:40:12.816Z",
+  "engine": "6000.6.4f1",
+  "equivalentSimulation": [
+    {
+      "file": "GpuBattle.cs",
+      "unchanged": true,
+      "sha256": "f1fbf944662f58c69b2261c05690981dd55661c1107eca8af1c7328f265fd513"
+    },
+    {
+      "file": "RtsWorld.cs",
+      "unchanged": true,
+      "sha256": "ea5077d38a8cb56c705f983d2830f6c4b54d278b431d7ed10cace3f8a13063ac"
+    },
+    {
+      "file": "RtsEconomy.cs",
+      "unchanged": true,
+      "sha256": "79b97df0b11d19550711d6e9350358fd2c21940269121fe5d91fa4f0ce7f8e7e"
+    },
+    {
+      "file": "ArmyRenderer.cs",
+      "unchanged": true,
+      "sha256": "52f736e9840fdd0fac7dc6840f90ed2178a25f3d3161b780766e018afd3a1e0e"
+    },
+    {
+      "file": "StandaloneBenchmark.cs",
+      "unchanged": true,
+      "sha256": "e26d2462761e79d1ad5b3dd72490d10aed1262b9c64302cc139e71534d94bb54"
+    }
+  ],
+  "optionalProfiling": [
+    "RtsGpu.cs: scopes around existing intel dispatches and fog readback",
+    "VolumetricFogOfWar.cs: CPU scope around existing fog pass preparation"
+  ]
+}

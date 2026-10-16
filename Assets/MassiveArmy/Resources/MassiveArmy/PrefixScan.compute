@@ -1,0 +1,51 @@
+#pragma kernel ScanBlocks
+#pragma kernel ScanSums
+#pragma kernel AddSums
+#pragma target 5.0
+StructuredBuffer<uint> _Counts;
+RWStructuredBuffer<uint> _Offsets;
+RWStructuredBuffer<uint> _BlockSums;
+RWStructuredBuffer<uint> _BlockOffsets;
+uint _Count, _Blocks;
+groupshared uint values[512];
+// Work-efficient Blelloch exclusive scan, padded to 512 per block.
+void Scan(uint lane) {
+    uint offset = 1;
+    for(uint d=256; d>0; d>>=1) {
+        GroupMemoryBarrierWithGroupSync();
+        if(lane<d) { uint a=offset*(2*lane+1)-1, b=offset*(2*lane+2)-1; values[b]+=values[a]; }
+        offset <<= 1;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    if(lane==0) values[511]=0;
+    for(uint stride=1; stride<512; stride<<=1) {
+        offset >>= 1;
+        GroupMemoryBarrierWithGroupSync();
+        if(lane<stride) { uint a=offset*(2*lane+1)-1, b=offset*(2*lane+2)-1; uint t=values[a]; values[a]=values[b]; values[b]+=t; }
+    }
+    GroupMemoryBarrierWithGroupSync();
+}
+[numthreads(256,1,1)]
+void ScanBlocks(uint3 group:SV_GroupID, uint lane:SV_GroupIndex) {
+    uint a=group.x*512+lane, b=a+256;
+    values[lane]=a<_Count?_Counts[a]:0;
+    values[lane+256]=b<_Count?_Counts[b]:0;
+    GroupMemoryBarrierWithGroupSync();
+    // Preserve the total independently of scan's root reset.
+    Scan(lane);
+    if(a<_Count) _Offsets[a]=values[lane];
+    if(b<_Count) _Offsets[b]=values[lane+256];
+    if(lane==255) _BlockSums[group.x]=values[511]+(b<_Count?_Counts[b]:0);
+}
+[numthreads(256,1,1)]
+void ScanSums(uint lane:SV_GroupIndex) {
+    values[lane]=lane<_Blocks?_BlockSums[lane]:0;
+    values[lane+256]=lane+256<_Blocks?_BlockSums[lane+256]:0;
+    Scan(lane);
+    if(lane<_Blocks) _BlockOffsets[lane]=values[lane];
+    if(lane+256<_Blocks) _BlockOffsets[lane+256]=values[lane+256];
+}
+[numthreads(256,1,1)]
+void AddSums(uint3 id:SV_DispatchThreadID) {
+    if(id.x<_Count) _Offsets[id.x]+=_BlockOffsets[id.x/512];
+}

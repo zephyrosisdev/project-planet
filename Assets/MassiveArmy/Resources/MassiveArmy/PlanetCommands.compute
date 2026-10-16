@@ -1,0 +1,79 @@
+#pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
+#define PLANET_SPECIALIZE_TERRAIN 1
+#pragma kernel Pick
+#pragma kernel Select
+#pragma kernel CountGroups
+#pragma kernel Order
+#pragma multi_compile _ PLANET_RTS_CONTENT
+#include "ArmyCommon.hlsl"
+#include "PlanetTopology.hlsl"
+#include "PlanetSurface.hlsl"
+RWStructuredBuffer<UnitState> _PlanetUnits;
+RWStructuredBuffer<uint> _CommandCounts;
+RWStructuredBuffer<uint> _Pick;
+uint _PlanetUnitCount,_SelectionOperation,_ClickSelection,_CommandGroup,_Stop;
+float4x4 _SelectionVP;
+float3 _SelectionCamera;
+float4 _SelectionRect;
+float2 _SelectionScreen,_CommandGoal;
+StructuredBuffer<UnitArchetype> _Archetypes;uint _CommandMovement;
+StructuredBuffer<UnitTraits> _Traits;
+uint Movement(UnitState u){
+#ifdef PLANET_RTS_CONTENT
+ return _Archetypes[Type(u)].movement;
+#else
+ return 2;
+#endif
+}
+
+// Only command events run this terrain visibility test. No unit state is read back.
+bool ProjectUnit(UnitState u,out float2 screen) {
+    float3 up=PlanetDecode(u.position);float3 p=PlanetPosition(up)+up;
+#ifdef PLANET_RTS_CONTENT
+    UnitTraits traits=_Traits[Type(u)];if(traits.scale.w==4)p=up*(_PlanetRadius+max(PlanetHeight(up),_PlanetOcean)+1);p+=up*traits.altitude;
+#endif
+    float4 clip=mul(_SelectionVP,float4(p,1));screen=(clip.xy/max(clip.w,1e-6)*.5+.5)*_SelectionScreen;
+    if((u.flags&ALIVE)==0||Team(u)!=0||clip.w<=0||any(screen<0)||any(screen>_SelectionScreen))return false;
+    float3 delta=p-_SelectionCamera;float distance=length(delta);float3 ray=delta/max(distance,1e-6);
+    // Intersect the terrain's outer bound, then test the segment that can contain terrain.
+    float outer=_PlanetRadius+abs(_PlanetHeight),b=dot(_SelectionCamera,ray);
+    float discriminant=b*b-dot(_SelectionCamera,_SelectionCamera)+outer*outer;
+    if(discriminant<0)return true;
+    float start=max(0,-b-sqrt(discriminant)),end=distance-.8;
+    for(uint i=0;i<64;i++) {
+        float t=lerp(start,end,(i+.5)/64.0);if(t<0||t>end)continue;
+        float3 q=_SelectionCamera+ray*t;float r=length(q);
+        if(r<_PlanetRadius-abs(_PlanetHeight)||r<_PlanetRadius+PlanetHeight(q/max(r,1e-6))-.1)return false;
+    }
+    return true;
+}
+[numthreads(128,1,1)]void Pick(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_PlanetUnitCount)return;float2 screen;
+    if(!ProjectUnit(_PlanetUnits[id.x],screen))return;
+    float d=length(screen-_SelectionRect.xy);if(d>12)return;
+    // 20 bits preserve stable IDs through the million-unit path; remaining bits rank pixel distance.
+    uint key=((uint)(d*128)<<20)|id.x;InterlockedMin(_Pick[0],key);
+}
+[numthreads(128,1,1)]void Select(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[id.x];float2 screen;
+    bool inside=_ClickSelection!=0?(_Pick[0]!=INVALID&&(_Pick[0]&0xfffffu)==id.x):
+        (ProjectUnit(u,screen)&&all(screen>=_SelectionRect.xy)&&all(screen<=_SelectionRect.zw));
+    if(_SelectionOperation==0)u.flags&=~SELECTED;
+    if(inside){if(_SelectionOperation==2)u.flags&=~SELECTED;else u.flags|=SELECTED;}
+    _PlanetUnits[id.x]=u;
+}
+[numthreads(128,1,1)]void CountGroups(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[id.x];if((u.flags&ALIVE)==0||Team(u)!=0)return;
+    if((u.flags&SELECTED)!=0){InterlockedAdd(_CommandCounts[2*GROUP_COUNT],1);InterlockedAdd(_CommandCounts[2*GROUP_COUNT+1+Movement(u)],1);}
+    if(u.group>=GROUP_COUNT||(u.flags&STOPPED)!=0)return;
+    InterlockedAdd(_CommandCounts[u.group],1);
+    if((u.flags&SELECTED)!=0)InterlockedAdd(_CommandCounts[GROUP_COUNT+u.group],1);
+}
+uint _AttackMove;
+[numthreads(128,1,1)]void Order(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[id.x];
+    if((u.flags&(ALIVE|SELECTED))!=(ALIVE|SELECTED)||Team(u)!=0)return;
+    if(_Stop!=0){u.flags=(u.flags&~ATTACK_MOVE)|STOPPED;u.velocity=0;u.previous=u.position;}
+    else{if(Movement(u)!=_CommandMovement)return;u.flags&=~(STOPPED|ARRIVED|ATTACK_MOVE);if(_AttackMove!=0)u.flags|=ATTACK_MOVE;u.group=_CommandGroup;u.destination=_CommandGoal;}
+    _PlanetUnits[id.x]=u;
+}

@@ -1,0 +1,81 @@
+#pragma kernel InitializePressure
+#pragma kernel ClearDensity
+#pragma kernel SplatDensity
+#pragma kernel BuildDensity
+#pragma kernel RelaxPressure
+#pragma kernel BuildPressureGradient
+#pragma target 5.0
+#pragma multi_compile _ ZOMBIES
+#include "ArmyCommon.hlsl"
+StructuredBuffer<UnitState> _Units;
+StructuredBuffer<UnitArchetype> _Types;
+uint _BaseMode;
+StructuredBuffer<float> _Costs;
+Texture2D<float4> _Terrain;
+RWStructuredBuffer<uint> _Mass;
+// Density normalized to one tank per 5.2^2 units, terrain mask, world pressure gradient XY.
+RWStructuredBuffer<float4> _CrowdGrid;
+StructuredBuffer<float4> _CrowdRead;
+StructuredBuffer<float> _PressureRead;
+RWStructuredBuffer<float> _PressureWrite;
+uint _CrowdRes,_NavRes,_Active;
+float _WorldSize,_Delta;
+#include "ArmyTerrain.hlsl"
+bool Valid(int2 c) { return true; }
+uint Index(int2 c) { c=WrapCell(c,_CrowdRes);return c.x+c.y*_CrowdRes; }
+float Mass(int2 c) { return Valid(c)?(float)_Mass[Index(c)]/1024:0; }
+float Pressure(int2 c,float centre) { return Valid(c)&&_CrowdRead[Index(c)].y>.5?_PressureRead[Index(c)]:centre; }
+[numthreads(128,1,1)]
+void InitializePressure(uint3 id:SV_DispatchThreadID) { if(id.x<_CrowdRes*_CrowdRes) { _PressureWrite[id.x]=0;_CrowdGrid[id.x]=0; } }
+[numthreads(128,1,1)]
+void ClearDensity(uint3 id:SV_DispatchThreadID) { if(id.x<_CrowdRes*_CrowdRes)_Mass[id.x]=0; }
+[numthreads(128,1,1)]
+void SplatDensity(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_Active)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0)return;
+    if(_BaseMode!=0&&((u.flags&32768)!=0||_Types[Type(u)].movement>=3))return;
+    // Parking overlap remains a deliberate exception; manual Stop still occupies space.
+    if((u.flags&FORMATION)!=0 && (u.flags&STOPPED)==0 && WorldDistance(u.position,u.destination,_WorldSize)<7)return;
+    float2 predicted=u.position+u.velocity*_Delta;
+    if(!SafeTerrainPosition(predicted,2))predicted=u.position;
+    float2 p=(predicted/_WorldSize+.5)*_CrowdRes-.5;int2 c=(int2)floor(p);float2 f=frac(p);
+    [unroll] for(int y=0;y<2;y++) [unroll] for(int x=0;x<2;x++) {
+        int2 q=c+int2(x,y);if(!Valid(q))continue;
+        float w=(x==0?1-f.x:f.x)*(y==0?1-f.y:f.y);
+#ifdef ZOMBIES
+        // Keep the established tank normalization for the armies. Small NPC
+        // bodies occupy their actual footprint rather than one tank's area.
+        float footprint=(_BaseMode!=0&&(u.flags&ZOMBIE_UNIT)!=0)?pow(max(.8,_Types[Type(u)].radius*2)/5.2,2):1;
+        InterlockedAdd(_Mass[Index(q)],(uint)round(w*footprint*1024));
+#else
+        InterlockedAdd(_Mass[Index(q)],(uint)round(w*1024));
+#endif
+    }
+}
+[numthreads(128,1,1)]
+void BuildDensity(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_CrowdRes*_CrowdRes)return;int2 c=int2(id.x%_CrowdRes,id.x/_CrowdRes);
+    float cell=_WorldSize/_CrowdRes;float2 p=((c+.5)/_CrowdRes-.5)*_WorldSize;
+    float open=SafeTerrainPosition(p,2)?1:0;
+    // Smooth CIC mass once to remove grid-alias pressure waves at normal tank spacing.
+    float mass=0;
+    [unroll] for(int y=-1;y<=1;y++) [unroll] for(int x=-1;x<=1;x++)mass+=Mass(c+int2(x,y))*(x==0?2:1)*(y==0?2:1)/16;
+    float2 previous=_CrowdGrid[id.x].zw;
+    _CrowdGrid[id.x]=float4(mass*5.2*5.2/(cell*cell),open,open>.5?previous:float2(0,0));
+}
+[numthreads(128,1,1)]
+void RelaxPressure(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_CrowdRes*_CrowdRes)return;float4 grid=_CrowdRead[id.x];
+    if(grid.y<.5) { _PressureWrite[id.x]=0;return; }
+    int2 c=int2(id.x%_CrowdRes,id.x/_CrowdRes);float centre=_PressureRead[id.x],cell=_WorldSize/_CrowdRes;
+    float sum=Pressure(c+int2(-1,0),centre)+Pressure(c+int2(1,0),centre)+Pressure(c+int2(0,-1),centre)+Pressure(c+int2(0,1),centre);
+    // Projected Jacobi for a nonnegative pressure / maximum-density complementarity constraint.
+    _PressureWrite[id.x]=clamp((sum+(grid.x-.9)*cell*cell)*.25,0,cell*cell*8);
+}
+float GradientPressure(int2 c,float centre) { return Valid(c)&&_CrowdGrid[Index(c)].y>.5?_PressureRead[Index(c)]:centre; }
+[numthreads(128,1,1)]
+void BuildPressureGradient(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_CrowdRes*_CrowdRes)return;int2 c=int2(id.x%_CrowdRes,id.x/_CrowdRes);
+    float centre=_PressureRead[id.x],cell=_WorldSize/_CrowdRes;float4 grid=_CrowdGrid[id.x];
+    float2 gradient=float2(GradientPressure(c+int2(1,0),centre)-GradientPressure(c+int2(-1,0),centre),GradientPressure(c+int2(0,1),centre)-GradientPressure(c+int2(0,-1),centre))/(2*cell);
+    grid.zw=lerp(grid.zw,gradient,.2);_CrowdGrid[id.x]=grid;
+}

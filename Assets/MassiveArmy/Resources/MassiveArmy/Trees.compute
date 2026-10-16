@@ -1,0 +1,13 @@
+#pragma kernel CullTrees
+#pragma target 5.0
+StructuredBuffer<float4> _Trees;
+AppendStructuredBuffer<uint> _TreeVisible;
+float4 _Planes[6];
+uint _TreeCount;
+[numthreads(128,1,1)]
+void CullTrees(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_TreeCount) return;
+    float4 tree=_Trees[id.x]; float3 p=tree.xyz+float3(0,tree.w*2,0);
+    [unroll] for(uint i=0;i<6;i++) if(dot(_Planes[i].xyz,p)+_Planes[i].w < -tree.w*3) return;
+    _TreeVisible.Append(id.x);
+}

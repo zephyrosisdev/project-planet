@@ -1,0 +1,80 @@
+#pragma kernel CacheNoise
+#pragma kernel ClearInjection
+#pragma kernel InjectUnits
+#pragma kernel AdvectWakes
+#pragma target 5.0
+#include "ArmyCommon.hlsl"
+RWTexture3D<float4> _NoiseCache;
+RWTexture3D<float4> _WakeWrite;
+Texture3D<float4> _WakeRead;
+SamplerState sampler_WakeRead;
+RWStructuredBuffer<int4> _Injection;
+StructuredBuffer<UnitState> _Units;
+StructuredBuffer<UnitArchetype> _Types;
+StructuredBuffer<UnitTraits> _Traits;
+StructuredBuffer<uint> _Visibility;
+Texture2D<float4> _Terrain,_Water;
+SamplerState sampler_Terrain;
+uint _Active,_FogRes;
+float _WorldSize,_WakeDelta,_Decay,_Radius,_Strength,_Swirl;
+float3 _Origin,_PreviousOrigin,_Extent,_PreviousExtent;
+float2 _Wind;
+int _First;
+uint Index(uint3 p){return p.x+p.z*96+p.y*96*96;}
+float RandomLattice(int3 p){uint3 c=(uint3)(p&15);return ArmyRandom(c.x+c.y*16+c.z*256);}
+float Value(float3 p){int3 c=(int3)floor(p);float3 f=frac(p);f=f*f*(3-2*f);return lerp(lerp(lerp(RandomLattice(c),RandomLattice(c+int3(1,0,0)),f.x),lerp(RandomLattice(c+int3(0,1,0)),RandomLattice(c+int3(1,1,0)),f.x),f.y),lerp(lerp(RandomLattice(c+int3(0,0,1)),RandomLattice(c+int3(1,0,1)),f.x),lerp(RandomLattice(c+int3(0,1,1)),RandomLattice(c+1),f.x),f.y),f.z);}
+float3 Potential(float3 p){return float3(Value(p),Value(p+float3(5,9,13)),Value(p+float3(9,3,5)));}
+[numthreads(4,4,4)]void CacheNoise(uint3 p:SV_DispatchThreadID){
+ if(any(p>=64))return;float3 q=(p+.5)/4.;float e=.125;
+ float3 dx=(Potential(q+float3(e,0,0))-Potential(q-float3(e,0,0)))/(2*e);
+ float3 dy=(Potential(q+float3(0,e,0))-Potential(q-float3(0,e,0)))/(2*e);
+ float3 dz=(Potential(q+float3(0,0,e))-Potential(q-float3(0,0,e)))/(2*e);
+ _NoiseCache[p]=float4(float3(dy.z-dz.y,dz.x-dx.z,dx.y-dy.x),Value(q+float3(13,11,7)));
+}
+[numthreads(128,1,1)]void ClearInjection(uint3 p:SV_DispatchThreadID){if(p.x<96*96*48)_Injection[p.x]=0;}
+void Splat(float3 position,float2 velocity,int mass){
+ position=NearestWorld(position,_Origin+_Extent*.5,_WorldSize);float3 uv=(position-_Origin)/_Extent;if(any(uv<0)||any(uv>=1))return;
+ uint3 c=(uint3)(uv*float3(96,48,96));uint index=Index(c);
+ InterlockedAdd(_Injection[index].x,(int)(velocity.x*mass));InterlockedAdd(_Injection[index].y,(int)(velocity.y*mass));InterlockedAdd(_Injection[index].z,mass);InterlockedAdd(_Injection[index].w,1);
+}
+float SurfaceHeight(float2 p){float2 uv=WorldUV(p,_WorldSize);float4 water=_Water.SampleLevel(sampler_Terrain,uv,0);float h=_Terrain.SampleLevel(sampler_Terrain,uv,0).r;return max(0,water.g>.01?max(h,water.r):h);}
+[numthreads(128,1,1)]void InjectUnits(uint3 p:SV_DispatchThreadID){
+ if(p.x>=_Active)return;UnitState u=_Units[p.x];if((u.flags&(ALIVE|32768))!=ALIVE||length(u.velocity)<.15)return;
+ uint2 fog=(uint2)(WorldUV(u.position,_WorldSize)*_FogRes);if(Team(u)!=0&&_Visibility[fog.x+fog.y*_FogRes]!=2)return;
+ float altitude=(u.flags&8192)==0?_Traits[Type(u)].altitude:0;
+ float3 position=float3(u.position.x,SurfaceHeight(u.position)+3+altitude,u.position.y);
+ position=NearestWorld(position,_Origin+_Extent*.5,_WorldSize);if(any(abs(position.xz-(_Origin+_Extent*.5).xz)>_Extent.xz*.65))return;
+ int mass=(int)clamp(_Types[Type(u)].radius*_Types[Type(u)].radius*64,32,2048);Splat(position,u.velocity,mass);
+ // Project a weaker disturbance onto the leading visibility boundary. The unit's own
+ // vision disc is clear, so an exclusively body-local wake would otherwise be invisible.
+ float2 front=u.position+normalize(u.velocity)*_Traits[Type(u)].vision;
+ float3 boundary=NearestWorld(float3(front.x,SurfaceHeight(front)+3+altitude,front.y),_Origin+_Extent*.5,_WorldSize);
+ Splat(boundary,u.velocity,max(16,mass/4));
+}
+[numthreads(4,4,4)]void AdvectWakes(uint3 cell:SV_DispatchThreadID){
+ if(any(cell>=uint3(96,48,96)))return;float3 p=_Origin+(cell+.5)/float3(96,48,96)*_Extent;
+ float3 oldOrigin=NearestWorld(p,_PreviousOrigin+_PreviousExtent*.5,_WorldSize);
+ float3 oldUV=(oldOrigin-_PreviousOrigin)/max(_PreviousExtent,1);float4 previous=0;
+ if(_First==0&&all(oldUV>=0)&&all(oldUV<=1)){
+   float4 motion=_WakeRead.SampleLevel(sampler_WakeRead,oldUV,0);
+   float3 velocity=motion.xyz+float3(_Wind.x,0,_Wind.y);
+   float3 back=oldUV-velocity*_WakeDelta/max(_PreviousExtent,1);
+   if(all(back>=0)&&all(back<=1))previous=_WakeRead.SampleLevel(sampler_WakeRead,back,0)*exp(-_WakeDelta/max(.1,_Decay));
+ }
+ float3 inject=0;float turbulence=0;
+ // Paired counter-rotating vortices and a trailing displacement. Vertical variation is real volume data.
+ [loop]for(int z=-1;z<=1;z++)[loop]for(int y=-1;y<=1;y++)[loop]for(int x=-1;x<=1;x++){
+   int3 c=(int3)cell+int3(x,y,z);if(any(c<0)||any(c>=int3(96,48,96)))continue;
+   int4 source=_Injection[Index(c)];if(source.z==0)continue;
+   float3 centre=_Origin+(c+.5)/float3(96,48,96)*_Extent;
+   float2 velocity=(float2)source.xy/max(1,source.z);float speed=length(velocity);float3 axis=float3(velocity.x,0,velocity.y)/max(speed,.001),side=float3(-axis.z,0,axis.x);
+   float3 r=p-centre;float radius=max(_Radius,max(_Extent.x/96,_Extent.z/96));float weight=exp(-dot(r,r)/(radius*radius));
+   float3 a=r-side*radius*.3,b=r+side*radius*.3;
+   float3 spin=(cross(float3(0,1,0),a)*exp(-dot(a,a)/(radius*radius*.4))-cross(float3(0,1,0),b)*exp(-dot(b,b)/(radius*radius*.4)))/radius;
+   float mass=min(4,sqrt(source.w));inject+=(axis*weight*.5+spin*_Swirl+float3(0,sin(dot(r,axis)/radius*3)*weight*.25,0))*min(speed,25)*mass;
+   turbulence+=weight*min(1,speed*.06)*mass;
+ }
+ float edge=saturate(min(min(cell.x,95-cell.x),min(cell.z,95-cell.z))/4.);
+ float4 value=previous+float4(inject,turbulence)*(_Strength*_WakeDelta);
+ value.xyz=clamp(value.xyz,-40,40);value.w=min(value.w,3);_WakeWrite[cell]=value*edge;
+}

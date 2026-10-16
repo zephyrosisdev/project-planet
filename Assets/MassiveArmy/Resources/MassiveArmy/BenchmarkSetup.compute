@@ -1,0 +1,21 @@
+#pragma kernel DenseCombat
+#pragma target 5.0
+#include "ArmyCommon.hlsl"
+#include "WorldTopology.hlsl"
+RWStructuredBuffer<UnitState> _Units;
+uint _Active;
+float _WorldSize;
+float2 _Centre;
+[numthreads(128,1,1)]
+void DenseCombat(uint3 id:SV_DispatchThreadID)
+{
+    if(id.x>=_Active)return;
+    UnitState u=_Units[id.x];uint team=u.packed&1,half=(_Active+1)/2;
+    uint local=team==0?id.x:id.x-half;
+    float spacing=5.4;uint columns=min(200u,max(1u,(uint)sqrt((float)half)));
+    float2 p=float2(((float)(local%columns)-(columns-1)*.5)*spacing,(local/columns+1)*spacing*(team==0?-1:1));
+    u.position=WrapPosition(_Centre+p,_WorldSize);u.previous=u.position;u.destination=u.position;
+    u.velocity=0;u.group=0xffffffff;u.flags=5;u.target=0xffffffff;
+    u.facing=team==0?0:3.14159265;u.turret=u.facing;u.cooldown=0;
+    _Units[id.x]=u;
+}

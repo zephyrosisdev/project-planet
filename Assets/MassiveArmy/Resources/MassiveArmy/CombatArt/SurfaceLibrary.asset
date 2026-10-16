@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1afc52447e063cb4197f220e0aa10e5c, type: 3}
+  m_Name: SurfaceLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.CombatSurfaceLibrary
+  normalNeutral:
+  - {x: 0.4519608, y: 0.48235294, z: 0.9892157, w: 0}
+  - {x: 0.45294118, y: 0.50686276, z: 0.99215686, w: 0}
+  - {x: 0.44215685, y: 0.48137254, z: 0.9911764, w: 0}
+  - {x: 0.4254902, y: 0.4764706, z: 0.9911765, w: 0}
+  - {x: 0.41960785, y: 0.46372548, z: 0.9892157, w: 0}
+  - {x: 0.4382353, y: 0.47941178, z: 0.9901961, w: 0}
+  alphaCoverage: 00f0ffdf00feffffbfffffffffffff3fffffff7ffcfffffffcfffffffcfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0fffffffcfffffffcfffffffcffff3fc0ffff3f00feff1f00fe0f0ff87ff8fffe7ff8fffe1ffefffeffffffffffffffffffffffffffffffffffff7fffffff7fffffffffffffffffffffffffffffff7ffeffff7ffeffff7ffefffffffefffffffeffffffffffffffffffffffffffffffffffff7ffeffff7ffeffff7ffeffffffffffffffffffffffdffffffffffffeffffffff7ffffdff7fffc1ff7f000efc00000efe00008eff00e08eff01e0efff1de0efff1fe0efff1fe0ffff03e0ffff03e0ffff07e0ffff07e0ffff07e0ffff07e0ffff0fe7ffff0f87ffff1ff7ffff1ff7ffff3ff0ffff3ff0ffff3fe0ffff3fe0ffff3fc0ffff1fc0ffff1f00feff0f00fcff0f00f0ff0700c7ff03e007fc00e0071c00e0007c0000007c000080070000f00700c0f3071ec0f33f1ec0e3ff1ff8ffff07f8ffff7ff8ffff7ff0ffff7ffeffff3ffeffff3ffefffffffcfffffffefffffffeffff7ffeffff7ffeffff7fffffff7fffffff7fffffff7fffffff7ffeffff7ff8ffff3ff8ffff3ff0ffff1fe0ffff03e0ffff03c0ffff1f00febf1f00f0011c000000000000000038f80100f8ffff01f8fffff9f0fffffff8fffffff8ffff7ff8ffff7ffcffff3ffcffff7ffcffff7ffcfffffffffffffffffffffffffffffffefffffffffffffffffffffffffffffffefffffffefffffffefffffffeffff7ffeffff7fffffff7fffffff7fffffffffffffffffffffffffffffff3ffcffff1f00f8ef1e00f80f1e38b8e71df8ffff1ffeffff1ffeffff1ffeffff7ffcfffffffcfffffffcfffffffefffffffeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7fffffff7fffffff7ffffffffffffffffffefffffffefffffffefffffff8ffff7ff8ffff3ff8ffff3ff8ffff3ffeffff3ffeffff1ffe9fff030000ff03u

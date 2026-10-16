@@ -1,0 +1,47 @@
+#pragma kernel ResetSwarmFields
+#pragma kernel RelaxSwarmFields
+#pragma kernel ClearSwarmChanged
+#pragma kernel SeedSwarmBuildings
+#pragma kernel ApplySwarmSeeds
+#pragma kernel PublishSwarmField
+#pragma target 5.0
+#include "ArmyCommon.hlsl"
+StructuredBuffer<float> _Costs;
+StructuredBuffer<Structure> _Structures;
+StructuredBuffer<float2> _FieldRead;
+RWStructuredBuffer<float2> _FieldWrite;
+RWStructuredBuffer<float2> _Published;
+RWStructuredBuffer<uint> _Changed;
+RWStructuredBuffer<uint> _Seeds;
+uint _NavRes,_BuildingCount,_OnlyPlayer;
+float _WorldSize;
+float CellCost(int2 c,uint m){c=WrapCell(c,_NavRes);return _Costs[(m+10)*_NavRes*_NavRes+c.x+c.y*_NavRes];}
+[numthreads(128,1,1)] void PublishSwarmField(uint3 id:SV_DispatchThreadID){if(id.x<_NavRes*_NavRes&&_Changed[0]==0)_Published[id.x]=_FieldRead[id.x];}
+[numthreads(128,1,1)] void ClearSwarmChanged(uint3 id:SV_DispatchThreadID){if(id.x==0)_Changed[0]=0;}
+[numthreads(128,1,1)] void ResetSwarmFields(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;if(i>=_NavRes*_NavRes)return;_FieldWrite[i]=float2(INF,asfloat(INVALID));_Seeds[i]=INVALID;
+}
+[numthreads(128,1,1)] void SeedSwarmBuildings(uint3 id:SV_DispatchThreadID){
+ uint b=id.x;if(b>=_BuildingCount)return;Structure s=_Structures[b];if(s.health<=0||_OnlyPlayer!=0&&s.team!=0)return;
+ float size=_WorldSize/_NavRes;int2 centre=(int2)floor((s.position/_WorldSize+.5)*_NavRes);int ring=(int)ceil(s.radius/size)+2;
+ [loop]for(int y=-ring;y<=ring;y++)[loop]for(int x=-ring;x<=ring;x++){
+  int2 c=WrapCell(centre+int2(x,y),_NavRes);float2 p=((c+.5)/_NavRes-.5)*_WorldSize;
+  if(WorldDistance(p,s.position,_WorldSize)-s.radius>=size*1.75)continue;
+  [unroll]for(uint m=0;m<1;m++)if(CellCost(c,m)<INF*.5)InterlockedMin(_Seeds[m*_NavRes*_NavRes+c.x+c.y*_NavRes],b);
+ }
+}
+[numthreads(128,1,1)] void ApplySwarmSeeds(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;if(i>=_NavRes*_NavRes)return;uint b=_Seeds[i];_FieldWrite[i]=float2(b==INVALID?INF:0,asfloat(b));
+}
+[numthreads(128,1,1)] void RelaxSwarmFields(uint3 id:SV_DispatchThreadID){
+ uint total=_NavRes*_NavRes,i=id.x;if(i>=total)return;uint cell=i%total,m=i/total;int2 c=int2(cell%_NavRes,cell/_NavRes);
+ float2 current=_FieldRead[i],best=current;float cost=CellCost(c,m);
+ if(cost<INF*.5&&current.x>0){
+  [unroll]for(int y=-1;y<=1;y++)[unroll]for(int x=-1;x<=1;x++){
+   if(x==0&&y==0)continue;int2 q=WrapCell(c+int2(x,y),_NavRes);float other=CellCost(q,m);
+   if(other>=INF*.5||(x!=0&&y!=0&&(CellCost(c+int2(x,0),m)>=INF*.5||CellCost(c+int2(0,y),m)>=INF*.5)))continue;
+   float2 next=_FieldRead[m*total+q.x+q.y*_NavRes];float candidate=next.x+(x!=0&&y!=0?1.41421356:1)*(cost+other)*.5;
+   if(candidate<best.x-.0001||(abs(candidate-best.x)<.0001&&asuint(next.y)<asuint(best.y))){best=float2(candidate,next.y);}
+  }
+ }_FieldWrite[i]=best;if(best.x!=current.x||asuint(best.y)!=asuint(current.y))InterlockedOr(_Changed[0],1);
+}

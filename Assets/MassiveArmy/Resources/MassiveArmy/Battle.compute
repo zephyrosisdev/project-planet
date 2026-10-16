@@ -1,0 +1,937 @@
+#pragma kernel InitializeUnits
+#pragma multi_compile _ BUILDING_GRID
+#pragma kernel InitializeProjectiles
+#pragma kernel ClearGrid
+#pragma kernel CountCells
+#pragma kernel ScatterUnits
+#pragma kernel MoveUnits
+#pragma kernel ClearContactGrid
+#pragma kernel CountContactCells
+#pragma kernel ScatterContactUnits
+#pragma kernel ResolveContacts
+#pragma kernel SelectedFlags
+#pragma kernel MixedFormationSlots
+#pragma kernel FinalizeFormation
+#pragma kernel PreviewFormationSlots
+#pragma kernel ClearPick
+#pragma kernel FindPick
+#pragma kernel SelectUnits
+#pragma kernel ApplyOrders
+#pragma kernel AcquireTargets
+#pragma kernel FireWeapons
+#pragma kernel MoveProjectiles
+#pragma kernel ApplyDamage
+#pragma kernel ClearStatistics
+#pragma kernel UpdateStatistics
+#pragma kernel ClearVisibility
+#pragma kernel ClassifyVisibility
+#pragma kernel ClassifyProjectiles
+#pragma kernel BuildIndirectArgs
+#pragma kernel ValidateGrid
+#pragma kernel ValidateMembership
+#pragma kernel ValidateSpawns
+#pragma kernel ClearOrderOccupancy
+#pragma kernel CountOrderOccupancy
+#pragma kernel ClearFormationSlots
+#pragma kernel FlagFormationSlots
+#pragma kernel ScatterFormationSlots
+#pragma kernel AdvanceFormationSlots
+#pragma kernel FinishFormationSlots
+#pragma kernel ApplyStrategicSlots
+#pragma kernel AssignFactionOrders
+#pragma kernel AssignClearanceOrders
+#pragma kernel CommitFormation
+#pragma target 5.0
+#pragma multi_compile _ SWARM_MODE
+#ifdef SWARM_MODE
+#define ZOMBIES
+#endif
+#include "ArmyCommon.hlsl"
+RWStructuredBuffer<UnitState> _Units;
+StructuredBuffer<UnitState> _Read;
+RWStructuredBuffer<UnitState> _Next;
+StructuredBuffer<UnitArchetype> _Types;
+StructuredBuffer<UnitTraits> _Traits;
+StructuredBuffer<Structure> _Structures;uint _BuildingCount,_StructureTarget;
+StructuredBuffer<uint> _SupportInfluence;
+RWStructuredBuffer<UnitOperations> _Operations;
+StructuredBuffer<uint> _Fog,_Radar;
+RWStructuredBuffer<uint> _FreeSlots,_FreeCount,_ControlGroups;
+uint _BaseMode,_FogRes,_Logistics,_Spectator,_BaseEnemyAI;int _FilterMovement;float4 _TeamModifiers[2];
+RWStructuredBuffer<GroupOrder> _Groups;
+StructuredBuffer<float> _Costs;
+StructuredBuffer<float> _CoarseField;
+StructuredBuffer<float> _GlobalField;
+#ifdef SWARM_MODE
+StructuredBuffer<float2> _SwarmField;
+StructuredBuffer<float4> _NoiseField;
+#endif
+StructuredBuffer<float4> _CrowdGrid;
+uint _CrowdRes,_UseCrowd;
+RWStructuredBuffer<uint> _ContactCounts,_ContactOffsets,_ContactCursor,_ContactIndices;
+RWStructuredBuffer<uint> _SelectedFlags,_SelectedRanks;
+StructuredBuffer<uint> _CombinedRanks;
+RWStructuredBuffer<uint> _OrderOccupancy,_FormationState;
+RWStructuredBuffer<float2> _FormationSlots;
+uint _SlotBatch,_CombinedFormation;
+float4 _FormationOrigins[5];
+RWBuffer<uint> _PreviewArgs;
+RWStructuredBuffer<float4> _PreviewSlots;
+uint _ContactRes;
+Texture2D<float4> _Terrain,_WaterMap;
+RWStructuredBuffer<uint> _CellCounts, _CellOffsets, _CellCursor, _Indices;
+// Projectile collision only reads the grid. SRV aliases preserve D3D11's eight-UAV budget.
+StructuredBuffer<uint> _ProjectileCellCounts,_ProjectileCellOffsets,_ProjectileIndices;
+RWStructuredBuffer<uint> _Damage;
+StructuredBuffer<float2> _SpawnSlots;
+RWStructuredBuffer<float2> _RouteProgress;
+RWStructuredBuffer<ProjectileState> _Projectiles,_Missiles;
+RWStructuredBuffer<uint> _Pick, _Statistics;
+RWStructuredBuffer<uint> _Visible, _VisibleProjectiles, _VisibleCounts;
+RWBuffer<uint> _Args;
+uint _Active, _Capacity, _ProjectileCapacity, _GridRes, _NavRes, _Seed, _Tick;
+uint _TargetSlices, _NeighbourBudget, _TargetBudget, _UseNavigation, _UseGrid, _UseLod;
+uint _UseProjectiles, _UseMeshes, _UseImpostors, _UseVfx;
+uint _SelectionOperation, _ClickSelection, _PickTeam, _Order, _CommandGroup;
+uint _FactionTeam;
+float _WorldSize, _Delta,_ProjectedUnitPixels;
+float4 _SelectionRect;
+float2 _ScreenSize;
+float4x4 _ViewProjection;
+float4 _Planes[6];
+float3 _CameraPosition,_RenderFocus;
+uint _IndexCount0, _IndexCount1, _IndexCount2, _IndexCount3;
+bool OrderMatches(UnitState u) {return _FilterMovement<0||_Types[Type(u)].movement==(uint)_FilterMovement;}
+uint IntelCell(float2 p,uint team) {uint2 c=(uint2)(WorldUV(p,_WorldSize)*_FogRes);return team*_FogRes*_FogRes+c.x+c.y*_FogRes;}
+bool TargetKnown(UnitState u,uint team) {
+#ifdef ZOMBIES
+if(team==ZOMBIE_TEAM)return true;
+#endif
+return _BaseMode==0||_Fog[IntelCell(u.position,team)]==2||(_Traits[Type(u)].signature>_Traits[Type(u)].stealth&&_Radar[IntelCell(u.position,team)]>0);}
+bool TargetAllowed(UnitState u,UnitState enemy) {return (enemy.flags&32768)==0&&(_BaseMode==0||((_Traits[Type(u)].targetMask&(1u<<_Types[Type(enemy)].movement))!=0&&TargetKnown(enemy,Team(u))));}
+#include "ArmyTerrain.hlsl"
+#include "ShotTracers.hlsl"
+#include "ExplosionNoise.hlsl"
+#include "CombatEvents.hlsl"
+#include "ZombieHearing.hlsl"
+StructuredBuffer<float> _WeaponNoise;
+#ifdef ZOMBIES
+StructuredBuffer<uint> _ShotCounts,_ShotOffsets,_ShotIndices;
+bool IsZombie(UnitState u){return (u.flags&ZOMBIE_UNIT)!=0;}
+bool FactionSupport(UnitState u){return Team(u)<2;}
+float ArmourModifier(uint team){return team<2?_TeamModifiers[min(team,1u)].z:1;}
+#else
+#define _ShotCounts _CellCounts
+#define _ShotOffsets _CellOffsets
+#define _ShotIndices _Indices
+bool IsZombie(UnitState u){return false;}
+bool FactionSupport(UnitState u){return true;}
+float ArmourModifier(uint team){return _TeamModifiers[team].z;}
+#endif
+int2 GridCoordinate(float2 p) { return (int2)(WorldUV(p,_WorldSize)*_GridRes); }
+uint GridCell(float2 p) { int2 c=GridCoordinate(p); return c.x+c.y*_GridRes; }
+bool CellValid(int2 c) { return true; }
+float3 WorldPosition(UnitState u) {float h=Ground(u.position).x;if(_BaseMode!=0&&_Traits[Type(u)].scale.w==4)h=max(h,_WaterMap.Load(int3((int2)(WorldUV(u.position,_WorldSize)*_NavRes),0)).x);return float3(u.position.x,h+1+(_BaseMode!=0?((u.flags&8192)!=0?0:_Traits[Type(u)].altitude):0),u.position.y); }
+[numthreads(128,1,1)]
+void InitializeUnits(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+    if(_BaseMode!=0){_Units[i]=(UnitState)0;_Next[i]=(UnitState)0;_Damage[i]=0;_RouteProgress[i]=float2(INF,0);return;}
+    uint team=i>=(_Active+1)/2, local=team!=0?i-(_Active+1)/2:i;
+    float2 p=_SpawnSlots[i];
+    _RouteProgress[i]=float2(INF,0);
+    UnitState u=(UnitState)0;
+    uint oppositeCount=team!=0?(_Active+1)/2:_Active/2,oppositeStart=team!=0?0:(_Active+1)/2;
+    u.position=p; u.previous=p; u.destination=local<oppositeCount?_SpawnSlots[oppositeStart+local]:p;
+    float2 heading=WorldDelta(p,u.destination,_WorldSize);u.facing=atan2(heading.x,heading.y); u.turret=u.facing;
+    u.cooldown=ArmyRandom(i+_Seed)*1.8; u.health=_Types[0].health;
+    u.packed=team|((_Groups[team].sequence&65535u)<<16); u.flags=ALIVE|ATTACK_MOVE|FORMATION; u.target=INVALID; u.group=team;
+    _Units[i]=u; _Next[i]=u; _Damage[i]=0;
+}
+[numthreads(128,1,1)]
+void InitializeProjectiles(uint3 id:SV_DispatchThreadID) {
+    if(id.x<_ProjectileCapacity) _Projectiles[id.x]=(ProjectileState)0;
+}
+[numthreads(128,1,1)]
+void ClearGrid(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_GridRes*_GridRes) return;
+    _CellCounts[id.x]=0; _CellCursor[id.x]=0;
+}
+[numthreads(128,1,1)]
+void CountCells(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_Active) return;
+    UnitState u=_Units[id.x];
+    if((u.flags&(ALIVE|32768))==ALIVE) InterlockedAdd(_CellCounts[GridCell(u.position)],1);
+}
+[numthreads(128,1,1)]
+void ScatterUnits(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_Active) return;
+    UnitState u=_Units[id.x]; if((u.flags&(ALIVE|32768))!=ALIVE) return;
+    uint cell=GridCell(u.position), slot;
+    InterlockedAdd(_CellCursor[cell],1,slot);
+    _Indices[_CellOffsets[cell]+slot]=id.x;
+}
+int2 ContactCoordinate(float2 p) { return (int2)(WorldUV(p,_WorldSize)*_ContactRes); }
+uint ContactCell(float2 p) { int2 c=ContactCoordinate(p);return c.x+c.y*_ContactRes; }
+[numthreads(128,1,1)]
+void ClearContactGrid(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_ContactRes*_ContactRes)return;_ContactCounts[id.x]=0;_ContactCursor[id.x]=0;
+}
+[numthreads(128,1,1)]
+void CountContactCells(uint3 id:SV_DispatchThreadID) {
+    if(id.x<_Active && (_Units[id.x].flags&(ALIVE|32768))==ALIVE)InterlockedAdd(_ContactCounts[ContactCell(_Units[id.x].position)],1);
+}
+[numthreads(128,1,1)]
+void ScatterContactUnits(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_Active)return;UnitState u=_Units[id.x];if((u.flags&(ALIVE|32768))!=ALIVE)return;
+    uint cell=ContactCell(u.position),slot;InterlockedAdd(_ContactCursor[cell],1,slot);_ContactIndices[_ContactOffsets[cell]+slot]=id.x;
+}
+[numthreads(128,1,1)]
+void SelectedFlags(uint3 id:SV_DispatchThreadID) {
+    if(id.x<_Active) { UnitState u=_Units[id.x];_SelectedFlags[id.x]=Team(u)==0 && (u.flags&(ALIVE|SELECTED|32768))==(ALIVE|SELECTED)&&OrderMatches(u)?1:0; }
+}
+[numthreads(128,1,1)]
+void ClearOrderOccupancy(uint3 id:SV_DispatchThreadID) { if(id.x<GROUP_COUNT*2+7)_OrderOccupancy[id.x]=0; }
+[numthreads(128,1,1)]
+void CountOrderOccupancy(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_Active)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0)return;
+    bool selected=Team(u)==0 && (u.flags&(SELECTED|32768))==SELECTED && OrderMatches(u);
+    if(u.group<GROUP_COUNT) {
+        InterlockedAdd(_OrderOccupancy[u.group],1);
+        if(selected)InterlockedAdd(_OrderOccupancy[GROUP_COUNT+u.group],1);
+    }
+    if(selected) {
+        InterlockedAdd(_OrderOccupancy[GROUP_COUNT*2],1);
+        InterlockedAdd(_OrderOccupancy[GROUP_COUNT*2+1+min(_Types[Type(u)].movement,4u)],1);
+        InterlockedMax(_OrderOccupancy[GROUP_COUNT*2+6],asuint(_Types[Type(u)].radius));
+    }
+}
+float2 CandidateSlot(uint index,GroupOrder g,out uint row) {
+    uint columns=max(1u,g.columns);
+    if(_SlotBatch==0) { row=index/columns;return FormationSlot(index,g); }
+    uint rank=((g.count+columns-1)/columns)*columns+(_SlotBatch-1)*g.count+index;
+    row=rank/columns;
+    return g.destination+g.right*((float)(rank%columns)-((float)columns-1)*.5)*g.spacing-float2(-g.right.y,g.right.x)*row*g.spacing;
+}
+[numthreads(1,1,1)]
+void ClearFormationSlots(uint3 id:SV_DispatchThreadID) {
+    _FormationState[0]=0;_FormationState[1]=0;_FormationState[2]=_Groups[_CommandGroup].count;_FormationState[3]=0;
+}
+[numthreads(128,1,1)]
+void FlagFormationSlots(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_Active)return;GroupOrder g=_Groups[_CommandGroup];
+    SetTraversalTeam(g.team);
+    if(id.x>=g.count || g.padding!=0) { _SelectedFlags[id.x]=0;return; }
+    uint row;float2 p=CandidateSlot(id.x,g,row);
+    _SelectedFlags[id.x]=id.x<g.count && g.padding==0 && SafeTerrainPosition(p,g.movement)?1:0;
+}
+[numthreads(128,1,1)]
+void ScatterFormationSlots(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_Active || _SelectedFlags[id.x]==0)return;GroupOrder g=_Groups[_CommandGroup];
+    uint rank=_FormationState[0]+_SelectedRanks[id.x];if(rank>=g.count)return;
+    uint row;_FormationSlots[rank]=WrapPosition(CandidateSlot(id.x,g,row),_WorldSize);InterlockedMax(_FormationState[1],row+1);
+}
+[numthreads(1,1,1)]
+void AdvanceFormationSlots(uint3 id:SV_DispatchThreadID) {
+    _FormationState[0]=min(_FormationState[2],_FormationState[0]+_SelectedRanks[_Active-1]+_SelectedFlags[_Active-1]);
+}
+[numthreads(1,1,1)]
+void FinishFormationSlots(uint3 id:SV_DispatchThreadID) {
+    GroupOrder g=_Groups[_CommandGroup];if(g.padding==0 && _FormationState[0]<g.count)g.padding=2;
+    SetTraversalTeam(g.team);
+    g.localOrigin=TraversableSlot(g.destination-float2(-g.right.y,g.right.x)*max(0,(int)_FormationState[1]-1)*g.spacing*.5,g.movement);
+    _Groups[_CommandGroup]=g;
+}
+[numthreads(1,1,1)]
+void CommitFormation(uint3 id:SV_DispatchThreadID) {
+    GroupOrder g=_Groups[GROUP_COUNT];g.sequence=_Groups[_CommandGroup].sequence;
+    SetTraversalTeam(g.team);
+    if(_CombinedFormation!=0&&_FilterMovement>=0){g.movement=(uint)_FilterMovement;g.destination+=_FormationOrigins[_FilterMovement].xy;g.localOrigin=TraversableSlot(g.localOrigin+_FormationOrigins[_FilterMovement].xy,g.movement);}
+    _Groups[_CommandGroup]=g;
+}
+[numthreads(128,1,1)]
+void MixedFormationSlots(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if(Team(u)!=0||(u.flags&(ALIVE|SELECTED|32768))!=(ALIVE|SELECTED))return;
+    uint rank=_CombinedRanks[i],movement=_Types[Type(u)].movement;GroupOrder g=_Groups[_CommandGroup];
+    float2 origin=_FormationOrigins[movement].xy,p=FormationSlot(rank,g)+origin;uint row=rank/max(1u,g.columns);bool valid=false;
+    if(g.padding==0){[unroll]for(uint attempt=0;attempt<4;attempt++){
+        uint candidate=attempt==0?rank:((g.count+g.columns-1)/g.columns)*g.columns+(attempt-1)*g.count+rank;
+        row=candidate/max(1u,g.columns);
+        p=attempt==0?FormationSlot(rank,g)+origin:g.destination+origin+g.right*((float)(candidate%g.columns)-((float)g.columns-1)*.5)*g.spacing-float2(-g.right.y,g.right.x)*row*g.spacing;
+        if(SafeTerrainPosition(p,movement)){valid=true;break;}
+    }}
+    _FormationSlots[rank]=WrapPosition(p,_WorldSize);_SelectedFlags[rank]=valid?1u:0u;
+    if(valid){InterlockedAdd(_FormationState[0],1);InterlockedMax(_FormationState[1],row+1);}
+}
+[numthreads(128,1,1)]
+void ApplyStrategicSlots(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=_Active)return;UnitState u=_Units[id.x];GroupOrder g=_Groups[1];
+    if(u.group!=1 || (u.flags&ALIVE)==0 || g.padding!=0)return;
+    u.destination=_FormationSlots[id.x-(_Active+1)/2];
+    u.flags&=~(DIRECT_ROUTE|DETOUR_ROUTE|ROUTE_TRACKED|ARRIVED|FORMATION_ENTRY|PASS_RIGHT|PASS_LEFT);
+    u.packed=(u.packed&65535u)|((g.sequence&65535u)<<16);_Units[id.x]=u;
+}
+[numthreads(128,1,1)]
+void AssignFactionOrders(uint3 id:SV_DispatchThreadID){
+    uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|32768|8192))!=ALIVE||Team(u)!=_FactionTeam)return;
+    uint movement=_Types[Type(u)].movement,group=2+_FactionTeam*5+movement;GroupOrder g=_Groups[group];if(g.sequence==0)return;
+    // Replenishments join the existing order; arrived troops keep their slots.
+    if((u.packed>>16)==(g.sequence&65535u))return;
+    SetTraversalTeam(_FactionTeam);float angle=ArmyRandom(i*73u+group)*6.2831853;float radius=8+ArmyRandom(i*113u+group)*24;
+    u.destination=TraversableSlot(g.destination+float2(sin(angle),cos(angle))*radius,movement);u.group=group;
+    u.flags=(u.flags&~(STOPPED|DIRECT_ROUTE|DETOUR_ROUTE|ROUTE_TRACKED|ARRIVED|FORMATION_ENTRY|PASS_RIGHT|PASS_LEFT))|ATTACK_MOVE;u.target=INVALID;
+    u.packed=(u.packed&65535u)|((g.sequence&65535u)<<16);_Units[i]=u;
+}
+[numthreads(128,1,1)]
+void AssignClearanceOrders(uint3 id:SV_DispatchThreadID){
+    uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|32768|8192))!=ALIVE||Team(u)!=1)return;
+    uint movement=_Types[Type(u)].movement;if(movement>=3)return;GroupOrder g=_Groups[1];if(g.sequence==0||(u.packed>>16)==(g.sequence&65535u)&&u.group==1)return;
+    if((u.packed>>16)==(g.sequence&65535u)&&(u.flags&ARRIVED)!=0)return;
+    SetTraversalTeam(1);float angle=ArmyRandom(i*73u+1)*6.2831853;float radius=8+ArmyRandom(i*113u+1)*24;
+    u.destination=TraversableSlot(g.destination+float2(sin(angle),cos(angle))*radius,movement);u.group=1;
+    u.flags=(u.flags&~(STOPPED|DIRECT_ROUTE|DETOUR_ROUTE|ROUTE_TRACKED|ARRIVED|FORMATION_ENTRY|PASS_RIGHT|PASS_LEFT))|ATTACK_MOVE;u.target=INVALID;u.packed=(u.packed&65535u)|((g.sequence&65535u)<<16);_Units[i]=u;
+}
+[numthreads(1,1,1)]
+void FinalizeFormation(uint3 id:SV_DispatchThreadID) {
+    GroupOrder g=_Groups[_CommandGroup];g.count=_SelectedRanks[_Active-1]+_SelectedFlags[_Active-1];
+    SetTraversalTeam(g.team);
+    g.columns=clamp((uint)floor(g.width/g.spacing+.0001)+1,1,max(1u,g.count));
+    uint rows=(g.count+g.columns-1)/g.columns;
+    float2 halfFront=g.right*(g.columns-1)*g.spacing*.5;
+    float2 rear=g.destination-float2(-g.right.y,g.right.x)*max(0,(int)rows-1)*g.spacing;
+    float bound=_WorldSize*.5-4;
+    g.padding=length(float2(length(halfFront)*2,(rows-1)*g.spacing))>=_WorldSize-g.spacing?1:0;
+    g.localOrigin=TraversableSlot(g.destination-float2(-g.right.y,g.right.x)*max(0,(int)rows-1)*g.spacing*.5,g.movement);
+    _Groups[_CommandGroup]=g;
+    _PreviewArgs[0]=6;_PreviewArgs[1]=min(g.count,4096u);_PreviewArgs[2]=0;_PreviewArgs[3]=0;_PreviewArgs[4]=0;
+}
+[numthreads(128,1,1)]
+void PreviewFormationSlots(uint3 id:SV_DispatchThreadID) {
+    GroupOrder g=_Groups[_CommandGroup];uint n=min(g.count,4096u);if(id.x>=n)return;
+    uint rank=id.x*g.count/n;float2 p=rank<_FormationState[0]?_FormationSlots[rank]:FormationSlot(rank,g);
+    if(_CombinedFormation!=0)p=_FormationSlots[rank];
+    _PreviewSlots[id.x]=float4(p,_CombinedFormation!=0?(_SelectedFlags[rank]==0?1:0):(g.padding!=0 || rank>=_FormationState[0]?1:0),rank);
+}
+bool Parking(UnitState u) { return (u.flags&FORMATION)!=0 && WorldDistance(u.position,u.destination,_WorldSize)<7; }
+bool IgnoreFriendly(UnitState u,UnitState other) {
+    if(Team(u)!=Team(other))return false;
+    // A stalled incoming tank may enter a filled formation through already parked friendlies.
+    // Ordinary moving traffic and manually stopped tanks retain full avoidance and contact.
+    if((u.flags&FORMATION_ENTRY)!=0 && (other.flags&ARRIVED)!=0 && Parking(other))return true;
+    return Parking(u) && ((u.flags&ARRIVED)==0 || Parking(other) || (other.flags&(STOPPED|ARRIVED|FORMATION_ENTRY))!=0);
+}
+float GlobalValue(uint group,int2 c) {
+    c=WrapCell(c,_NavRes);
+    return _GlobalField[group*_NavRes*_NavRes+c.x+c.y*_NavRes];
+}
+float2 FlowDirection(inout UnitState u,uint id,uint movement,out float2 route) {
+    route=0;
+#ifdef SWARM_MODE
+    if((u.flags&ZOMBIE_UNIT)!=0){
+        if((u.flags&ZOMBIE_WANDERING)!=0)return SafeNormal(WorldDelta(u.position,u.destination,_WorldSize));
+        if((u.flags&DIRECT_ROUTE)==0||(id+_Tick)%16==0){if(ClearTerrainSegment(u.position,u.destination,movement))u.flags|=DIRECT_ROUTE;else u.flags&=~DIRECT_ROUTE;}
+        if((u.flags&DIRECT_ROUTE)!=0)return SafeNormal(WorldDelta(u.position,u.destination,_WorldSize));
+        int2 c=(int2)floor((u.position/_WorldSize+.5)*_NavRes);uint offset=movement*_NavRes*_NavRes;
+        int2 wrapped=WrapCell(c,_NavRes);float best=_SwarmField[offset+wrapped.x+wrapped.y*_NavRes].x;float2 waypoint=u.position;
+        float4 hearing=_NoiseField[wrapped.x+wrapped.y*_NavRes];bool investigating=_Operations[id].timer>_Tick/30.0&&WorldDistance(_Operations[id].mission,u.destination,_WorldSize)<4;bool noise=investigating&&hearing.w>_Tick/30.0&&WorldDistance(NoisePosition(hearing.x,_WorldSize),u.destination,_WorldSize)<4;
+        if(investigating&&!noise)return SafeNormal(WorldDelta(u.position,u.destination,_WorldSize));
+        float loud=hearing.z;
+        [unroll]for(int y=-1;y<=1;y++)[unroll]for(int x=-1;x<=1;x++){
+            if(x==0&&y==0)continue;int2 q=WrapCell(c+int2(x,y),_NavRes);float value=_SwarmField[offset+q.x+q.y*_NavRes].x;
+            float4 sound=_NoiseField[q.x+q.y*_NavRes];bool improves=noise?sound.w>_Tick/30.0&&asuint(sound.x)==asuint(hearing.x)&&sound.z>loud:value<best;
+            if(improves&&CellCost(q,movement)<INF*.5&&(x==0||y==0||(CellCost(c+int2(x,0),movement)<INF*.5&&CellCost(c+int2(0,y),movement)<INF*.5))){best=value;loud=sound.z;waypoint=CellWorld(q);}
+        }
+        route=SafeNormal(WorldDelta(u.position,waypoint,_WorldSize));if(investigating&&length(route)<.01)return SafeNormal(WorldDelta(u.position,u.destination,_WorldSize));return route;
+    }
+#endif
+    if(u.group>=GROUP_COUNT)return SafeNormal(WorldDelta(u.position,u.destination,_WorldSize));
+    // Cache verified line-of-sight, but recheck after local steering or an obstacle slide.
+    if((u.flags&DETOUR_ROUTE)==0 && ((u.flags&DIRECT_ROUTE)==0 || (id+_Tick)%16==0)) {
+        if(ClearTerrainSegment(u.position,u.destination,movement))u.flags|=DIRECT_ROUTE;else u.flags&=~DIRECT_ROUTE;
+    }
+    if((u.flags&DIRECT_ROUTE)!=0)return SafeNormal(WorldDelta(u.position,u.destination,_WorldSize));
+    u.flags|=DETOUR_ROUTE;
+    int2 c=(int2)floor((u.position/_WorldSize+.5)*_NavRes);
+    float current=GlobalValue(u.group,c),best=current;float2 waypoint=u.position;
+    [unroll] for(int y=-1;y<=1;y++) [unroll] for(int x=-1;x<=1;x++) {
+        if(x==0&&y==0)continue;int2 other=c+int2(x,y);float value=GlobalValue(u.group,other);
+        if(value<best && (x==0||y==0||(CellCost(c+int2(x,0),movement)<INF*.5 && CellCost(c+int2(0,y),movement)<INF*.5))) {
+            best=value;waypoint=CellWorld(other);
+        }
+    }
+    // Preserve each tank's lane through the fine field. Shared coarse cell centres form traffic funnels.
+    float cellSize=_WorldSize/_NavRes;
+    if(best<current) {
+        float2 lane=clamp(WorldDelta(CellWorld(c),u.position,_WorldSize),-cellSize*.5+2.3,cellSize*.5-2.3);
+        float2 parallel=waypoint+lane;
+        if(ClearTerrainSegment(u.position,parallel,movement))waypoint=parallel;
+        float left=GlobalValue(u.group,c+int2(-1,0)),right=GlobalValue(u.group,c+int2(1,0));
+        float down=GlobalValue(u.group,c+int2(0,-1)),up=GlobalValue(u.group,c+int2(0,1));
+        if(max(max(left,right),max(down,up))<INF*.5) {
+            float2 gradient=SafeNormal(float2(left-right,down-up));
+            float2 smooth=u.position+gradient*cellSize;
+            int2 next=(int2)floor((smooth/_WorldSize+.5)*_NavRes);
+            if(GlobalValue(u.group,next)<current && ClearTerrainSegment(u.position,smooth,movement))waypoint=smooth;
+        }
+    }
+    if(best<INF*.5 && WorldDistance(waypoint,u.position,_WorldSize)>.05) {
+        route=SafeNormal(WorldDelta(u.position,waypoint,_WorldSize));
+        // Stay on the connected detour until it approaches the group goal. Fleeting sight of a slot
+        // at a concave bank must not repeatedly switch steering back into the same obstacle.
+        if(WorldDistance(u.position,_Groups[u.group].localOrigin,_WorldSize)<cellSize*2 ||
+            (WorldDistance(u.position,u.destination,_WorldSize)<cellSize*4 && ClearTerrainSegment(u.position,u.destination,movement))) {
+            if(ClearTerrainSegment(u.position,u.destination,movement)) { u.flags&=~DETOUR_ROUTE;u.flags|=DIRECT_ROUTE;return SafeNormal(WorldDelta(u.position,u.destination,_WorldSize)); }
+        }
+        return route;
+    }
+    if(current<INF*.5 && ClearTerrainSegment(u.position,u.destination,movement)) {
+        u.flags&=~DETOUR_ROUTE;u.flags|=DIRECT_ROUTE;return SafeNormal(WorldDelta(u.position,u.destination,_WorldSize));
+    }
+    return 0; // An unconnected or still-propagating field never permits an untested shortcut.
+}
+float2 PairNormal(uint a,uint b,float2 delta,float d) {
+    if(d>.0001)return delta/d;
+    float angle=ArmyRandom(min(a,b)^ArmyHash(max(a,b)))*6.2831853;
+    return float2(cos(angle),sin(angle))*(a<b?1:-1);
+}
+[numthreads(128,1,1)]
+void ValidateSpawns(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];
+    SetTraversalTeam(Team(u));
+    InterlockedAdd(_Statistics[106],1);
+    if(!SafeTerrainPosition(u.position,2))InterlockedAdd(_Statistics[104],1);
+    int2 cell=ContactCoordinate(u.position);int rings=(int)ceil(5.2/(_WorldSize/_ContactRes));
+    [loop] for(int y=-rings;y<=rings;y++) [loop] for(int x=-rings;x<=rings;x++) {
+        int2 c=WrapCell(cell+int2(x,y),_ContactRes);
+        uint ci=c.x+c.y*_ContactRes;
+        [loop] for(uint j=0;j<_ContactCounts[ci];j++) {
+            uint other=_ContactIndices[_ContactOffsets[ci]+j];
+            if(other!=i && WorldDistance(u.position,_Units[other].position,_WorldSize)<5.18)InterlockedAdd(_Statistics[105],1);
+        }
+    }
+}
+float4 CrowdSample(float2 p) {
+    float2 grid=WorldUV(p,_WorldSize)*_CrowdRes-.5;
+    int2 a=WrapCell((int2)floor(grid),_CrowdRes),b=WrapCell(a+1,_CrowdRes);float2 f=frac(grid);
+    return lerp(lerp(_CrowdGrid[a.x+a.y*_CrowdRes],_CrowdGrid[b.x+a.y*_CrowdRes],f.x),
+        lerp(_CrowdGrid[a.x+b.y*_CrowdRes],_CrowdGrid[b.x+b.y*_CrowdRes],f.x),f.y);
+}
+[numthreads(128,1,1)]
+void MoveUnits(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x;if(i>=_Active)return;UnitState u=_Read[i];u.previous=u.position;
+    SetTraversalTeam(Team(u));
+    if((u.flags&ALIVE)==0 || (u.flags&(STOPPED|32768))!=0) { u.velocity=0;_Next[i]=u;return; }
+    UnitArchetype t=_Types[Type(u)];
+#ifdef ZOMBIES
+    if((u.flags&ZOMBIE_WANDERING)!=0){
+        // Idle walkers need local steering, not vehicle passing/queue searches.
+        // The normal contact-resolution kernel still handles their body collisions.
+        uint rate=_UseLod!=0&&WorldDistance(u.position,_RenderFocus.xz,_WorldSize)>1400?6u:1u;
+        if((i+_Tick)%rate!=0){_Next[i]=u;return;}
+        float2 delta=WorldDelta(u.position,u.destination,_WorldSize);float distance=length(delta);
+        float speed=min(t.speed,2.5),dt=max(_Delta*rate,.001);
+        float2 desired=SafeNormal(delta)*min(speed,distance/dt)/clamp(Cost(u.position,t.movement),.5,4);
+        desired=SafeNormal(desired)*min(length(desired),speed);
+        u.velocity=lerp(u.velocity,desired,saturate(dt*7));u.velocity=SafeNormal(u.velocity)*min(length(u.velocity),speed);
+        float2 proposed=u.position+u.velocity*dt;
+        if(ClearTerrainSegment(u.position,proposed,t.movement))u.position=WrapPosition(proposed,_WorldSize);else u.velocity=0;
+        if(dot(u.velocity,u.velocity)>.1)u.facing=Turn(u.facing,atan2(u.velocity.x,u.velocity.y),t.turnSpeed*dt);
+        _Next[i]=u;return;
+    }
+#endif
+    float remaining=WorldDistance(u.position,u.destination,_WorldSize);float2 direction=0,route=0,separation=0,yielding=0,passing=0;float speedScale=1,passingCount=0;if(_BaseMode!=0&&FactionSupport(u)&&(_SupportInfluence[Team(u)*_GridRes*_GridRes+GridCell(u.position)]&4)!=0)speedScale=1.1;
+    bool useCrowd=_UseCrowd!=0&&(_BaseMode==0||t.movement<3);float4 crowd=0;if(useCrowd && !Parking(u))crowd=CrowdSample(u.position);
+    if(_BaseMode!=0&&_Logistics!=0&&t.movement!=0&&_Operations[i].fuel<1)speedScale=.15;
+    float2 queueNormal=0;float queueLower=0,queueViolation=0;
+    bool rightOccupied=false,leftOccupied=false,nearTraffic=false;float2 passSide=float2(direction.y,-direction.x);
+    bool fighting=false;
+    if(u.target<_Active && (u.flags&ATTACK_MOVE)!=0) {
+        UnitState enemy=_Read[u.target];fighting=(enemy.flags&ALIVE)!=0 && WorldDistance(u.position,enemy.position,_WorldSize)<t.attackRange*.85;
+    }
+    if(_BaseMode!=0 && u.target!=INVALID && (u.target&STRUCTURE_TARGET)!=0 && (u.flags&ATTACK_MOVE)!=0) {
+        uint building=u.target&~STRUCTURE_TARGET;
+        if(building<_BuildingCount) {Structure b=_Structures[building];fighting=b.health>0&&b.team!=Team(u)&&WorldDistance(u.position,b.position,_WorldSize)-b.radius<t.attackRange*.85;}
+    }
+    if(!fighting && remaining>.3) {
+        if(_UseNavigation!=0)direction=FlowDirection(u,i,t.movement,route);else direction=SafeNormal(WorldDelta(u.position,u.destination,_WorldSize));
+    }
+#ifdef ZOMBIES
+    if((u.flags&ZOMBIE_UNIT)!=0&&u.target==INVALID&&_Operations[i].state==3&&remaining>180){
+        // Reuse the normal terrain flow; distant investigators omit vehicle
+        // passing/queue anticipation while retaining density and hard contacts.
+        uint rate=_UseLod!=0&&crowd.x<.7&&WorldDistance(u.position,_RenderFocus.xz,_WorldSize)>1400?2u:1u;
+        if((i+_Tick)%rate!=0){_Next[i]=u;return;}
+        float dt=max(_Delta*rate,.001);float2 desired=direction*min(t.speed,remaining/dt);
+        if(useCrowd){float2 gradient=crowd.zw,normal=SafeNormal(gradient);desired-=normal*max(0,dot(desired,normal))*saturate((crowd.x-.85)/.4);
+            float2 pressure=-gradient*(.12/_Delta);desired+=SafeNormal(pressure)*min(length(pressure),t.speed*.8);desired=SafeNormal(desired)*min(length(desired),t.speed);}
+        desired/=clamp(Cost(u.position,t.movement),.5,4);u.velocity=lerp(u.velocity,desired,saturate(dt*7));
+        float2 proposed=u.position+u.velocity*dt;
+        if(!ClearTerrainSegment(u.position,proposed,t.movement)){
+            u.flags&=~DIRECT_ROUTE;u.flags|=DETOUR_ROUTE;
+            float2 guided=u.position+route*min(t.speed*dt,.35),slideX=float2(proposed.x,u.position.y),slideY=float2(u.position.x,proposed.y);
+            if(length(route)>.01&&ClearTerrainSegment(u.position,guided,t.movement)){proposed=guided;u.velocity=(proposed-u.position)/dt;}
+            else if(ClearTerrainSegment(u.position,slideX,t.movement)&&abs(slideX.x-u.position.x)>.001){proposed=slideX;u.velocity.y=0;}
+            else if(ClearTerrainSegment(u.position,slideY,t.movement)){proposed=slideY;u.velocity.x=0;}
+            else {proposed=u.position;u.velocity=0;}
+        }
+        u.position=WrapPosition(proposed,_WorldSize);if(dot(u.velocity,u.velocity)>.1)u.facing=Turn(u.facing,atan2(u.velocity.x,u.velocity.y),t.turnSpeed*dt);
+        _Next[i]=u;return;
+    }
+#endif
+    float2 progress=_RouteProgress[i];
+    if((u.flags&ROUTE_TRACKED)==0) { progress=float2(INF,0);u.flags|=ROUTE_TRACKED; }
+    float potential=remaining;
+    if((u.flags&DETOUR_ROUTE)!=0 && u.group<GROUP_COUNT) {
+        int2 cell=(int2)floor((u.position/_WorldSize+.5)*_NavRes);
+        potential=GlobalValue(u.group,cell)*(_WorldSize/_NavRes);
+    }
+    if(fighting||remaining<7||length(direction)<.01)progress=float2(potential,0);
+    else if(potential<progress.x-.25)progress=float2(potential,0);
+    else progress.y+=_Delta;
+    float stallLimit=max(2.5,(_WorldSize/_NavRes)/t.speed*3);
+    bool recovery=progress.y>stallLimit && length(route)>.01;
+    bool entryStalled=progress.y>stallLimit && (u.flags&FORMATION)!=0;
+    _RouteProgress[i]=progress;
+    if(_UseGrid!=0) {
+        passSide=float2(direction.y,-direction.x);
+        int2 cell=ContactCoordinate(u.position);uint examined=0;
+        int rings=min(4,(int)ceil((t.radius*2+4)/(_WorldSize/_ContactRes)));
+        [loop] for(int ring=0;ring<=rings;ring++) [loop] for(int y=-ring;y<=ring;y++) [loop] for(int x=-ring;x<=ring;x++) {
+            if(max(abs(x),abs(y))!=ring)continue;int2 c=WrapCell(cell+int2(x,y),_ContactRes);
+            uint ci=c.x+c.y*_ContactRes,count=_ContactCounts[ci],take=min(count,(uint)_NeighbourBudget);
+            uint begin=count>take?ArmyHash(i)%count:0;
+            [loop] for(uint j=0;j<take && examined<_NeighbourBudget;j++,examined++) {
+                uint other=_ContactIndices[_ContactOffsets[ci]+(begin+j)%count];if(other==i)continue;
+                UnitState v=_Read[other];if((v.flags&ALIVE)==0)continue;if(_BaseMode!=0&&((_Types[Type(u)].movement==3)!=(_Types[Type(v)].movement==3)))continue;
+                if(entryStalled && Team(u)==Team(v) && (v.flags&ARRIVED)!=0 && Parking(v))u.flags|=FORMATION_ENTRY;
+                if(IgnoreFriendly(u,v))continue;
+                float2 delta=WorldDelta(v.position,u.position,_WorldSize);float d=length(delta),radius=t.radius+_Types[Type(v)].radius+.4;
+                float2 normal=PairNormal(i,other,delta,d);
+                nearTraffic=nearTraffic || d<radius+3;
+                // Passing needs an actual hull-sized space, including sparse cells beside walls.
+                rightOccupied=rightOccupied || WorldDistance(u.position+passSide*(radius+1),v.position,_WorldSize)<radius+.3;
+                leftOccupied=leftOccupied || WorldDistance(u.position-passSide*(radius+1),v.position,_WorldSize)<radius+.3;
+                // Project forward drive out of a full queue before integrating positions.
+                // A stopped leader then transmits braking upstream instead of being pushed each tick.
+                if(d<radius+4 && dot(direction,-normal)>.4 && (length(v.velocity)<.2 || dot(direction,SafeNormal(v.velocity))>.3)) {
+                    float lower=dot(v.velocity,normal)-max(0,d-(radius+.15))/_Delta;
+                    float violation=lower-dot(direction*t.speed,normal);
+                    if(violation>queueViolation) { queueViolation=violation;queueNormal=normal;queueLower=lower; }
+                }
+                if((u.flags&ARRIVED)!=0 && Team(u)==Team(v) && (v.flags&ARRIVED)==0 && !Parking(v) && d<radius+4) {
+                    float2 traffic=SafeNormal(WorldDelta(v.position,v.destination,_WorldSize)),side=float2(traffic.y,-traffic.x);
+                    float ahead=dot(delta,traffic),lateral=dot(delta,side);
+                    // Parked tanks yield only when they actually obstruct incoming traffic.
+                    // Reacting to every nearby mover makes an otherwise finished formation churn forever.
+                    if(ahead>0 && abs(lateral)<radius)
+                        yielding+=side*(lateral>=0?1:-1)*(1-d/(radius+4));
+                }
+                if(d<radius*1.25)separation+=normal*(1-d/(radius*1.25));
+                float2 relative=direction*t.speed-v.velocity;
+                float closest=clamp(-dot(delta,relative)/max(dot(relative,relative),.001),0,.35);
+                if(d<radius+4 && dot(delta,relative)<0 && length(delta+relative*closest)<radius*1.15) {
+                    // Right-hand passing is relative to travel direction, so opposing traffic chooses opposite world sides.
+                    float2 side=float2(direction.y,-direction.x);
+                    float2 passingPoint=u.position+side*(radius+1);
+                    float2 leftPoint=u.position-side*(radius+1);
+                    float roomLimit=max(.8,crowd.x-.05);
+                    bool rightRoom=!useCrowd || CrowdSample(passingPoint).x<roomLimit;
+                    bool leftRoom=!useCrowd || CrowdSample(leftPoint).x<roomLimit;
+                    if(rightRoom && ClearTerrainSegment(u.position,passingPoint,t.movement))passing.x+=.9;
+                    if(leftRoom && ClearTerrainSegment(u.position,leftPoint,t.movement))passing.y+=.9;
+                    passingCount++;speedScale=min(speedScale,saturate((d-radius-.15)/2.5));
+                }
+            }
+        }
+    }
+    float2 passingDirection=0;
+    // Keep the selected passing side while surrounded; gaps changing between ticks must not flip steering.
+    bool sideHitsTerrain=((u.flags&PASS_RIGHT)!=0 && !ClearTerrainSegment(u.position,u.position+passSide*(t.radius*2+1.4),t.movement)) ||
+        ((u.flags&PASS_LEFT)!=0 && !ClearTerrainSegment(u.position,u.position-passSide*(t.radius*2+1.4),t.movement));
+    if(!nearTraffic || sideHitsTerrain)u.flags&=~(PASS_RIGHT|PASS_LEFT);
+    if((u.flags&(PASS_RIGHT|PASS_LEFT))==0) {
+        if(!rightOccupied && passing.x>0)u.flags|=PASS_RIGHT;
+        else if(!leftOccupied && passing.y>0)u.flags|=PASS_LEFT;
+    }
+    if((u.flags&PASS_RIGHT)!=0 && !rightOccupied)passingDirection=passSide*passing.x;
+    else if((u.flags&PASS_LEFT)!=0 && !leftOccupied)passingDirection=-passSide*passing.y;
+    separation+=passingDirection/max(1,passingCount);
+    uint rate=_UseLod!=0 && crowd.x<.7 && u.target==INVALID && WorldDistance(u.position,_RenderFocus.xz,_WorldSize)>1400?2:1;
+    if(rate==2 && ((i+_Tick)&1)!=0) { _Next[i]=u;return; }
+    float dt=_Delta*rate;float2 steering=direction*speedScale+separation*1.7;
+    // Recommit to the descending route while retaining lateral passing and separation.
+    // Separation and hard contact resolution still protect both teams; recovery never phases through tanks.
+    if(recovery)steering=route*speedScale+separation*1.7;
+    float2 desired=SafeNormal(steering)*min(1,length(steering))*min(t.speed,remaining/max(dt,.001));
+    if(length(direction)<.01)desired=SafeNormal(separation)*min(1,length(separation))*t.speed*.25;
+    if(length(yielding)>.01)desired=SafeNormal(yielding)*t.speed*.5*min(1,length(yielding)*2);
+    if(useCrowd && !Parking(u)) {
+        float2 gradient=crowd.zw,normal=SafeNormal(gradient);
+        float compression=saturate((crowd.x-.85)/.4);
+        desired-=normal*max(0,dot(desired,normal))*compression;
+        float2 pressureVelocity=-gradient*(.12/_Delta);
+        desired+=SafeNormal(pressureVelocity)*min(length(pressureVelocity),t.speed*.8);
+        desired=SafeNormal(desired)*min(length(desired),t.speed);
+    }
+    if(queueViolation>0 && dot(desired,queueNormal)<queueLower)desired+=queueNormal*(queueLower-dot(desired,queueNormal));
+    desired/=clamp(Cost(u.position,t.movement),.5,4);
+    // Vehicle steering has finite acceleration. Immediate collision braking below remains authoritative.
+    float2 velocityGoal=recovery?desired:lerp(u.velocity,desired,saturate(dt*7));
+    float2 axis=length(direction)>.01?direction:SafeNormal(u.velocity),change=velocityGoal-u.velocity;
+    float along=dot(change,axis);float2 sideways=change-axis*along;
+    u.velocity+=axis*clamp(along,-t.speed*1.5*dt,t.speed*1.5*dt)+SafeNormal(sideways)*min(length(sideways),t.speed*.5*dt);
+    if(queueViolation>0 && dot(u.velocity,queueNormal)<queueLower)u.velocity+=queueNormal*(queueLower-dot(u.velocity,queueNormal));
+    if((u.flags&DIRECT_ROUTE)!=0 && remaining<7 && length(yielding)<.01)u.velocity=SafeNormal(u.velocity)*min(length(u.velocity),remaining/max(dt,.001));
+    float2 proposed=u.position+u.velocity*dt;
+    if((u.flags&ARRIVED)!=0 && WorldDistance(proposed,u.destination,_WorldSize)>6.5)
+        proposed=u.destination+SafeNormal(WorldDelta(u.destination,proposed,_WorldSize))*6.5;
+    if(!ClearTerrainSegment(u.position,proposed,t.movement)) {
+        u.flags&=~DIRECT_ROUTE;u.flags|=DETOUR_ROUTE;
+        float2 guided=u.position+route*min(t.speed*dt,.35),slideX=float2(proposed.x,u.position.y),slideY=float2(u.position.x,proposed.y);
+        if(length(route)>.01 && ClearTerrainSegment(u.position,guided,t.movement)) { proposed=guided;u.velocity=(proposed-u.position)/dt; }
+        else if(ClearTerrainSegment(u.position,slideX,t.movement) && abs(slideX.x-u.position.x)>.001) { proposed=slideX;u.velocity.y=0; }
+        else if(ClearTerrainSegment(u.position,slideY,t.movement)) { proposed=slideY;u.velocity.x=0; }
+        else { proposed=u.position;u.velocity=0; }
+    }
+    u.position=WrapPosition(proposed,_WorldSize);
+    bool aiming=false;
+    if(u.target<_Active)aiming=(_Read[u.target].flags&ALIVE)!=0&&WorldDistance(u.position,_Read[u.target].position,_WorldSize)<t.attackRange;
+    if(_BaseMode!=0&&u.target!=INVALID&&(u.target&STRUCTURE_TARGET)!=0){uint b=u.target&~STRUCTURE_TARGET;if(b<_BuildingCount)aiming=_Structures[b].health>0&&WorldDistance(u.position,_Structures[b].position,_WorldSize)-_Structures[b].radius<t.attackRange;}
+    if(dot(u.velocity,u.velocity)>.1&&!aiming)u.facing=Turn(u.facing,atan2(u.velocity.x,u.velocity.y),t.turnSpeed*dt);
+    if(WorldDistance(u.position,u.destination,_WorldSize)<.3 && ((u.group>=2 && u.group<GROUP_COUNT)||(u.flags&ARRIVED)!=0) && length(separation)<.001 && length(yielding)<.01) { u.position=WrapPosition(u.destination,_WorldSize);u.velocity=0;u.flags|=ARRIVED;u.group=INVALID; }
+    _Next[i]=u;
+}
+[numthreads(128,1,1)]
+void ResolveContacts(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x;if(i>=_Active)return;UnitState u=_Read[i];
+    SetTraversalTeam(Team(u));
+    if((u.flags&ALIVE)==0 || (u.flags&(STOPPED|32768))!=0) { _Next[i]=u;return; }
+    // Match the staggered distant walk steps. Nearby walkers and all pursuers
+    // retain normal contact updates; no simulation identities are culled.
+#ifdef ZOMBIES
+    if((u.flags&ZOMBIE_WANDERING)!=0){if(_UseLod!=0&&WorldDistance(u.position,_RenderFocus.xz,_WorldSize)>1400&&(i+_Tick)%6!=0){_Next[i]=u;return;}}
+#endif
+    float radius=_Types[Type(u)].radius;float2 correction=0;float weightSum=0;uint examined=0;
+    int rings=min(4,(int)ceil((radius*3.5+.5)/(_WorldSize/_ContactRes)));
+    int2 cell=ContactCoordinate(u.position);
+    [loop] for(int ring=0;ring<=rings;ring++) [loop] for(int y=-ring;y<=ring;y++) [loop] for(int x=-ring;x<=ring;x++) {
+        if(max(abs(x),abs(y))!=ring)continue;int2 c=WrapCell(cell+int2(x,y),_ContactRes);
+        uint ci=c.x+c.y*_ContactRes,count=_ContactCounts[ci],take=min(count,128u),begin=count>take?ArmyHash(i+23)%count:0;
+        [loop] for(uint j=0;j<take && examined<128;j++,examined++) {
+            uint other=_ContactIndices[_ContactOffsets[ci]+(begin+j)%count];if(other==i)continue;
+            UnitState v=_Read[other];if((v.flags&ALIVE)==0 || IgnoreFriendly(u,v))continue;if(_BaseMode!=0&&((_Types[Type(u)].movement==3)!=(_Types[Type(v)].movement==3)))continue;
+            float2 delta=WorldDelta(v.position,u.position,_WorldSize);float d=length(delta),contact=radius+_Types[Type(v)].radius+.5;
+            if(d<contact) {
+                float2 normal=PairNormal(i,other,delta,d);
+                bool constrained=(v.flags&STOPPED)!=0 || IgnoreFriendly(v,u) ||
+                    !ClearTerrainSegmentForTeam(v.position,v.position-normal*(contact-d)*.5,_Types[Type(v)].movement,Team(v));
+                float weight=constrained?1:.5;
+                correction+=normal*(contact-d+.0005)*weight;weightSum+=weight;
+            }
+        }
+    }
+    correction/=max(1,weightSum);
+    correction=SafeNormal(correction)*min(length(correction)*.8,radius*.5);
+    if(dot(correction,correction)<.000009)correction=0;
+    // Movement already published a canonical position. With no correction,
+    // terrain checks of the identical endpoint cannot change position/velocity.
+    if(dot(correction,correction)==0){_Next[i]=u;return;}
+    float2 proposed=u.position+correction;
+    uint movement=_Types[Type(u)].movement;
+    if(!ClearTerrainSegment(u.position,proposed,movement)) {
+        float2 alongX=u.position+float2(correction.x,0),alongY=u.position+float2(0,correction.y);
+        bool xClear=ClearTerrainSegment(u.position,alongX,movement),yClear=ClearTerrainSegment(u.position,alongY,movement);
+        if(xClear && (!yClear || abs(correction.x)>abs(correction.y)))proposed=alongX;
+        else if(yClear)proposed=alongY;
+        correction=proposed-u.position;
+    }
+    if(ClearTerrainSegment(u.position,proposed,movement)) {
+        u.position=WrapPosition(proposed,_WorldSize);
+        if(dot(u.velocity,correction)<0) { float2 n=SafeNormal(correction);u.velocity-=n*dot(u.velocity,n); }
+    }
+    _Next[i]=u;
+}
+[numthreads(1,1,1)]
+void ClearPick(uint3 id:SV_DispatchThreadID) { _Pick[0]=INVALID; }
+[numthreads(128,1,1)]
+void FindPick(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+#ifdef ZOMBIES
+    UnitState u=_Units[i]; if((u.flags&ALIVE)==0 || (u.flags&32768)!=0 || (_PickTeam==0?Team(u)!=0:Team(u)==0)) return;
+    if(_BaseMode!=0&&_PickTeam!=0&&!TargetKnown(u,0))return;
+#else
+    UnitState u=_Units[i];if((u.flags&ALIVE)==0||(u.flags&32768)!=0||Team(u)!=_PickTeam)return;
+#endif
+    float4 clip=mul(_ViewProjection,float4(NearestWorld(WorldPosition(u),_RenderFocus,_WorldSize),1)); if(clip.w<=0) return;
+    float2 screen=(clip.xy/clip.w*.5+.5)*_ScreenSize;
+    float2 mouse=_SelectionRect.xy*_ScreenSize;
+    float d2=dot(screen-mouse,screen-mouse);
+    if(d2<196) InterlockedMin(_Pick[0],((uint)(d2*16)<<20)|i);
+}
+[numthreads(128,1,1)]
+void SelectUnits(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+    UnitState u=_Units[i]; if((u.flags&(ALIVE|32768))!=ALIVE || Team(u)!=0) return;
+    float4 clip=mul(_ViewProjection,float4(NearestWorld(WorldPosition(u),_RenderFocus,_WorldSize),1));
+    float2 screen=clip.xy/max(clip.w,.00001)*.5+.5;
+    bool inside=_ClickSelection!=0 ? (_Pick[0]!=INVALID && (_Pick[0]&0xfffffu)==i)
+        : clip.w>0 && all(screen>=_SelectionRect.xy) && all(screen<=_SelectionRect.zw);
+    if(_SelectionOperation==0) u.flags&=~SELECTED;
+    if(inside) { if(_SelectionOperation==2) u.flags&=~SELECTED; else u.flags|=SELECTED; }
+    _Units[i]=u;
+}
+[numthreads(128,1,1)]
+void ApplyOrders(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+    UnitState u=_Units[i]; if((u.flags&(ALIVE|SELECTED))!=(ALIVE|SELECTED) || Team(u)!=0 || !OrderMatches(u)) return;
+    u.flags&=~(4096u|STRUCTURE_ORDER);u.target=INVALID;
+    if(_Order==3) { u.flags&=~(ARRIVED|FORMATION_ENTRY|PASS_RIGHT|PASS_LEFT);u.flags|=STOPPED; u.velocity=0; u.destination=u.position; u.group=INVALID; }
+    else {
+        if(_Groups[_CommandGroup].padding!=0)return;
+        u.group=_CommandGroup; u.flags&=~(STOPPED|ATTACK_MOVE|DIRECT_ROUTE|ARRIVED|DETOUR_ROUTE|ROUTE_TRACKED|FORMATION_ENTRY|PASS_RIGHT|PASS_LEFT); u.flags|=FORMATION;
+        if(_Order==1 || _Order==2) u.flags|=ATTACK_MOVE;
+        u.destination=_FormationSlots[_CombinedFormation!=0?_CombinedRanks[i]:_SelectedRanks[i]];
+        if(_Order==2 && _Pick[0]!=INVALID) u.target=_Pick[0]&0xfffffu;
+        if(_StructureTarget!=INVALID){u.target=STRUCTURE_TARGET|_StructureTarget;u.flags|=STRUCTURE_ORDER;}
+    }
+    _Units[i]=u;
+}
+[numthreads(128,1,1)]
+void AcquireTargets(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+    UnitState u=_Units[i]; if((u.flags&ALIVE)==0||(u.flags&32768)!=0) return;
+    UnitArchetype t=_Types[Type(u)];
+    #ifdef ZOMBIES
+    uint zombieStructure=INVALID;
+    #endif
+    if(_BaseMode!=0&&u.target!=INVALID&&(u.target&STRUCTURE_TARGET)!=0) {
+        uint b=u.target&~STRUCTURE_TARGET;
+        #ifdef ZOMBIES
+        if(IsZombie(u)&&b<_BuildingCount&&_Structures[b].health>0&&_Structures[b].team!=Team(u))zombieStructure=u.target;
+        #endif
+        if(b<_BuildingCount&&_Structures[b].health>0&&_Structures[b].team!=Team(u)&&!IsZombie(u)&&((u.flags&STRUCTURE_ORDER)!=0||WorldDistance(u.position,_Structures[b].position,_WorldSize)-_Structures[b].radius<=t.attackRange))return;
+        u.target=INVALID;u.flags&=~STRUCTURE_ORDER;
+    }
+    bool valid=false;
+    if(u.target<_Active) {
+        UnitState target=_Units[u.target];
+        valid=(target.flags&ALIVE)!=0 && Team(target)!=Team(u) && WorldDistance(u.position,target.position,_WorldSize)<=t.acquisitionRange && TargetAllowed(u,target);
+    }
+    if(!valid) u.target=INVALID;
+    if((i+_Tick)%_TargetSlices==0 && _UseGrid!=0 && !valid) {
+        int2 centre=GridCoordinate(u.position);
+        int radius=(int)ceil(t.acquisitionRange/(_WorldSize/_GridRes))+1;
+        float best=t.acquisitionRange*t.acquisitionRange; uint examined=0;
+        // Rotate the cell traversal each scan to avoid starving a dense far side.
+        uint side=radius*2+1, total=side*side, start=ArmyHash(i+_Tick/_TargetSlices)%total;
+        [loop] for(uint c=0;c<total && examined<_TargetBudget;c++) {
+            uint offset=(start+c)%total;
+            int2 cell=WrapCell(centre+int2(offset%side,offset/side)-radius,_GridRes);
+            if(!CellValid(cell)) continue;
+            uint ci=cell.x+cell.y*_GridRes, count=_CellCounts[ci];
+            uint take=min(count,8u), begin=count>0?ArmyHash(i+ci+_Tick)%count:0;
+            [loop] for(uint j=0;j<take && examined<_TargetBudget;j++,examined++) {
+                uint other=_Indices[_CellOffsets[ci]+(begin+j*max(1u,count/take))%count];
+                UnitState v=_Units[other]; if((v.flags&ALIVE)==0 || Team(v)==Team(u) || !TargetAllowed(u,v)) continue;
+                float2 d=WorldDelta(u.position,v.position,_WorldSize); float d2=dot(d,d);
+                if(d2<best) { best=d2; u.target=other; }
+            }
+        }
+    }
+#ifdef ZOMBIES
+    if((u.flags&ZOMBIE_UNIT)!=0&&u.target<_Active){u.destination=_Units[u.target].position;u.flags=(u.flags|ATTACK_MOVE)&~(STOPPED|ARRIVED|STRUCTURE_ORDER|ZOMBIE_WANDERING);}
+    else if(u.target==INVALID&&zombieStructure!=INVALID){u.target=zombieStructure;u.flags=(u.flags|STRUCTURE_ORDER)&~ZOMBIE_WANDERING;}
+#endif
+    _Units[i]=u;
+}
+[numthreads(128,1,1)]
+void FireWeapons(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+    UnitState u=_Units[i]; if((u.flags&ALIVE)==0||(u.flags&(32768|8192))!=0) return;
+    UnitArchetype t=_Types[Type(u)]; u.cooldown=max(0,u.cooldown-_Delta);
+    if(_BaseMode!=0&&u.target!=INVALID&&(u.target&STRUCTURE_TARGET)!=0) {
+        uint b=u.target&~STRUCTURE_TARGET;
+        if(b<_BuildingCount&&_Structures[b].health>0&&WorldDistance(u.position,_Structures[b].position,_WorldSize)-_Structures[b].radius<=t.attackRange){float2 delta=WorldDelta(u.position,_Structures[b].position,_WorldSize);float angle=atan2(delta.x,delta.y);u.turret=Turn(u.turret,angle,t.turnSpeed*2*_Delta);u.facing=Turn(u.facing,angle,t.turnSpeed*2*_Delta);}
+        _Units[i]=u;return;
+    }
+    if(_BaseMode!=0&&(_Logistics!=0||t.movement==3)&&_Operations[i].ammo<1){_Units[i]=u;return;}
+    if(u.target<_Active) {
+        UnitState enemy=_Units[u.target]; float2 delta=WorldDelta(u.position,enemy.position,_WorldSize);
+        float angle=atan2(delta.x,delta.y); u.turret=Turn(u.turret,angle,t.turnSpeed*2*_Delta);
+        if(dot(delta,delta)<=t.attackRange*t.attackRange)u.facing=Turn(u.facing,angle,t.turnSpeed*2*_Delta);
+        float aim=abs(atan2(sin(angle-u.turret),cos(angle-u.turret)));
+        if(_BaseMode!=0)aim=max(aim,abs(atan2(sin(angle-u.facing),cos(angle-u.facing))));
+        if((enemy.flags&ALIVE)!=0 && Team(enemy)!=Team(u) && dot(delta,delta)<=t.attackRange*t.attackRange && aim<t.aimTolerance && u.cooldown<=0 && TargetAllowed(u,enemy)) {
+            bool fired=false;
+            if(_BaseMode!=0 && _Traits[Type(u)].role==8){
+                [loop]for(uint attempt=0;attempt<32;attempt++){uint at=(i+attempt+_Tick)%32,claim;InterlockedCompareExchange(_Missiles[at].alive,0,1,claim);if(claim!=0)continue;ProjectileState missile=(ProjectileState)0;missile.position=WorldPosition(u);missile.velocity=WorldPosition(enemy);missile.lifetime=12;missile.damage=t.damage;missile.team=Team(u);missile.alive=1;missile.owner=i;missile.target=(uint)_Traits[Type(u)].splash;_Missiles[at]=missile;fired=true;break;}
+            }else if(_UseProjectiles!=0 && t.weapon==1) {
+                // Bounded, lock-free pool. A failed claim delays this shot; damage is never fabricated.
+                [unroll] for(uint attempt=0;attempt<4;attempt++) {
+                    uint slot=ArmyHash(i+_Tick*103+attempt*7919)%_ProjectileCapacity, previous;
+                    InterlockedCompareExchange(_Projectiles[slot].alive,0,1,previous);
+                    if(previous!=0) continue;
+                    float3 origin=WorldPosition(u)+float3(sin(u.turret)*2,1.3,cos(u.turret)*2);
+                    float3 destination=NearestWorld(WorldPosition(enemy),origin,_WorldSize);
+                    ProjectileState p;
+                    p.position=origin; p.lifetime=3;
+                    p.velocity=normalize(destination-origin)*t.projectileSpeed;
+                    p.target=u.target; p.damage=t.damage; p.team=Team(u); p.alive=1; p.owner=i;
+                    _Projectiles[slot]=p; fired=true; break;
+                }
+            } else { uint dealt=_BaseMode!=0?(uint)max(1,(float)t.damage-_Traits[Type(enemy)].armour*ArmourModifier(Team(enemy))*.5):t.damage;InterlockedAdd(_Damage[u.target],dealt);
+                if(_BaseMode!=0&&_Traits[Type(u)].splash>0){int2 c=GridCoordinate(enemy.position);[loop]for(int y=-2;y<=2;y++)[loop]for(int x=-2;x<=2;x++){int2 q=WrapCell(c+int2(x,y),_GridRes);uint ci=q.x+q.y*_GridRes;[loop]for(uint n=0;n<min(24u,_ShotCounts[ci]);n++){uint at=_ShotIndices[_ShotOffsets[ci]+n];UnitState v=_Units[at];if(at!=u.target&&(v.flags&ALIVE)!=0&&Team(v)!=Team(u)&&WorldDistance(v.position,enemy.position,_WorldSize)<_Traits[Type(u)].splash)InterlockedAdd(_Damage[at],dealt/2);}}}fired=true; }
+            if(fired&&_BaseMode!=0&&_WeaponNoise[Type(u)]>0&&_Traits[Type(u)].role!=8)EmitExplosionNoise(enemy.position,t.damage,_WeaponNoise[Type(u)]);
+            if(fired && !IsZombie(u) && t.weapon!=1 && !(_BaseMode!=0 && _Traits[Type(u)].role==8))
+                EmitShotTracer(WorldPosition(u)+float3(sin(u.turret)*2,1.3,cos(u.turret)*2),WorldPosition(enemy),Team(u),i+_Tick*103u,t.projectileSpeed);
+            if(fired&&_BaseMode!=0){UnitOperations ops=_Operations[i];ops.ammo=max(0,ops.ammo-1);_Operations[i]=ops;}
+            if(fired) u.cooldown=t.cooldown*(.9+ArmyRandom(i^_Tick)*.2)*(_BaseMode!=0&&FactionSupport(u)&&(_SupportInfluence[Team(u)*_GridRes*_GridRes+GridCell(u.position)]&4)!=0?.85:1);
+        }
+    } else u.turret=Turn(u.turret,u.facing,t.turnSpeed*_Delta);
+    _Units[i]=u;
+}
+float SegmentDistanceSquared(float3 a,float3 b,float3 p) {
+    float3 ab=b-a; float f=saturate(dot(p-a,ab)/max(dot(ab,ab),.0001));
+    float3 d=a+ab*f-p; return dot(d,d);
+}
+[numthreads(128,1,1)]
+void MoveProjectiles(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_ProjectileCapacity) return;
+    ProjectileState p=_Projectiles[i]; if(p.alive==0) return;
+    float3 previous=p.position; p.position+=p.velocity*_Delta; p.lifetime-=_Delta;
+    if(p.owner==INVALID) { // Cosmetic tracer: the firing kernel already resolved damage.
+        if(p.lifetime<=0){p.position=previous+p.velocity*min(_Delta,max(0,p.lifetime+_Delta));EmitCombatVisual(p.position,1,0,p.team,i+_Tick*7919u,0);p.alive=0;}
+        p.position.xz=WrapPosition(p.position.xz,_WorldSize);_Projectiles[i]=p;return;
+    }
+    uint hit=INVALID; float nearest=INF;
+    if(_UseGrid!=0) {
+        int2 centre=GridCoordinate(p.position.xz); uint examined=0;
+        [loop] for(int y=-1;y<=1;y++) [loop] for(int x=-1;x<=1;x++) {
+            int2 cell=WrapCell(centre+int2(x,y),_GridRes);
+            uint ci=cell.x+cell.y*_GridRes, count=_ProjectileCellCounts[ci];
+            [loop] for(uint j=0;j<min(count,16u) && examined<96;j++,examined++) {
+                uint other=_ProjectileIndices[_ProjectileCellOffsets[ci]+j]; UnitState u=_Read[other];
+                if((u.flags&ALIVE)==0 || Team(u)==p.team) continue;
+                float3 target=NearestWorld(WorldPosition(u),previous,_WorldSize); float r=_Types[Type(u)].radius*1.5;
+                float d2=SegmentDistanceSquared(previous,p.position,target);
+                float travel=dot(target-previous,target-previous);
+                if(d2<r*r && travel<nearest) { hit=other; nearest=travel; }
+            }
+        }
+    }
+    // Always test the intended victim even if the dense-cell sample budget was exhausted.
+    if(p.target<_Active) {
+        UnitState u=_Read[p.target]; float3 q=NearestWorld(WorldPosition(u),previous,_WorldSize);
+        if((u.flags&ALIVE)!=0 && Team(u)!=p.team && SegmentDistanceSquared(previous,p.position,q)<4 && dot(q-previous,q-previous)<nearest) hit=p.target;
+    }
+    if(hit!=INVALID) { InterlockedAdd(_Damage[hit],p.damage);EmitCombatVisual(p.position,max(1,sqrt((float)p.damage)*.2),0,p.team,i+_Tick*7919u,0);EmitExplosionNoise(_Read[hit].position,p.damage,max(1,sqrt((float)p.damage)*.2));p.alive=0; }
+    if(p.alive!=0&&(p.lifetime<=0 || p.position.y<Ground(p.position.xz).x)){EmitCombatVisual(p.position,max(1,sqrt((float)p.damage)*.2),0,p.team,i+_Tick*7919u,0);EmitExplosionNoise(p.position.xz,p.damage,max(1,sqrt((float)p.damage)*.2));p.alive=0;}
+    p.position.xz=WrapPosition(p.position.xz,_WorldSize);_Projectiles[i]=p;
+}
+[numthreads(128,1,1)]
+void ApplyDamage(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+    UnitState u=_Units[i]; uint damage=_Damage[i]; _Damage[i]=0;
+    if((u.flags&ALIVE)==0) return;
+    u.health=damage>=u.health?0:u.health-damage;
+    if(u.health==0) { EmitCombatDeath(u,i+_Tick*7919u);if(_BaseMode!=0){_ControlGroups[i]=0;uint slot;InterlockedAdd(_FreeCount[0],1,slot);if(slot<_Capacity)_FreeSlots[slot]=i;}u.flags=0; u.velocity=0; u.target=INVALID; u.group=INVALID; }
+    _Units[i]=u;
+}
+[numthreads(128,1,1)]
+void ClearStatistics(uint3 id:SV_DispatchThreadID) { if(id.x<128) _Statistics[id.x]=0; }
+[numthreads(128,1,1)]
+void UpdateStatistics(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x;
+    if(i<_Active) {
+        UnitState u=_Units[i];
+        if((u.flags&ALIVE)!=0) {
+#ifdef ZOMBIES
+            InterlockedAdd(_Statistics[Team(u)<2?Team(u):112],1);
+            if((u.flags&SWARM_UNIT)!=0)InterlockedAdd(_Statistics[113],1);
+#else
+            InterlockedAdd(_Statistics[Team(u)],1);
+#endif
+            if((u.flags&SELECTED)!=0) {InterlockedAdd(_Statistics[2],1);if(_BaseMode!=0&&_Traits[Type(u)].role==1)InterlockedAdd(_Statistics[80],1);}
+            if(_BaseMode!=0&&_Traits[Type(u)].role==4)InterlockedAdd(_Statistics[88+Team(u)],1);
+            if(u.target<_Active) InterlockedAdd(_Statistics[3],1);
+            if(u.group<GROUP_COUNT) InterlockedAdd(_Statistics[16+u.group],1);
+            if(_Spectator!=0 && Team(u)<2 && _Types[Type(u)].movement<3) {
+                uint group=2+Team(u)*5+_Types[Type(u)].movement;GroupOrder g=_Groups[group];
+                if(g.sequence!=0 && (u.packed>>16)==(g.sequence&65535u)) {
+                    InterlockedAdd(_Statistics[116+Team(u)],1);
+                    if(WorldDistance(u.position,g.destination,_WorldSize)<96)InterlockedAdd(_Statistics[114+Team(u)],1);
+                }
+            }
+            else if(_BaseEnemyAI!=0 && Team(u)==1 && _Types[Type(u)].movement<3) {
+                InterlockedAdd(_Statistics[117],1);
+                if(WorldDistance(u.position,u.destination,_WorldSize)<96)InterlockedAdd(_Statistics[115],1);
+            }
+            uint2 sector=(uint2)(WorldUV(u.position,_WorldSize)*4);
+            #ifdef ZOMBIES
+            if(Team(u)<2)
+#endif
+            InterlockedAdd(_Statistics[48+Team(u)*16+sector.x+sector.y*4],1);
+        }
+    }
+    if(i<_ProjectileCapacity && _Projectiles[i].alive!=0) InterlockedAdd(_Statistics[4],1);
+    if(i<_GridRes*_GridRes) InterlockedMax(_Statistics[5],_CellCounts[i]);
+}
+[numthreads(128,1,1)]
+void ClearVisibility(uint3 id:SV_DispatchThreadID) { if(id.x<5) _VisibleCounts[id.x]=0; }
+bool InFrustum(float3 p,float radius) {
+    [unroll] for(uint i=0;i<6;i++) if(dot(_Planes[i].xyz,p)+_Planes[i].w < -radius) return false;
+    return true;
+}
+[numthreads(128,1,1)]
+void ClassifyVisibility(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+    UnitState u=_Units[i]; if((u.flags&ALIVE)==0) return;
+    if((u.flags&32768)!=0)return;
+    if(_Spectator==0 && _BaseMode!=0 && Team(u)!=0 && _Fog[IntelCell(u.position,0)]!=2)return;
+    float3 p=NearestWorld(WorldPosition(u),_RenderFocus,_WorldSize); if(!InFrustum(p,4)) return;
+    UnitArchetype t=_Types[Type(u)]; float d=distance(p,_CameraPosition);
+    uint lod=_ProjectedUnitPixels>=0?(_ProjectedUnitPixels>=12?0:(_ProjectedUnitPixels>=4?1:2)):(d<t.nearDistance?0:(d<t.farDistance?1:2));
+    if(_UseMeshes==0) lod=2;
+    if(lod==2 && _UseImpostors==0) { if(_UseMeshes==0) return; lod=1; }
+    uint slot; InterlockedAdd(_VisibleCounts[lod],1,slot);
+    _Visible[lod*_Capacity+slot]=i;
+}
+[numthreads(128,1,1)]
+void ClassifyProjectiles(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_ProjectileCapacity || _UseVfx==0) return;
+    ProjectileState p=_Projectiles[i];
+    if(p.alive!=0 && InFrustum(NearestWorld(p.position,_RenderFocus,_WorldSize),4) && (_Spectator!=0||_BaseMode==0||p.team==0||_Fog[IntelCell(p.position.xz,0)]==2)) {
+        uint slot; InterlockedAdd(_VisibleCounts[3],1,slot); _VisibleProjectiles[slot]=i;
+    }
+}
+[numthreads(1,1,1)]
+void BuildIndirectArgs(uint3 id:SV_DispatchThreadID) {
+    uint indices[4]={_IndexCount0,_IndexCount1,_IndexCount2,_IndexCount3};
+    [unroll] for(uint i=0;i<4;i++) {
+        _Args[i*5]=indices[i]; _Args[i*5+1]=_VisibleCounts[i];
+        _Args[i*5+2]=0; _Args[i*5+3]=0; _Args[i*5+4]=0;
+        _Statistics[8+i]=_VisibleCounts[i];
+    }
+}
+[numthreads(128,1,1)]
+void ValidateGrid(uint3 id:SV_DispatchThreadID) {
+    uint cell=id.x; if(cell>=_GridRes*_GridRes) return;
+    uint count=_CellCounts[cell], offset=_CellOffsets[cell];
+    if(_CellCursor[cell]!=count || offset+count>_Active) { InterlockedAdd(_Statistics[100],1);InterlockedAdd(_Statistics[107],1); return; }
+    if(cell>0 && offset!=_CellOffsets[cell-1]+_CellCounts[cell-1]) { InterlockedAdd(_Statistics[100],1);InterlockedAdd(_Statistics[108],1); }
+    [loop] for(uint j=0;j<count;j++) {
+        uint unit=_Indices[offset+j];
+        if(unit>=_Active) { InterlockedAdd(_Statistics[100],1); continue; }
+        UnitState u=_Units[unit];
+        if((u.flags&ALIVE)==0 || GridCell(u.position)!=cell) { InterlockedAdd(_Statistics[100],1);InterlockedAdd(_Statistics[109],1); }
+        InterlockedAdd(_Damage[unit],1);
+    }
+    InterlockedAdd(_Statistics[101],count);
+}
+[numthreads(128,1,1)]
+void ValidateMembership(uint3 id:SV_DispatchThreadID) {
+    uint i=id.x; if(i>=_Active) return;
+    uint expected=(_Units[i].flags&ALIVE)!=0?1:0;
+    if(_Damage[i]!=expected) { InterlockedAdd(_Statistics[100],1);InterlockedAdd(_Statistics[110],1); }
+    _Damage[i]=0;
+}
+

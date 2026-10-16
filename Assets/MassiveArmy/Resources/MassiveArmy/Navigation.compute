@@ -1,0 +1,105 @@
+#pragma kernel InvalidateRegion
+#pragma multi_compile _ BUILDING_GRID
+#pragma multi_compile _ PLANET_NAV
+#pragma multi_compile _ PLANET_LOCAL_NAV
+#pragma kernel ResetFields
+#pragma kernel RelaxFields
+#pragma kernel ClearChanged
+#pragma kernel BuildCoarse
+#pragma target 5.0
+#include "ArmyCommon.hlsl"
+StructuredBuffer<GroupOrder> _Groups;
+StructuredBuffer<float> _Costs,_FieldRead;
+RWStructuredBuffer<float> _FieldWrite,_CoarseField;
+RWStructuredBuffer<uint> _Changed;
+uint _NavRes,_WorkGroup;
+float _WorldSize;
+#ifdef PLANET_LOCAL_NAV
+StructuredBuffer<uint> _LocalGoal;
+uint NavCount(){return _NavRes*_NavRes;}
+uint NavIndex(int2 c){c=clamp(c,0,(int)_NavRes-1);return c.x+c.y*_NavRes;}
+int2 NavCell(uint i){return int2(i%_NavRes,i/_NavRes);}
+int2 NavGoal(float2 p){uint i=_LocalGoal[_WorkGroup]&65535u;return int2(i%_NavRes,i/_NavRes);}
+int2 NavNeighbour(int2 c,int2 d){return clamp(c+d,0,(int)_NavRes-1);}
+#elif defined(PLANET_NAV)
+#include "PlanetTopology.hlsl"
+float _PlanetRadius;
+uint NavCount(){return 6*_NavRes*_NavRes;}
+uint NavIndex(int2 c){return PlanetIndex(c,_NavRes);}
+int2 NavCell(uint i){return PlanetCell(i,_NavRes);}
+int2 NavGoal(float2 p){return PlanetPositionCell(p,_NavRes);}
+int2 NavNeighbour(int2 c,int2 d){return PlanetNeighbour(c,d,_NavRes);}
+#else
+uint NavCount(){return _NavRes*_NavRes;}
+uint NavIndex(int2 c){c=WrapCell(c,_NavRes);return c.x+c.y*_NavRes;}
+int2 NavCell(uint i){return int2(i%_NavRes,i/_NavRes);}
+int2 NavGoal(float2 p){return (int2)(WorldUV(p,_WorldSize)*_NavRes);}
+int2 NavNeighbour(int2 c,int2 d){return WrapCell(c+d,_NavRes);}
+#endif
+float CostCell(int2 c,uint movement) {
+#ifdef BUILDING_GRID
+    movement+=_Groups[_WorkGroup].team*5;
+#endif
+#ifdef PLANET_LOCAL_NAV
+    return _Costs[_WorkGroup*NavCount()+NavIndex(c)];
+#else
+    return _Costs[movement*NavCount()+NavIndex(c)];
+#endif
+}
+[numthreads(128,1,1)]
+void ResetFields(uint3 id:SV_DispatchThreadID) {
+    if(id.x>=NavCount())return;
+    GroupOrder g=_Groups[_WorkGroup];
+    int2 target=NavGoal(g.localOrigin);
+    // The command finalizer snaps the route goal to a traversable cell.
+    _FieldWrite[_WorkGroup*NavCount()+id.x]=g.sequence!=0 && id.x==NavIndex(target) && CostCell(target,g.movement)<INF*.5?0:INF;
+}
+[numthreads(1,1,1)]
+void ClearChanged(uint3 id:SV_DispatchThreadID) { _Changed[_WorkGroup]=0; }
+[numthreads(128,1,1)]
+void RelaxFields(uint3 id:SV_DispatchThreadID) {
+    uint n=NavCount();if(id.x>=n)return;
+    GroupOrder g=_Groups[_WorkGroup];int2 c=NavCell(id.x);
+    uint index=_WorkGroup*n+id.x;float cost=CostCell(c,g.movement),old=_FieldRead[index],best=old;
+    if(cost<INF*.5) {
+        [unroll] for(int y=-1;y<=1;y++) [unroll] for(int x=-1;x<=1;x++) {
+            if(x==0&&y==0)continue;
+#if defined(PLANET_NAV) && !defined(PLANET_LOCAL_NAV)
+            // Cardinal topology gives unambiguous cube-corner connectivity.
+            if(x!=0&&y!=0)continue;
+#endif
+            int2 other=NavNeighbour(c,int2(x,y));
+            if(x!=0 && y!=0 && (CostCell(c+int2(x,0),g.movement)>=INF*.5 || CostCell(c+int2(0,y),g.movement)>=INF*.5))continue;
+#if defined(PLANET_NAV) && !defined(PLANET_LOCAL_NAV)
+            float distance=PlanetArc(PlanetCellDirection(c,_NavRes),PlanetCellDirection(other,_NavRes),_PlanetRadius);
+#else
+            float distance=x!=0&&y!=0?1.41421356:1;
+#endif
+            best=min(best,_FieldRead[_WorkGroup*n+NavIndex(other)]+cost*distance);
+        }
+    }
+    _FieldWrite[index]=cost<INF*.5?best:INF;
+    if(best<old)InterlockedOr(_Changed[_WorkGroup],1);
+}
+[numthreads(128,1,1)]
+void BuildCoarse(uint3 id:SV_DispatchThreadID) {
+#if defined(PLANET_NAV) && !defined(PLANET_LOCAL_NAV)
+    if(id.x>=6*COARSE_RES*COARSE_RES)return;
+    uint face=id.x/(COARSE_RES*COARSE_RES),local=id.x%(COARSE_RES*COARSE_RES);
+    int2 fine=min((int2(local%COARSE_RES,local/COARSE_RES)*2+1)*(int)_NavRes/(COARSE_RES*2),(int)_NavRes-1);fine.x+=face*_NavRes;
+    _CoarseField[_WorkGroup*6*COARSE_RES*COARSE_RES+id.x]=_FieldRead[_WorkGroup*NavCount()+NavIndex(fine)];
+#else
+    if(id.x>=COARSE_RES*COARSE_RES)return;
+    uint2 c=uint2(id.x%COARSE_RES,id.x/COARSE_RES);
+    uint2 fine=min((c*2+1)*_NavRes/(COARSE_RES*2),_NavRes-1);
+    _CoarseField[_WorkGroup*COARSE_RES*COARSE_RES+id.x]=_FieldRead[_WorkGroup*_NavRes*_NavRes+fine.x+fine.y*_NavRes];
+#endif
+}
+
+float4 _DirtyRegion;
+[numthreads(128,1,1)] void InvalidateRegion(uint3 id:SV_DispatchThreadID) {
+ uint width=(uint)(_DirtyRegion.z-_DirtyRegion.x+1),height=(uint)(_DirtyRegion.w-_DirtyRegion.y+1);if(id.x>=width*height)return;
+ uint2 c=uint2((uint)_DirtyRegion.x+id.x%width,(uint)_DirtyRegion.y+id.x/width);GroupOrder g=_Groups[_WorkGroup];
+ uint2 target=(uint2)(WorldUV(g.localOrigin,_WorldSize)*_NavRes);
+ _FieldWrite[_WorkGroup*_NavRes*_NavRes+c.x+c.y*_NavRes]=all(c==target)?0:INF;
+}

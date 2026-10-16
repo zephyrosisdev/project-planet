@@ -1,0 +1,9 @@
+#pragma kernel DamageSwarm
+#pragma target 5.0
+#include "../Resources/MassiveArmy/ArmyCommon.hlsl"
+StructuredBuffer<UnitState> _Units;
+RWStructuredBuffer<uint> _Damage;
+uint _Active;
+[numthreads(128,1,1)]void DamageSwarm(uint3 id:SV_DispatchThreadID){
+ if(id.x>=_Active)return;UnitState u=_Units[id.x];if((u.flags&(ALIVE|SWARM_UNIT))==(ALIVE|SWARM_UNIT))_Damage[id.x]=u.health+10000;
+}

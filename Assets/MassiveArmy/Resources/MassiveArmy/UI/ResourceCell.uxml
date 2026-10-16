@@ -1,0 +1,7 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Image name="icon" class="resource-icon" picking-mode="Ignore" />
+    <ui:VisualElement>
+        <ui:Label name="title" class="resource-name" picking-mode="Ignore" />
+        <ui:Label name="value" class="resource-value" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>

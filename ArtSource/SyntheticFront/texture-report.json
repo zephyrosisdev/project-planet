@@ -1,0 +1,562 @@
+[
+  {
+    "id": "command",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5536727905273438,
+    "triangles": 954
+  },
+  {
+    "id": "outpost",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6131820678710938,
+    "triangles": 698
+  },
+  {
+    "id": "barracks",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5643272399902344,
+    "triangles": 874
+  },
+  {
+    "id": "light_depot",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5887413024902344,
+    "triangles": 786
+  },
+  {
+    "id": "factory",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5745277404785156,
+    "triangles": 830
+  },
+  {
+    "id": "ordnance",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6057586669921875,
+    "triangles": 830
+  },
+  {
+    "id": "helipad",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6967430114746094,
+    "triangles": 504
+  },
+  {
+    "id": "airbase",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6052894592285156,
+    "triangles": 830
+  },
+  {
+    "id": "naval_yard",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5897026062011719,
+    "triangles": 874
+  },
+  {
+    "id": "lab",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6208114624023438,
+    "triangles": 738
+  },
+  {
+    "id": "advanced_lab",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6155433654785156,
+    "triangles": 738
+  },
+  {
+    "id": "strategic_lab",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6197967529296875,
+    "triangles": 738
+  },
+  {
+    "id": "logistics",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5665397644042969,
+    "triangles": 852
+  },
+  {
+    "id": "repair_depot",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5664443969726562,
+    "triangles": 830
+  },
+  {
+    "id": "field_command",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5980873107910156,
+    "triangles": 698
+  },
+  {
+    "id": "radar_station",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.630126953125,
+    "triangles": 544
+  },
+  {
+    "id": "phased_radar",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6491508483886719,
+    "triangles": 544
+  },
+  {
+    "id": "horizon_radar",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6134529113769531,
+    "triangles": 544
+  },
+  {
+    "id": "counter_radar",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6555213928222656,
+    "triangles": 534
+  },
+  {
+    "id": "mine",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6342658996582031,
+    "triangles": 534
+  },
+  {
+    "id": "oil",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6429405212402344,
+    "triangles": 524
+  },
+  {
+    "id": "gas",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5868339538574219,
+    "triangles": 702
+  },
+  {
+    "id": "rare",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5406036376953125,
+    "triangles": 856
+  },
+  {
+    "id": "isotope",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6114540100097656,
+    "triangles": 680
+  },
+  {
+    "id": "synthetic",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5929603576660156,
+    "triangles": 702
+  },
+  {
+    "id": "material_storage",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5851325988769531,
+    "triangles": 786
+  },
+  {
+    "id": "fuel_storage",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5954399108886719,
+    "triangles": 680
+  },
+  {
+    "id": "rare_storage",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5860023498535156,
+    "triangles": 702
+  },
+  {
+    "id": "isotope_storage",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5860023498535156,
+    "triangles": 702
+  },
+  {
+    "id": "wind",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6517257690429688,
+    "triangles": 489
+  },
+  {
+    "id": "solar",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6179351806640625,
+    "triangles": 634
+  },
+  {
+    "id": "gas_turbine",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6423187255859375,
+    "triangles": 766
+  },
+  {
+    "id": "reactor",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6288414001464844,
+    "triangles": 680
+  },
+  {
+    "id": "fusion",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5742111206054688,
+    "triangles": 856
+  },
+  {
+    "id": "exotic",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5767631530761719,
+    "triangles": 888
+  },
+  {
+    "id": "battery",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5493354797363281,
+    "triangles": 856
+  },
+  {
+    "id": "wall",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.7729988098144531,
+    "triangles": 220
+  },
+  {
+    "id": "gate",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.7258796691894531,
+    "triangles": 238
+  },
+  {
+    "id": "autocannon",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6223411560058594,
+    "triangles": 608
+  },
+  {
+    "id": "at_turret",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6016807556152344,
+    "triangles": 648
+  },
+  {
+    "id": "aa_turret",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5192375183105469,
+    "triangles": 918
+  },
+  {
+    "id": "sam",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5731658935546875,
+    "triangles": 794
+  },
+  {
+    "id": "advanced_sam",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5380592346191406,
+    "triangles": 794
+  },
+  {
+    "id": "point_defence",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6016807556152344,
+    "triangles": 648
+  },
+  {
+    "id": "artillery_battery",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.618438720703125,
+    "triangles": 608
+  },
+  {
+    "id": "missile_defence",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5380592346191406,
+    "triangles": 794
+  },
+  {
+    "id": "laser",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.6057662963867188,
+    "triangles": 636
+  },
+  {
+    "id": "shield",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.5987701416015625,
+    "triangles": 758
+  },
+  {
+    "id": "silo",
+    "kind": "building",
+    "resolution": 512,
+    "uvCoverage": 0.670318603515625,
+    "triangles": 524
+  },
+  {
+    "id": "infantry",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5681838989257812,
+    "triangles": 466
+  },
+  {
+    "id": "engineer",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5636634826660156,
+    "triangles": 488
+  },
+  {
+    "id": "heavy_infantry",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5631637573242188,
+    "triangles": 466
+  },
+  {
+    "id": "scout",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.7149505615234375,
+    "triangles": 230
+  },
+  {
+    "id": "apc",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.7076416015625,
+    "triangles": 230
+  },
+  {
+    "id": "tank",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6214141845703125,
+    "triangles": 346
+  },
+  {
+    "id": "heavy_tank",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.603668212890625,
+    "triangles": 386
+  },
+  {
+    "id": "at",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6214141845703125,
+    "triangles": 346
+  },
+  {
+    "id": "aa",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.561431884765625,
+    "triangles": 510
+  },
+  {
+    "id": "artillery_unit",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6180496215820312,
+    "triangles": 346
+  },
+  {
+    "id": "mlrs",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5615806579589844,
+    "triangles": 460
+  },
+  {
+    "id": "supply",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6927719116210938,
+    "triangles": 240
+  },
+  {
+    "id": "repair",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.7171058654785156,
+    "triangles": 230
+  },
+  {
+    "id": "command_vehicle",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6992759704589844,
+    "triangles": 282
+  },
+  {
+    "id": "fighter",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6887283325195312,
+    "triangles": 156
+  },
+  {
+    "id": "attack_heli",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6089401245117188,
+    "triangles": 262
+  },
+  {
+    "id": "gunship",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.7132377624511719,
+    "triangles": 322
+  },
+  {
+    "id": "bomber",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6468124389648438,
+    "triangles": 320
+  },
+  {
+    "id": "transport_heli",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.4562034606933594,
+    "triangles": 160
+  },
+  {
+    "id": "recon_air",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.681732177734375,
+    "triangles": 188
+  },
+  {
+    "id": "patrol_boat",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.687286376953125,
+    "triangles": 323
+  },
+  {
+    "id": "gunboat",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.566192626953125,
+    "triangles": 323
+  },
+  {
+    "id": "transport_ship",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6049118041992188,
+    "triangles": 189
+  },
+  {
+    "id": "destroyer",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5847625732421875,
+    "triangles": 425
+  },
+  {
+    "id": "submarine",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.7585601806640625,
+    "triangles": 126
+  },
+  {
+    "id": "cruiser",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6092796325683594,
+    "triangles": 425
+  },
+  {
+    "id": "battleship",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5882453918457031,
+    "triangles": 509
+  },
+  {
+    "id": "carrier_unit",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5937080383300781,
+    "triangles": 189
+  },
+  {
+    "id": "mobile_missile",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5615806579589844,
+    "triangles": 460
+  },
+  {
+    "id": "mobile_radar",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.6971893310546875,
+    "triangles": 252
+  },
+  {
+    "id": "strategic_platform",
+    "kind": "unit",
+    "resolution": 512,
+    "uvCoverage": 0.5615806579589844,
+    "triangles": 460
+  }
+]

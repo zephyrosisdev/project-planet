@@ -1,0 +1,28 @@
+#pragma kernel CheckGate
+#pragma kernel SeedProbes
+#pragma target 5.0
+#include "ArmyCommon.hlsl"
+StructuredBuffer<float> _Costs;
+Texture2D<float4> _Terrain;
+uint _NavRes;
+float _WorldSize;
+#define BUILDING_GRID
+#include "ArmyTerrain.hlsl"
+RWStructuredBuffer<uint> _Results;
+float4 _Gate,_Across;
+RWStructuredBuffer<UnitState> _ProbeUnits;
+uint _ProbeType;
+[numthreads(64,1,1)]void SeedProbes(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;UnitState u=(UnitState)0;
+ if(i<2){float sign=i==0?-1:1;u.position=_Gate.xy+_Across.xy*sign*16;u.previous=u.position;u.destination=_Gate.xy-_Across.xy*sign*16;
+  u.health=1000000000;u.packed=i|(_ProbeType<<8);u.flags=ALIVE;u.group=i;u.target=INVALID;}
+ _ProbeUnits[i]=u;
+}
+[numthreads(2,1,1)]void CheckGate(uint3 id:SV_DispatchThreadID){
+ uint team=id.x;SetTraversalTeam(team);
+ uint offset=team*4;
+ _Results[offset]=BuildingPointClear(_Gate.xy,2)?1:0;
+ _Results[offset+1]=SafeTerrainPosition(_Gate.xy,2)?1:0;
+ _Results[offset+2]=ClearTerrainSegment(_Gate.xy-_Across.xy*6,_Gate.xy+_Across.xy*6,2)?1:0;
+ _Results[offset+3]=Cost(_Gate.xy,2)<INF*.5?1:0;
+}

@@ -1,0 +1,347 @@
+#pragma kernel ResetRouteReferences
+#pragma kernel MissileOperations
+#pragma kernel TestNuke
+#pragma kernel InitializeSpawnOperations
+#pragma kernel AircraftOperations
+#pragma kernel TransportPassengers
+#pragma kernel LoadUnload
+#pragma kernel CollectContacts
+#pragma kernel InitializeRts
+#pragma kernel SpawnUnits
+#pragma kernel ResetIntel
+#pragma kernel UnitIntel
+#pragma kernel BuildingIntel
+#pragma kernel ScoutMissions
+#pragma kernel AssignScout
+#pragma kernel StructureWeapons
+#pragma kernel UnitStructureCombat
+#pragma kernel SupportUnits
+#pragma kernel ControlGroup
+#pragma kernel ReserveSwarmSlots
+#pragma kernel SpawnSwarm
+#pragma kernel ReclaimSwarmSlots
+#pragma kernel ResetSwarmAlive
+#pragma kernel SwarmOrders
+#pragma target 5.0
+#pragma multi_compile _ ZOMBIES
+#include "ArmyCommon.hlsl"
+struct Spawn {float2 position,destination;uint type,team,homeBuilding,rallyTarget;};
+struct Mission {float2 origin,extent;uint pattern;float step,fuel,ammo;};
+RWStructuredBuffer<UnitState> _Units,_Next;
+StructuredBuffer<UnitArchetype> _Types;
+StructuredBuffer<UnitTraits> _Traits;
+StructuredBuffer<Structure> _Structures;
+RWStructuredBuffer<uint> _StructureDamage,_FreeSlots,_FreeCount,_SpawnResults,_Damage,_Fog,_Radar,_Sensors,_ControlGroups,_SectorCounts,_Contacts,_Support;
+RWStructuredBuffer<float> _StructureTimers;
+RWStructuredBuffer<float4> _StructureAim;
+RWStructuredBuffer<float2> _RouteProgress;
+RWStructuredBuffer<Mission> _Missions;
+RWStructuredBuffer<UnitOperations> _Operations;
+uint _LoadTransport;int _RouteSlot;
+StructuredBuffer<float2> _RoutePoints;StructuredBuffer<uint> _RouteCounts;RWStructuredBuffer<uint> _RouteReferences;
+RWStructuredBuffer<Spawn> _Spawns;
+RWStructuredBuffer<ProjectileState> _Missiles,_Projectiles;
+RWStructuredBuffer<uint> _Intercepts;
+StructuredBuffer<float> _Costs;
+StructuredBuffer<uint> _CellCounts,_CellOffsets,_Indices;
+Texture2D<float4> _Terrain;
+StructuredBuffer<float2> _SwarmField,_SwarmSites;
+StructuredBuffer<uint> _SwarmTypes,_SwarmSlots;
+RWStructuredBuffer<uint> _SwarmCounts,_SwarmScratch;
+uint _SwarmRequest,_SwarmTypeCount,_SwarmSiteCount,_SwarmSeed,_SwarmSerial;
+uint _Spectator;
+uint _Active,_Capacity,_BuildingCount,_SpawnCount,_FogRes,_GridRes,_NavRes,_RtsTick,_Pattern,_Logistics,_GroupBit,_AssignGroup,_AddGroup;
+uint _ProjectileCapacity,_UseVfx;
+float _WorldSize,_Step;
+float4 _MissionOrigin;float4 _TeamModifiers[2];
+float4 _TestNuke;
+#define BUILDING_GRID
+#include "ArmyTerrain.hlsl"
+#include "ShotTracers.hlsl"
+#include "ExplosionNoise.hlsl"
+#include "CombatEvents.hlsl"
+StructuredBuffer<float> _WeaponNoise;
+StructuredBuffer<uint> _CombatFog,_CombatRadar;StructuredBuffer<UnitState> _CombatUnits;
+StructuredBuffer<float4> _NoiseField,_HearingField;float _NoiseTime,_SwarmFrontRadius;uint _ZombieType,_SwarmAmbient;
+#include "ZombieHearing.hlsl"
+float3 TracerUnitPosition(UnitState u) {return float3(u.position.x,Ground(u.position).x+1+_Traits[Type(u)].altitude,u.position.y);}
+float3 TracerBuildingPosition(Structure b) {return float3(b.position.x,Ground(b.position).x+8,b.position.y);}
+uint FogCell(float2 p,uint team) {uint2 c=(uint2)(WorldUV(p,_WorldSize)*_FogRes);return team*_FogRes*_FogRes+c.x+c.y*_FogRes;}
+uint GridCell(float2 p) {uint2 c=(uint2)(WorldUV(p,_WorldSize)*_GridRes);return c.x+c.y*_GridRes;}
+bool Seen(float2 p,uint team) {return team==ZOMBIE_TEAM||_CombatFog[FogCell(p,team)]==2;}
+void Reveal(float2 p,float vision,float detection,uint team) {
+ int2 centre=(int2)((p/_WorldSize+.5)*_FogRes);float cell=_WorldSize/_FogRes;
+ int ring=(int)ceil(max(vision,detection)/cell);
+ [loop] for(int y=-ring;y<=ring;y++) [loop] for(int x=-ring;x<=ring;x++) {
+  int2 c=WrapCell(centre+int2(x,y),_FogRes);
+  float2 q=((c+.5)/_FogRes-.5)*_WorldSize;float d=WorldDistance(p,q,_WorldSize);uint at=team*_FogRes*_FogRes+c.x+c.y*_FogRes;
+  if(d<=vision)InterlockedMax(_Fog[at],2);
+  if(d<=detection)InterlockedMax(_Radar[at],1);
+ }
+}
+[numthreads(128,1,1)] void InitializeRts(uint3 id:SV_DispatchThreadID) {
+ if(id.x>=_Capacity)return;_FreeSlots[id.x]=_Capacity-1-id.x;_ControlGroups[id.x]=0;_Missions[id.x]=(Mission)0;
+}
+[numthreads(128,1,1)] void ReserveSwarmSlots(uint3 id:SV_DispatchThreadID){
+ if(id.x!=0)return;uint free=_FreeCount[0],reserve=min(256u,max(8u,_Capacity/10));
+ uint count=min(_SwarmRequest,free>reserve?free-reserve:0);_FreeCount[0]=free-count;
+ _SwarmCounts[0]=0;_SwarmCounts[2]=count;_SwarmCounts[3]=free-count;
+}
+[numthreads(128,1,1)] void SpawnSwarm(uint3 id:SV_DispatchThreadID){
+ SetTraversalTeam(ZOMBIE_TEAM);
+ uint n=id.x;if(n>=_SwarmCounts[2])return;uint i=_SwarmSlots[_SwarmCounts[3]+n];_SwarmScratch[n]=i+1;
+ uint random=ArmyHash(_SwarmSeed+(_SwarmSerial+n)*7919u);uint type=_ZombieType;UnitArchetype t=_Types[type];UnitTraits traits=_Traits[type];
+ uint site=_SwarmAmbient!=0?ArmyHash(random+17)%_SwarmSiteCount:(ArmyHash(_SwarmSeed)+n%min(2u,_SwarmSiteCount))%_SwarmSiteCount;float2 origin=_SwarmSites[site],p=origin;bool safe=false;
+ // Jitter a wide arrival zone, always remaining on a reachable route for this movement class.
+ [loop]for(uint attempt=0;attempt<32;attempt++){
+  float angle=ArmyRandom(random+attempt*2+1)*6.2831853,radius=sqrt(ArmyRandom(random+attempt*2+2))*(_SwarmAmbient!=0?_WorldSize/_NavRes*.65:_SwarmFrontRadius);
+  p=attempt==31?origin:WrapPosition(origin+float2(cos(angle),sin(angle))*radius,_WorldSize);
+  float2 route=_SwarmField[t.movement*_NavRes*_NavRes+TerrainIndex(p)];
+  if(SafeTerrainPosition(p,t.movement)&&(_SwarmAmbient!=0||route.x<INF*.5)){safe=true;break;}
+ }if(!safe)return;
+ UnitState u=(UnitState)0;u.position=p;u.previous=p;u.destination=p;u.health=t.health;u.packed=ZOMBIE_TEAM|(type<<8);
+ u.flags=ALIVE|ATTACK_MOVE|ZOMBIE_UNIT|(_SwarmAmbient!=0?STOPPED:STRUCTURE_ORDER|SWARM_UNIT);u.target=INVALID;u.group=INVALID;u.cooldown=ArmyRandom(random+77)*t.cooldown;
+ _Units[i]=u;_Damage[i]=0;_RouteProgress[i]=float2(INF,0);_Missions[i]=(Mission)0;_ControlGroups[i]=0;
+ UnitOperations ops=(UnitOperations)0;ops.fuel=traits.fuel;ops.ammo=traits.ammunition;ops.home=p;ops.mission=p;ops.homeBuilding=INVALID;ops.carrier=INVALID;ops.state=2;_Operations[i]=ops;
+ _SwarmScratch[n]=0;InterlockedAdd(_SwarmCounts[0],1);
+}
+[numthreads(128,1,1)] void ReclaimSwarmSlots(uint3 id:SV_DispatchThreadID){
+ if(id.x!=0)return;uint free=_FreeCount[0];[loop]for(uint n=0;n<_SwarmCounts[2];n++)if(_SwarmScratch[n]!=0)_FreeSlots[free++]=_SwarmScratch[n]-1;_FreeCount[0]=free;
+}
+[numthreads(128,1,1)] void ResetSwarmAlive(uint3 id:SV_DispatchThreadID){if(id.x==0)_SwarmCounts[1]=0;}
+[numthreads(128,1,1)] void SwarmOrders(uint3 id:SV_DispatchThreadID){
+ SetTraversalTeam(ZOMBIE_TEAM);
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|ZOMBIE_UNIT))!=(ALIVE|ZOMBIE_UNIT))return;
+ if((u.flags&SWARM_UNIT)!=0)InterlockedAdd(_SwarmCounts[1],1);UnitArchetype t=_Types[Type(u)];
+ UnitOperations ops=_Operations[i];ops.ammo=100000;ops.fuel=100000;
+ if(u.target<_Active&&( _Units[u.target].flags&ALIVE)!=0&&Team(_Units[u.target])!=ZOMBIE_TEAM&&WorldDistance(u.position,_Units[u.target].position,_WorldSize)<t.acquisitionRange){u.destination=_Units[u.target].position;u.flags=(u.flags|ATTACK_MOVE)&~(STOPPED|ARRIVED|STRUCTURE_ORDER|ZOMBIE_WANDERING);_Units[i]=u;_Operations[i]=ops;return;}
+ float4 heard=_HearingField[TerrainIndex(u.position)];float4 path=_NoiseField[TerrainIndex(u.position)];float2 pathSource=NoisePosition(path.x,_WorldSize);
+ bool hearing=heard.z>0&&heard.w>_NoiseTime;
+ if(hearing){ops.mission=heard.xy;if(path.w>_NoiseTime&&WorldDistance(u.position,pathSource,_WorldSize)<path.y)ops.mission=pathSource;
+  // Hearing expiry stops recruiting new listeners; it must not cancel a journey.
+  // Two travel times plus grace permit detours but bound unreachable investigations.
+  ops.timer=max(heard.w,_NoiseTime+WorldDistance(u.position,ops.mission,_WorldSize)/max(t.speed,1)*2+8);
+  ops.state=3;u.flags&=~ZOMBIE_WANDERING;
+ }
+ if(ops.state==3&&ops.timer>_NoiseTime){
+  if(hearing||WorldDistance(u.position,ops.mission,_WorldSize)>2){if(WorldDistance(u.destination,ops.mission,_WorldSize)>4)u.flags&=~DIRECT_ROUTE;u.destination=ops.mission;u.target=INVALID;u.flags=(u.flags|ATTACK_MOVE)&~(STOPPED|ARRIVED|STRUCTURE_ORDER);_Units[i]=u;_Operations[i]=ops;return;}
+  ops.timer=0;ops.state=2;
+ }
+ float2 route=_SwarmField[t.movement*_NavRes*_NavRes+TerrainIndex(u.position)];uint target=asuint(route.y);
+ if(route.x<INF*.5&&target<_BuildingCount&&_Structures[target].health>0&&((u.flags&SWARM_UNIT)!=0||WorldDistance(u.position,_Structures[target].position,_WorldSize)-_Structures[target].radius<140)){
+  Structure b=_Structures[target];float2 away=-SafeNormal(WorldDelta(u.position,b.position,_WorldSize));
+  u.destination=TraversableSlot(b.position+away*(b.radius+max(2,t.attackRange*.65)),t.movement);
+  u.target=STRUCTURE_TARGET|target;u.flags|=ATTACK_MOVE|STRUCTURE_ORDER;u.flags&=~(STOPPED|ARRIVED|DIRECT_ROUTE|DETOUR_ROUTE|FORMATION|ZOMBIE_WANDERING);ops.timer=0;ops.state=2;_Units[i]=u;
+ }
+ // Swarm attackers arrive supplied; they have no production base to return to.
+ else if((u.flags&SWARM_UNIT)==0){
+  if((u.flags&ZOMBIE_WANDERING)==0||ops.timer<=_NoiseTime||WorldDistance(u.position,u.destination,_WorldSize)<2){
+   uint random=ArmyHash(i^ArmyHash((uint)(_NoiseTime*4)+_SwarmSeed));float2 goal=u.position;
+   [loop]for(uint attempt=0;attempt<4;attempt++){float angle=ArmyRandom(random+attempt*2)*6.2831853;float distance=12+ArmyRandom(random+attempt*2+1)*28;float2 candidate=WrapPosition(u.position+float2(cos(angle),sin(angle))*distance,_WorldSize);
+    if(ClearTerrainSegment(u.position,candidate,t.movement)){goal=candidate;break;}}
+   u.destination=goal;ops.mission=goal;ops.timer=_NoiseTime+8+ArmyRandom(random+13)*12;ops.state=2;
+   u.flags&=~(ARRIVED|STRUCTURE_ORDER|DETOUR_ROUTE|ROUTE_TRACKED|FORMATION|PASS_RIGHT|PASS_LEFT);
+  }
+  u.target=INVALID;u.flags=(u.flags|ATTACK_MOVE|DIRECT_ROUTE|ZOMBIE_WANDERING)&~STOPPED;_Units[i]=u;
+ }
+ _Operations[i]=ops;
+}
+[numthreads(128,1,1)] void SpawnUnits(uint3 id:SV_DispatchThreadID) {
+ if(id.x!=0)return;
+ [loop] for(uint n=0;n<_SpawnCount;n++) {
+  _SpawnResults[n]=0;uint count=_FreeCount[0];if(count==0)continue;
+  _FreeCount[0]=count-1;uint i=_FreeSlots[count-1];Spawn s=_Spawns[n];UnitState u=(UnitState)0;
+  if(s.homeBuilding==0xfffffffeu){bool found=false;[loop]for(uint carrier=0;carrier<_Active;carrier++){UnitState ship=_Units[carrier];if((ship.flags&(ALIVE|SELECTED))==(ALIVE|SELECTED)&&Team(ship)==s.team&&_Types[Type(ship)].movement==4&&_Traits[Type(ship)].role==5){s.position=ship.position;s.destination=ship.position+float2(180,0);s.homeBuilding=0x80000000u|carrier;_Spawns[n]=s;found=true;break;}}if(!found){_FreeCount[0]=count;continue;}}
+  UnitArchetype t=_Types[s.type];UnitTraits traits=_Traits[s.type];
+  SetTraversalTeam(s.team);
+  if(s.rallyTarget<_Active&&(_Units[s.rallyTarget].flags&ALIVE)!=0&&Team(_Units[s.rallyTarget])==s.team)s.destination=_Units[s.rallyTarget].position;
+  u.position=TraversableSlot(s.position,t.movement);u.previous=u.position;u.destination=TraversableSlot(s.destination,t.movement);u.health=t.health;u.flags=ALIVE|ATTACK_MOVE;
+  u.target=INVALID;u.group=INVALID;u.packed=s.team|(s.type<<8);u.cooldown=ArmyRandom(i+_RtsTick)*t.cooldown;
+  _Units[i]=u;_Next[i]=u;_Damage[i]=0;_RouteProgress[i]=float2(INF,0);_SpawnResults[n]=i+1;
+ }
+}
+[numthreads(128,1,1)] void ResetIntel(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i<_FogRes*_FogRes*2) {_Fog[i]=min(1u,_Fog[i]);_Radar[i]=0;_Contacts[i]=0;}if(i<_GridRes*_GridRes*2)_Support[i]=0;
+ if(i<512){_StructureDamage[i]=0;_Intercepts[i]=0;}if(i<512*4)_Sensors[i]=0;if(i<32)_SectorCounts[i]=0;
+}
+[numthreads(128,1,1)] void UnitIntel(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&ALIVE)==0||(u.flags&32768)!=0||Team(u)>=2)return;UnitTraits t=_Traits[Type(u)];
+ Reveal(u.position,t.vision*_TeamModifiers[Team(u)].x,t.detection*_TeamModifiers[Team(u)].y,Team(u));
+ if(t.role==3||t.role==4||t.role==5){int2 c=(int2)(WorldUV(u.position,_WorldSize)*_GridRes);int ring=(int)ceil(50/(_WorldSize/_GridRes));[loop]for(int y=-ring;y<=ring;y++)[loop]for(int x=-ring;x<=ring;x++){int2 q=WrapCell(c+int2(x,y),_GridRes);InterlockedOr(_Support[Team(u)*_GridRes*_GridRes+q.x+q.y*_GridRes],t.role==4?1u:t.role==3?2u:4u);}}
+ uint2 sector=(uint2)(WorldUV(u.position,_WorldSize)*4);if(_Types[Type(u)].movement!=3)InterlockedAdd(_SectorCounts[Team(u)*16+sector.x+sector.y*4],1);
+}
+[numthreads(128,1,1)] void BuildingIntel(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i>=_BuildingCount)return;Structure b=_Structures[i];if(b.health<=0)return;
+ Reveal(b.position,b.vision,b.detection,b.team);
+ uint2 c=(uint2)(WorldUV(b.position,_WorldSize)*_GridRes);uint friends=0,enemies=0,air=0,engineers=0;
+ [loop] for(int y=-1;y<=1;y++) [loop] for(int x=-1;x<=1;x++) {
+  int2 q=WrapCell(int2(c)+int2(x,y),_GridRes);uint ci=q.x+q.y*_GridRes;
+  [loop] for(uint j=0;j<min(32u,_CellCounts[ci]);j++) {
+   UnitState u=_Units[_Indices[_CellOffsets[ci]+j]];if((u.flags&ALIVE)==0||WorldDistance(u.position,b.position,_WorldSize)>b.radius+35)continue;
+   if(Team(u)==b.team){friends++;uint role=_Traits[Type(u)].role;if(role==1||role==4)engineers++;}else if(Seen(u.position,b.team)) {enemies++;if(_Types[Type(u)].movement==3)air++;}
+  }
+ }
+ _Sensors[i*4]=friends|(engineers<<16);_Sensors[i*4+1]=enemies;_Sensors[i*4+2]=air;
+ if(b.repair>0&&(b.flags&1)!=0){int ring=(int)ceil(90/(_WorldSize/_GridRes));[loop]for(int y=-ring;y<=ring;y++)[loop]for(int x=-ring;x<=ring;x++){int2 q=WrapCell(int2(c)+int2(x,y),_GridRes);InterlockedOr(_Support[b.team*_GridRes*_GridRes+q.x+q.y*_GridRes],3);}}
+ _Sensors[i*4+3]=Seen(b.position,1-b.team)?2:(_Radar[FogCell(b.position,1-b.team)]!=0?1:0);
+}
+float2 SearchGoal(UnitState u,Mission m) {
+ SetTraversalTeam(Team(u));
+ float k=m.step,phase=k*2.399963;
+ if(m.pattern==1)return m.origin+float2(cos(phase),sin(phase))*min(length(m.extent),18*sqrt(k+1));
+ if(m.pattern==2) {uint col=(uint)k%8,row=(uint)k/8%8;if((row&1)!=0)col=7-col;return m.origin+(float2(col,row)/7-.5)*m.extent;}
+ if(m.pattern==3)return m.origin+float2(cos(k*.35-1),sin(k*.35-1))*min(length(m.extent),40+fmod(k,8)*30);
+ if(m.pattern==4)return m.origin+float2(cos(k*.4),sin(k*.4))*m.extent;
+ if(m.pattern==5){uint route=(uint)m.extent.x;if(route<64&&_RouteCounts[route]>0)return _RoutePoints[route*16+(uint)k%_RouteCounts[route]];return m.origin+((uint)k%2==0?m.extent:-m.extent);}
+ if(m.pattern==7)return m.origin;
+ if(m.pattern==8) { // Follow the centroid of friendly local forces from the spatial grid.
+  uint ci=GridCell(u.position);float2 p=0;uint count=0;
+  [loop] for(uint n=0;n<min(64u,_CellCounts[ci]);n++) {UnitState v=_Units[_Indices[_CellOffsets[ci]+n]];if(Team(v)==Team(u)&&(v.flags&ALIVE)!=0){p+=u.position+WorldDelta(u.position,v.position,_WorldSize);count++;}}
+  return count>1?p/count:m.origin;
+ }
+ // Auto explore scores unknown cells by travel distance and a stable per-scout offset.
+ float best=-INF;float2 goal=m.origin;
+ [loop] for(uint n=0;n<96;n++) {uint h=ArmyHash((uint)k*97+n+asuint(m.origin.x)+Type(u)*11);uint cell=h%(_FogRes*_FogRes);float2 q=(float2(cell%_FogRes,cell/_FogRes)+.5)/_FogRes*_WorldSize-_WorldSize*.5;
+  uint state=_Fog[Team(u)*_FogRes*_FogRes+cell];float score=(2-state)*_WorldSize-WorldDistance(u.position,q,_WorldSize)+ArmyRandom(h)*50;
+  if(score>best&&Cost(q,_Types[Type(u)].movement)<INF*.5){best=score;goal=q;}
+ }return goal;
+}
+[numthreads(128,1,1)] void AssignScout(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|SELECTED))!=(ALIVE|SELECTED))return;
+ if(_Traits[Type(u)].role!=2)return;
+ Mission m=(Mission)0;m.origin=_MissionOrigin.xy;m.extent=_MissionOrigin.zw;m.pattern=_Pattern;m.step=_Pattern==5?0:ArmyRandom(i)*7;m.ammo=INF;if(_Pattern==5)m.extent.x=_RouteSlot<0?64:_RouteSlot;
+ _Missions[i]=m;u.flags&=~(STOPPED|FORMATION|ARRIVED|DIRECT_ROUTE|DETOUR_ROUTE);u.flags|=4096;u.group=INVALID;u.destination=TraversableSlot(SearchGoal(u,m),_Types[Type(u)].movement);_Units[i]=u;
+}
+[numthreads(128,1,1)] void ScoutMissions(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|32768))!=ALIVE)return;Mission m=_Missions[i];UnitTraits t=_Traits[Type(u)];
+ if((u.flags&4096)!=0&&m.pattern==5&&m.extent.x<64)InterlockedAdd(_RouteReferences[(uint)m.extent.x],1);
+ float remaining=WorldDistance(u.position,u.destination,_WorldSize);if((u.flags&4096)!=0){if(remaining<m.ammo-2){m.ammo=remaining;m.fuel=0;}else m.fuel+=_Step;}
+ if((u.flags&4096)!=0 && (remaining<12||m.fuel>5)) {m.step++;m.ammo=INF;m.fuel=0;u.destination=TraversableSlot(SearchGoal(u,m),_Types[Type(u)].movement);u.flags&=~(ARRIVED|STOPPED|DIRECT_ROUTE|DETOUR_ROUTE);_Units[i]=u;}
+ if(_Logistics!=0&&_Types[Type(u)].movement!=0&&_Types[Type(u)].movement!=3){UnitOperations o=_Operations[i];o.fuel=max(0,o.fuel-_Step*length(u.velocity)*.01);_Operations[i]=o;}
+ _Missions[i]=m;
+}
+bool Detect(UnitState u,uint team) {UnitTraits t=_Traits[Type(u)];return Seen(u.position,team)||(t.signature>t.stealth&&_CombatRadar[FogCell(u.position,team)]>0);}
+
+bool LaunchMissile(float2 origin,float2 target,uint team,uint damage,uint owner,float radius){
+ [loop]for(uint attempt=0;attempt<32;attempt++){uint at=(owner+attempt+_RtsTick)%32,previous;InterlockedCompareExchange(_Missiles[at].alive,0,1,previous);if(previous!=0)continue;
+ ProjectileState p=(ProjectileState)0;p.position=float3(origin.x,Ground(origin).x+15,origin.y);p.velocity=float3(target.x,Ground(target).x+1,target.y);p.lifetime=12;p.damage=damage;p.team=team;p.alive=1;p.owner=owner;p.target=(uint)radius;_Missiles[at]=p;return true;}return false;
+}
+[numthreads(128,1,1)] void StructureWeapons(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i>=_BuildingCount)return;Structure b=_Structures[i];if(b.health<=0||b.damage<=0||(b.flags&1)==0)return;
+ float timer=max(0,_StructureTimers[i]-_Step);if(timer>0){_StructureTimers[i]=timer;return;}
+ uint best=INVALID;float score=b.range*b.range;
+ int2 centre=(int2)(WorldUV(b.position,_WorldSize)*_GridRes);int ring=(int)ceil(b.range/(_WorldSize/_GridRes));uint examined=0;
+ [loop] for(int y=-ring;y<=ring;y++) [loop] for(int x=-ring;x<=ring;x++) {
+  int2 c=WrapCell(centre+int2(x,y),_GridRes);if(examined>=512)continue;uint ci=c.x+c.y*_GridRes;
+  [loop] for(uint j=0;j<min(8u,_CellCounts[ci])&&examined<512;j++,examined++) {
+   uint at=_Indices[_CellOffsets[ci]+(j+_RtsTick)%_CellCounts[ci]];UnitState u=_CombatUnits[at];uint movement=_Types[Type(u)].movement;
+   if((u.flags&ALIVE)==0||Team(u)==b.team||(b.targetMask&(1u<<movement))==0||!Detect(u,b.team))continue;
+   float d=dot(WorldDelta(b.position,u.position,_WorldSize),WorldDelta(b.position,u.position,_WorldSize));if(d>b.range*b.range)continue;uint priority=(b.flags>>8)&255u;bool preferred=priority==1?movement==3:priority==2?movement==2:priority==3?movement==0:priority==4?_Traits[Type(u)].role==7:priority==5?_Traits[Type(u)].role==8:false;float weighted=d*(preferred?.1:1);if(weighted<score){score=weighted;best=at;}
+  }
+ }
+ if(best!=INVALID) {UnitState victim=_CombatUnits[best];float2 aim=WorldDelta(b.position,victim.position,_WorldSize);_StructureAim[i]=float4(atan2(aim.x,aim.y),victim.position,1);uint amount=(uint)max(1,b.damage-_Traits[Type(victim)].armour*.5);if(b.damage>=5000){if(LaunchMissile(b.position,victim.position,b.team,amount,i,120))timer=b.reload;}else{InterlockedAdd(_Damage[best],amount);if((b.flags>>20)>0)EmitExplosionNoise(victim.position,b.damage,((b.flags>>20)&1023)/4.0);EmitShotTracer(TracerBuildingPosition(b),TracerUnitPosition(victim),b.team,i+_RtsTick*103u,220);timer=b.reload;}}
+ else if(b.range>500) { // Strategic artillery can attack discovered infrastructure.
+  [loop] for(uint n=0;n<_BuildingCount;n++) {Structure enemy=_Structures[n];if(enemy.health>0&&enemy.team!=b.team&&Seen(enemy.position,b.team)&&WorldDistance(enemy.position,b.position,_WorldSize)<b.range){float2 aim=WorldDelta(b.position,enemy.position,_WorldSize);_StructureAim[i]=float4(atan2(aim.x,aim.y),enemy.position,1);if(b.damage>=5000){if(LaunchMissile(b.position,enemy.position,b.team,(uint)b.damage,i,120))timer=b.reload;}else{InterlockedAdd(_StructureDamage[n],(uint)b.damage);if((b.flags>>20)>0)EmitExplosionNoise(enemy.position,b.damage,((b.flags>>20)&1023)/4.0);EmitShotTracer(TracerBuildingPosition(b),TracerBuildingPosition(enemy),b.team,i+_RtsTick*103u,220);timer=b.reload;}break;}}
+ }
+ _StructureTimers[i]=timer;
+}
+[numthreads(128,1,1)] void UnitStructureCombat(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|32768|8192))!=ALIVE||u.target<_Active)return;
+ UnitArchetype t=_Types[Type(u)];UnitTraits traits=_Traits[Type(u)];if(t.damage==0||(traits.targetMask&7)==0)return;UnitOperations ops=_Operations[i];if((_Logistics!=0||t.movement==3)&&ops.ammo<1)return;
+ // Stagger long building scans across ticks; no CPU targeting or unit readback.
+ uint best=INVALID;float closest=t.attackRange;
+ if(u.target!=INVALID&&(u.target&STRUCTURE_TARGET)!=0){uint n=u.target&~STRUCTURE_TARGET;if(n<_BuildingCount){Structure b=_Structures[n];if(b.health>0&&b.team!=Team(u)&&Seen(b.position,Team(u))&&WorldDistance(u.position,b.position,_WorldSize)-b.radius<=t.attackRange)best=n;}}
+ if(best==INVALID&&(u.flags&STRUCTURE_ORDER)!=0)return;
+ if(best==INVALID){if((i+_RtsTick)%4!=0)return;
+  [loop] for(uint n=0;n<_BuildingCount;n++) {Structure b=_Structures[n];if(b.health<=0||b.team==Team(u)||!Seen(b.position,Team(u)))continue;
+   float d=WorldDistance(u.position,b.position,_WorldSize)-b.radius;if(d<closest){closest=d;best=n;}}
+ }
+ if(best!=INVALID) {Structure b=_Structures[best];float shield=0;
+  u.target=STRUCTURE_TARGET|best;float2 delta=WorldDelta(u.position,b.position,_WorldSize);float angle=atan2(delta.x,delta.y);
+  u.turret=Turn(u.turret,angle,t.turnSpeed*2*_Step);u.facing=Turn(u.facing,angle,t.turnSpeed*2*_Step);_Units[i]=u;
+  float aim=max(abs(atan2(sin(angle-u.turret),cos(angle-u.turret))),abs(atan2(sin(angle-u.facing),cos(angle-u.facing))));if(u.cooldown>0||aim>t.aimTolerance)return;
+  [loop] for(uint shieldIndex=0;shieldIndex<_BuildingCount;shieldIndex++){Structure s=_Structures[shieldIndex];if(s.health>0&&s.team==b.team&&(s.flags&1)!=0&&s.shield>0&&WorldDistance(s.position,b.position,_WorldSize)<s.shield)shield=max(shield,.6);}
+  uint amount=(uint)max(1,(t.damage-b.armour*.5)*(1-shield));if(traits.role==8){if(LaunchMissile(u.position,b.position,Team(u),amount,i,traits.splash)){u.cooldown=t.cooldown;_Units[i]=u;ops.ammo=max(0,ops.ammo-1);_Operations[i]=ops;}return;}InterlockedAdd(_StructureDamage[best],amount);if((u.flags&ZOMBIE_UNIT)==0)EmitShotTracer(TracerUnitPosition(u)+float3(sin(u.turret)*2,1.3,cos(u.turret)*2),TracerBuildingPosition(b),Team(u),i+_RtsTick*103u,t.projectileSpeed);if(_WeaponNoise[Type(u)]>0)EmitExplosionNoise(b.position,t.damage,_WeaponNoise[Type(u)]);u.cooldown=t.cooldown;_Units[i]=u;ops.ammo=max(0,ops.ammo-1);_Operations[i]=ops;
+  if(traits.splash>0) [loop] for(uint splashIndex=0;splashIndex<_BuildingCount;splashIndex++) {Structure s=_Structures[splashIndex];if(splashIndex!=best&&s.health>0&&s.team!=Team(u)&&WorldDistance(s.position,b.position,_WorldSize)<traits.splash)InterlockedAdd(_StructureDamage[splashIndex],amount/2u);}
+ }
+}
+[numthreads(128,1,1)] void SupportUnits(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|32768))!=ALIVE)return;UnitArchetype t=_Types[Type(u)];
+ if(Team(u)>=2)return;uint influence=_Support[Team(u)*_GridRes*_GridRes+GridCell(u.position)];
+ if((influence&1)!=0){u.health=min(t.health,u.health+(uint)(60*_Step*_TeamModifiers[Team(u)].w));_Units[i]=u;}
+ if((influence&2)!=0||((influence&4)!=0&&t.movement==3)){UnitOperations o=_Operations[i];o.fuel=min(_Traits[Type(u)].fuel,o.fuel+20*_Step);o.ammo=min(_Traits[Type(u)].ammunition,o.ammo+20*_Step);_Operations[i]=o;}
+
+}
+[numthreads(128,1,1)] void ControlGroup(uint3 id:SV_DispatchThreadID) {
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if(Team(u)!=0)return;
+ if(_AssignGroup!=0) {if((u.flags&SELECTED)!=0)_ControlGroups[i]|=_GroupBit;else if(_AddGroup==0)_ControlGroups[i]&=~_GroupBit;}
+ else {if(_AddGroup==0)u.flags&=~SELECTED;if((_ControlGroups[i]&_GroupBit)!=0&&(u.flags&(ALIVE|32768))==ALIVE)u.flags|=SELECTED;_Units[i]=u;}
+}
+
+[numthreads(128,1,1)] void CollectContacts(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|32768))!=ALIVE)return;if(_Spectator!=0){uint at=FogCell(u.position,0);InterlockedOr(_Contacts[at],1u<<Team(u));return;}if(Team(u)>=2){[unroll]for(uint team=0;team<2;team++){uint at=FogCell(u.position,team);if(_Spectator!=0||_Fog[at]==2)InterlockedMax(_Contacts[at],2u);}return;}uint enemy=1-Team(u);uint at=FogCell(u.position,enemy);UnitTraits t=_Traits[Type(u)];
+ if(_Spectator!=0||_Fog[at]==2)InterlockedMax(_Contacts[at],2u);else if(_Radar[at]!=0&&t.signature>t.stealth)InterlockedMax(_Contacts[at],1u);
+}
+
+[numthreads(128,1,1)] void InitializeSpawnOperations(uint3 id:SV_DispatchThreadID){
+ uint n=id.x;if(n>=_SpawnCount||_SpawnResults[n]==0)return;uint i=_SpawnResults[n]-1;Spawn s=_Spawns[n];UnitTraits t=_Traits[s.type];
+ UnitOperations ops=(UnitOperations)0;ops.fuel=t.fuel;ops.ammo=t.ammunition;ops.home=s.position;ops.mission=s.destination;ops.homeBuilding=s.homeBuilding;ops.carrier=INVALID;
+ // Transport capacity is encoded per type in the archetype-sized side table.
+ ops.capacity=_Types[s.type].sprite>>16;ops.state=_Types[s.type].movement==3?1:2;_Operations[i]=ops;
+ Mission m=(Mission)0;m.origin=s.position;m.extent=float2(220,220);m.fuel=t.fuel;m.ammo=t.ammunition;
+ if(s.team==1&&t.role==2){m.pattern=6;UnitState u=_Units[i];u.flags|=4096;_Units[i]=u;}_Missions[i]=m;
+}
+[numthreads(128,1,1)] void AircraftOperations(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&ALIVE)==0||_Types[Type(u)].movement!=3)return;
+ UnitOperations o=_Operations[i];UnitTraits t=_Traits[Type(u)];o.timer+=_Step;
+ if(o.state==1){u.flags|=STOPPED|8192;if(o.timer>=3){o.state=2;o.timer=0;u.flags&=~(STOPPED|8192);}}
+ else if(o.state==2){o.fuel=max(0,o.fuel-length(u.velocity)*_Step*.025);if(o.fuel<t.fuel*.25||o.ammo<1||u.health<_Types[Type(u)].health*.3){o.mission=u.destination;o.state=3;o.timer=0;}}
+ else if(o.state==3){
+  bool mobileHome=(o.homeBuilding&0x80000000u)!=0&&o.homeBuilding!=INVALID;uint carrier=o.homeBuilding&0x7fffffffu;bool onCarrier=mobileHome&&carrier<_Active&&(_Units[carrier].flags&ALIVE)!=0&&_Types[Type(_Units[carrier])].movement==4&&_Traits[Type(_Units[carrier])].role==5;
+  if(onCarrier)o.home=_Units[carrier].position;
+  bool homeValid=onCarrier||(o.homeBuilding<_BuildingCount&&_Structures[o.homeBuilding].health>0&&(_Structures[o.homeBuilding].flags&5)==5);
+  if(!homeValid){float closest=INF;uint found=INVALID;[loop]for(uint b=0;b<_BuildingCount;b++){Structure s=_Structures[b];float d=WorldDistance(s.position,u.position,_WorldSize);if(s.health>0&&s.team==Team(u)&&(s.flags&5)==5&&d<closest){closest=d;found=b;}}if(found!=INVALID){o.homeBuilding=found;o.home=_Structures[found].position;homeValid=true;}}
+  if(homeValid){u.destination=o.home;u.group=INVALID;u.flags&=~(STOPPED|4096|FORMATION|ARRIVED);if(WorldDistance(u.position,o.home,_WorldSize)<20){o.state=4;o.timer=0;u.flags|=STOPPED|8192;}}
+  else{o.fuel=max(0,o.fuel-_Step*2);if(o.fuel<=0)InterlockedAdd(_Damage[i],20);}
+ }
+ else if(o.state==4){u.flags|=STOPPED|8192;if(o.timer>=8){o.fuel=t.fuel;o.ammo=t.ammunition;o.state=5;o.timer=0;}}
+ else if(o.state==5){u.health=min(_Types[Type(u)].health,u.health+80);if(o.timer>=5){o.state=1;o.timer=0;u.destination=o.mission;u.flags&=~(FORMATION|ARRIVED);u.group=INVALID;}}
+ _Operations[i]=o;_Units[i]=u;
+}
+[numthreads(128,1,1)] void LoadUnload(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&ALIVE)==0||Team(u)!=0)return;
+ if(_LoadTransport!=0){
+  if((u.flags&32768)!=0||_Types[Type(u)].movement>2||_Traits[Type(u)].role==6)return;int2 centre=(int2)(WorldUV(u.position,_WorldSize)*_GridRes);
+  [loop]for(int y=-2;y<=2;y++)[loop]for(int x=-2;x<=2;x++){int2 c=WrapCell(centre+int2(x,y),_GridRes);uint ci=c.x+c.y*_GridRes;
+  [loop]for(uint j=0;j<min(64u,_CellCounts[ci]);j++){uint at=_Indices[_CellOffsets[ci]+j];UnitState carrier=_Units[at];if(at==i||(carrier.flags&(ALIVE|SELECTED))!=(ALIVE|SELECTED)||Team(carrier)!=0||_Traits[Type(carrier)].role!=6||WorldDistance(u.position,carrier.position,_WorldSize)>32)continue;
+   if(_Types[Type(carrier)].movement!=4&&_Types[Type(u)].movement!=0)continue;uint capacity=_Operations[at].capacity,claimed;InterlockedAdd(_Operations[at].payload,1,claimed);if(claimed>=capacity){InterlockedAdd(_Operations[at].payload,0xffffffffu);continue;}
+   u.flags|=32768;u.flags&=~SELECTED;_Operations[i].carrier=at;_Units[i]=u;return;
+  }}
+ }else if((u.flags&32768)!=0){uint at=_Operations[i].carrier;if(at>=_Active)return;UnitState carrier=_Units[at];if((carrier.flags&SELECTED)==0)return;
+  float a=ArmyRandom(i)*6.283185;float2 p=TraversableSlot(carrier.position+float2(cos(a),sin(a))*(12+ArmyRandom(i+1)*22),_Types[Type(u)].movement);
+  if(WorldDistance(p,carrier.position,_WorldSize)>55)return;u.position=p;u.previous=p;u.destination=p;u.group=INVALID;u.flags&=~(32768|FORMATION|ARRIVED);_Operations[i].carrier=INVALID;InterlockedAdd(_Operations[at].payload,0xffffffffu);_Units[i]=u;
+ }
+}
+[numthreads(128,1,1)] void TransportPassengers(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;if(i>=_Active)return;UnitState u=_Units[i];if((u.flags&(ALIVE|32768))!=(ALIVE|32768))return;uint at=_Operations[i].carrier;
+ if(at>=_Active||(_Units[at].flags&ALIVE)==0){InterlockedAdd(_Damage[i],u.health);return;}u.position=_Units[at].position;u.previous=u.position;u.velocity=0;_Units[i]=u;
+}
+
+void DetonateNuke(float2 impact,float radius,uint damage,uint team,uint seed){
+ EmitCombatVisual(float3(impact.x,Ground(impact).x,impact.y),radius*1.2,1,team,seed,0);EmitExplosionNoise(impact,damage,radius);
+ int2 centre=(int2)(WorldUV(impact,_WorldSize)*_GridRes);int ring=(int)ceil(radius/(_WorldSize/_GridRes));
+ [loop]for(int y=-ring;y<=ring;y++)[loop]for(int x=-ring;x<=ring;x++){int2 c=WrapCell(centre+int2(x,y),_GridRes);uint ci=c.x+c.y*_GridRes;
+  [loop]for(uint n=0;n<_CellCounts[ci];n++){uint at=_Indices[_CellOffsets[ci]+n];UnitState u=_CombatUnits[at];float d=WorldDistance(u.position,impact,_WorldSize);if((u.flags&ALIVE)!=0&&d<radius)InterlockedAdd(_Damage[at],(uint)(damage*(1-d/radius)));}}
+ [loop]for(uint b=0;b<_BuildingCount;b++){Structure s=_Structures[b];float d=WorldDistance(s.position,impact,_WorldSize);if(s.health>0&&d<radius)InterlockedAdd(_StructureDamage[b],(uint)(damage*(1-d/radius)));}
+}
+[numthreads(128,1,1)]void TestNuke(uint3 id:SV_DispatchThreadID){if(id.x==0)DetonateNuke(_TestNuke.xy,_TestNuke.w,(uint)_TestNuke.z,INVALID,_RtsTick*7919u);}
+[numthreads(128,1,1)] void MissileOperations(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;if(i>=32)return;ProjectileState p=_Missiles[i];if(p.alive==0)return;
+ p.lifetime-=_Step;float phase=saturate(1-p.lifetime/12);float2 delta=WorldDelta(p.position.xz,p.velocity.xz,_WorldSize);
+ p.position.xz+=delta/max(.25,p.lifetime+_Step)*_Step;p.position.y=lerp(Ground(p.position.xz).x+15,p.velocity.y,phase)+sin(phase*3.14159265)*350;
+ [loop]for(uint b=0;b<_BuildingCount;b++){Structure s=_Structures[b];if(s.health<=0||s.team==p.team||(s.flags&17)!=17||WorldDistance(s.position,p.position.xz,_WorldSize)>s.range||_CombatRadar[FogCell(p.position.xz,s.team)]==0)continue;
+  uint claimed;InterlockedCompareExchange(_Intercepts[b],0,1,claimed);if(claimed==0){p.alive=0;break;}}
+ if(p.alive!=0&&p.lifetime<=0){DetonateNuke(p.velocity.xz,max(40,(float)p.target),p.damage,p.team,i+_RtsTick*7919u);p.alive=0;}p.position.xz=WrapPosition(p.position.xz,_WorldSize);_Missiles[i]=p;
+}
+
+[numthreads(128,1,1)] void ResetRouteReferences(uint3 id:SV_DispatchThreadID){if(id.x<64)_RouteReferences[id.x]=0;}

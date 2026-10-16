@@ -1,0 +1,11 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Button name="card" class="action catalog-card">
+        <ui:Image name="highlight" class="control-glow" picking-mode="Ignore" />
+        <ui:Image name="portrait" class="portrait" picking-mode="Ignore" />
+        <ui:VisualElement class="grow">
+            <ui:Label name="name" class="card-name" picking-mode="Ignore" />
+            <ui:Label name="cost" class="card-meta" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:Button>
+    <ui:Label name="lock" class="card-lock" picking-mode="Ignore" />
+</ui:UXML>

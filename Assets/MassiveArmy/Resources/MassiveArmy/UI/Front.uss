@@ -1,0 +1,163 @@
+.front {
+    --cyan: rgb(27,219,255);
+    --text: rgb(196,225,240);
+    --edge: rgb(27,101,132);
+    --surface: rgb(3,16,27);
+    position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+    color: var(--text); font-size: 18px; -unity-font-definition: url("Fonts/Inter SDF.asset");
+}
+.screen,.hud,.modal-layer,.overlay { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.screen { background-color: rgb(3,12,21); padding: 70px 100px; }
+.panel { background-color: var(--surface); border-color: var(--edge); border-width: 1px; border-radius: 2px; padding: 14px; }
+.top { height: 96px; flex-direction: row; align-items: center; padding: 8px 18px; border-bottom-width: 2px; border-bottom-color: var(--cyan); }
+.brand { width: 350px; flex-direction: row; align-items: center; flex-shrink: 0; }
+.emblem { width: 76px; height: 76px; margin-right: 12px; }
+.brand-title { font-size: 29px; }
+.resources { flex-grow: 1; flex-direction: row; align-items: center; }
+.resource { flex-grow: 1; flex-basis: 0; border-left-color: var(--edge); border-left-width: 1px; padding: 6px 10px; flex-direction: row; align-items: center; }
+.resource-icon { width: 34px; height: 34px; margin-right: 8px; flex-shrink: 0; }
+.resource-name { font-size: 13px; color: rgb(128,177,203); }
+.resource-value { font-size: 19px; -unity-font-definition: url("Fonts/Rajdhani SDF.asset"); }
+.top-actions { width: 370px; flex-shrink: 0; }
+.grid-status { position: absolute; right: 18px; top: 100px; flex-direction: row; font-size: 13px; }
+.construction { position: absolute; top: 132px; bottom: 144px; left: 10px; width: 365px; }
+.context { position: absolute; top: 132px; bottom: 144px; right: 10px; width: 455px; }
+.quick-actions { position: absolute; top: 112px; left: 390px; right: 480px; flex-direction: row; }
+.notifications { position: absolute; left: 395px; right: 480px; top: 175px; }
+.notice { background-color: rgba(3,16,27,0.86); padding: 6px 12px; margin-bottom: 6px; font-size: 16px; }
+.bottom { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 122px; flex-direction: row; align-items: center; border-top-width: 2px; border-top-color: var(--cyan); }
+.selection { width: 390px; flex-shrink: 0; }
+.commands { flex-direction: row; flex-grow: 1; }
+.commands .action { height: 64px; flex-grow: 1; margin: 0 6px; }
+.minimap { width: 206px; height: 100px; margin: 0 14px; border-width: 1px; border-color: var(--cyan); flex-shrink: 0; overflow: hidden; }
+.map-image { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+.camera-help { width: 190px; font-size: 13px; flex-shrink: 0; }
+.scout { position: absolute; right: 10px; bottom: 144px; width: 455px; }
+.developer { position: absolute; right: 10px; top: 132px; bottom: 144px; width: 420px; }
+.title,.heading,.brand-title,.action { -unity-font-definition: url("Fonts/Rajdhani SDF.asset"); }
+.title { font-size: 76px; color: var(--cyan); letter-spacing: 3px; }
+.heading { font-size: 27px; color: var(--cyan); letter-spacing: 1px; margin-bottom: 12px; white-space: normal; }
+.subheading { font-size: 21px; color: var(--cyan); margin: 12px 0 6px; }
+.muted { color: rgb(117,161,185); font-size: 14px; white-space: normal; }
+.body { white-space: normal; margin-bottom: 8px; }
+.row { flex-direction: row; align-items: center; }
+.wrap { flex-direction: row; flex-wrap: wrap; }
+.grow { flex-grow: 1; }
+.action {
+    min-height: 44px; margin: 3px; padding: 8px 12px; flex-direction: row; justify-content: center; align-items: center;
+    background-color: rgb(6,27,42); border-width: 1px; border-color: rgb(25,119,153); border-radius: 3px;
+    color: rgb(208,240,255); font-size: 19px; white-space: normal;
+    transition-property: background-color, border-color, color; transition-duration: 0.10s;
+}
+.action:hover { background-color: rgb(10,53,74); border-color: var(--cyan); color: white; }
+.action:active { background-color: rgb(12,89,116); }
+.action:focus { border-color: rgb(162,243,255); border-width: 2px; }
+.action.active { background-color: rgb(8,66,87); border-color: var(--cyan); color: white; }
+.action:disabled { opacity: 0.48; background-color: rgb(9,19,29); }
+.action.danger { border-color: rgb(207,53,94); }
+.action.warning { border-color: rgb(232,183,49); }
+.action.primary { border-color: var(--cyan); background-color: rgb(6,55,74); }
+.action-icon { width: 24px; height: 24px; margin-right: 8px; flex-shrink: 0; }
+.category { width: 48%; font-size: 18px; }
+.catalog-card { min-height: 72px; flex-direction: row; justify-content: flex-start; padding: 5px; }
+.portrait { width: 84px; height: 64px; flex-shrink: 0; margin-right: 10px; }
+.portrait-large { width: 210px; height: 160px; flex-shrink: 0; }
+.card-name { font-size: 18px; white-space: normal; }
+.card-meta { font-size: 14px; color: rgb(119,188,216); white-space: normal; }
+.card-lock { color: rgb(227,178,72); font-size: 13px; white-space: normal; }
+.progress { height: 6px; margin: 6px 0; background-color: rgb(27,44,57); }
+.progress-fill { height: 6px; background-color: var(--cyan); }
+.queue-card { padding: 5px; margin: 4px 0; border-color: var(--edge); border-width: 1px; flex-direction: row; }
+.queue-card .action { min-height: 28px; font-size: 13px; padding: 2px 8px; }
+.modal-layer { background-color: rgba(0,6,12,0.75); align-items: center; justify-content: center; }
+.modal { width: 1150px; max-height: 88%; padding: 24px; }
+.modal .action { min-width: 100px; }
+.close { width: 46px; min-width: 46px; }
+.tooltip { position: absolute; width: 350px; }
+.menu-layout { flex-direction: row; flex-grow: 1; align-items: center; }
+.menu-main { width: 900px; }
+.menu-art { flex-grow: 1; align-items: center; }
+.hero { width: 640px; height: 530px; }
+.menu-main .action { margin: 6px 0; min-height: 56px; }
+.scale-choice { flex-grow: 1; }
+.setting-row { margin: 7px 0; padding: 8px; border-bottom-color: rgb(17,49,66); border-bottom-width: 1px; }
+.setting-row .unity-base-field__label { min-width: 360px; }
+.setting-row .unity-base-field__input { flex-grow: 1; }
+.unity-base-field__label { color: var(--text); }
+.unity-toggle__checkmark { background-color: rgb(10,43,60); border-color: var(--edge); border-width: 1px; }
+.unity-base-slider__tracker { background-color: rgb(21,65,85); }
+.unity-base-slider__dragger { background-color: var(--cyan); border-width: 0; }
+.unity-text-field__input { background-color: rgb(9,29,42); color: var(--text); border-color: var(--edge); border-width: 1px; padding: 8px; }
+.unity-scroll-view { flex-grow: 1; }
+.unity-scroller--vertical { width: 10px; }
+.unity-scroller__low-button,.unity-scroller__high-button { display: none; }
+.tech-canvas { width: 1040px; height: 850px; }
+.tech-node { position: absolute; width: 230px; height: 78px; justify-content: flex-start; }
+.tech-node.complete { border-color: rgb(97,224,157); }
+.tech-node.pending { border-color: rgb(238,192,62); }
+.map-atlas { width: 650px; height: 650px; flex-shrink: 0; margin-right: 24px; }
+.setup-preview { width: 580px; height: 580px; flex-shrink: 0; margin: 12px; }
+.setup-fields { width: 760px; margin-right: 30px; }
+.setup-tabs .action { width: 23%; font-size: 16px; }
+.danger-text { color: rgb(255,95,132); }
+.warning-text { color: rgb(239,194,72); }
+
+.title,.brand-title { -unity-font-definition: url("Fonts/Rajdhani Bold SDF.asset"); }
+
+.resource-value,.card-meta { -unity-font-definition: url("Fonts/Inter Medium SDF.asset"); }
+.front.compact .brand { width: 285px; }
+.front.compact .brand-title { font-size: 25px; }
+.front.compact .resources .resource-icon { width: 24px; height: 24px; margin-right: 5px; }
+.front.compact .resource { padding: 4px 6px; }
+.front.compact .resource-value { font-size: 15px; }
+.front.compact .top-actions { width: 315px; }
+.front.compact .top-actions .action { padding: 6px; font-size: 17px; min-height: 38px; }
+.front.compact .construction { width: 310px; }
+.front.compact .context,.front.compact .scout { width: 390px; }
+.front.compact .quick-actions,.front.compact .notifications { left: 335px; right: 415px; }
+.front.compact .selection { width: 260px; }
+.front.compact .camera-help { width: 140px; }
+.front.compact .commands .action { font-size: 16px; padding: 6px; margin: 0 3px; }
+.front.compact .minimap { width: 120px; margin: 0 8px; }
+.front.compact .modal { max-width: 94%; }
+.front.compact .screen { padding: 35px 50px; }
+.front.compact .menu-main { width: 740px; }
+.front.compact .hero { width: 450px; height: 400px; }
+.front.compact .title { font-size: 64px; }
+.front.compact .setup-fields { width: 650px; }
+.front.compact .setup-preview { width: 430px; height: 430px; }
+.front.compact .setting-row .unity-base-field__label { min-width: 260px; }
+
+.front.compact .map-atlas { width: 500px; height: 500px; }
+.front.compact .modal .setting-row { margin: 4px 0; padding: 5px; }
+
+.unity-base-text-field__input,.unity-base-popup-field__input { background-color: rgb(9,29,42); color: var(--text); border-color: var(--edge); border-width: 1px; padding: 8px; }
+.unity-base-popup-field__text { color: var(--text); }
+.unity-base-popup-field__arrow { -unity-background-image-tint-color: var(--cyan); }
+.unity-toggle:checked .unity-toggle__checkmark { background-color: var(--cyan); -unity-background-image-tint-color: rgb(3,20,30); }
+
+.brand-title { color: var(--cyan); }
+.quick-actions { top: 132px; }
+.notifications { top: 195px; }
+.grid-status { left: 390px; top: 100px; justify-content: flex-end; }
+.grid-status .notice { font-size: 13px; height: 24px; padding: 2px 6px; margin: 0; }
+.minimap,.front.compact .minimap { width: 100px; height: 100px; }
+
+.front .unity-enum-field > .unity-base-field__input { background-color: rgb(9,29,42); color: var(--text); border-color: var(--edge); border-width: 1px; }
+.front .unity-enum-field__text { color: var(--text); }
+.front .unity-enum-field__arrow { -unity-background-image-tint-color: var(--cyan); }
+
+.control-glow { position: absolute; left: 0; right: 0; top: 0; height: 16px; display: none; }
+.action:hover .control-glow,.action.active .control-glow,.action.primary .control-glow { display: flex; }
+
+.wrap { flex-shrink: 0; }
+.front.compact .category { width: 46%; }
+.front.compact .portrait-large { width: 160px; height: 140px; }
+.context .row .body { flex-grow: 1; flex-shrink: 1; min-width: 0; font-size: 16px; }
+
+.front.compact .category { padding: 6px; }
+.front.compact .category .card-name { font-size: 16px; white-space: nowrap; }
+.front.compact .category .action-icon { width: 20px; height: 20px; margin-right: 5px; }
+
+/* Scroll content and fixed cards keep their natural size in Editor and player. */
+.unity-scroll-view__content-container,.queue-card,.setting-row,.tech-canvas { flex-shrink: 0; }

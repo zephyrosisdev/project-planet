@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1afc52447e063cb4197f220e0aa10e5c, type: 3}
+  m_Name: SurfaceLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.CombatSurfaceLibrary
+  normalNeutral:
+  - {x: 0.44411764, y: 0.47549018, z: 0.99215686, w: 0}
+  - {x: 0.43529412, y: 0.48333335, z: 0.9882353, w: 0}
+  - {x: 0.44705883, y: 0.48529413, z: 0.99215686, w: 0}
+  - {x: 0.45196077, y: 0.4715686, z: 0.9911765, w: 0}
+  - {x: 0.45196077, y: 0.48235294, z: 0.9911765, w: 0}
+  - {x: 0.44607842, y: 0.46862745, z: 0.9911765, w: 0}
+  - {x: 0.44313726, y: 0.4745098, z: 0.9911765, w: 0}
+  alphaCoverage: 

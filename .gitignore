@@ -107,3 +107,67 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Local wrapping-world validation builds and disposable compilation caches
+/TestResults/ValidationProject/
+/TestResults/Builds/
+/TestResults/CompileCheck/shader-includes/
+/TestResults/CompileCheck/shaders/
+/TestResults/CompileCheck/world/
+
+# Disposable UI benchmark tooling, obsolete runs and frozen source checkout.
+/TestResults/UiRedesign/PythonDeps/
+/TestResults/UiRedesign/BaselineSources/
+/TestResults/UiRedesign/invalid-*/
+/TestResults/UiRedesign/gallery-initial/
+/TestResults/UiRedesign/gallery/
+/TestResults/UiRedesign/*-build.log
+/TestResults/UiRedesign/**/player.log
+
+/TestResults/UiRedesign/intermediate-current/
+
+/TestResults/UiRedesign/__pycache__/
+
+/TestResults/UiRedesign/intermediate-reset-current/
+
+TestResults/UiRedesign/diagnostic-fog-missing-cpu/
+
+TestResults/UiRedesign/*-pending.txt
+
+# Reproducible model-art players; retain the sources and measurement reports.
+/TestResults/ArtPass/Builds/
+
+/TestResults/HQ/Builds/
+/ArtSource/HQ/*.blend1
+/ArtSource/HQ-build*.log
+
+/TestResults/HQ/*build*.log
+/TestResults/HQ/Validation/player.log
+/TestResults/HQ/Benchmarks/**/player.log
+/TestResults/HQ/benchmarks*.log
+
+# Frozen zombie comparison players and transient editor/player logs.
+/TestResults/Zombies/Builds/
+/TestResults/Zombies/*.log
+/TestResults/Zombies/Benchmarks/**/player.log
+/TestResults/Zombies/Validation/player.log
+
+/TestResults/Lighting/*.log
+/TestResults/Lighting/Benchmarks/**/player.log
+
+/TestResults/BuildingPresentation/*.log
+/TestResults/BuildingPresentation/Benchmarks/**/player.log
+
+/TestResults/AiTest/Builds/
+/TestResults/AiTest/*.log
+/TestResults/AiTest/Benchmarks/**/player.log
+/TestResults/AiAccess/Builds/
+/TestResults/AiAccess/*.log
+/TestResults/AiAccess/Benchmarks/**/player.log
+/TestResults/AiAccess/Player/player.log
+/TestResults/AiClearance/Builds/
+/TestResults/AiClearance/*.log
+/TestResults/AiClearance/Benchmarks/**/player.log
+/TestResults/AiClearance/Player/player.log
+/TestResults/AiClearance/PlayerFinal/player.log
+TestResults

@@ -1,0 +1,59 @@
+#pragma kernel ClearNoiseSeeds
+#pragma kernel SeedExplosionNoise
+#pragma kernel RelaxZombieNoise
+#pragma kernel ClearNoiseEvents
+#pragma kernel UpdateZombieHearing
+#pragma target 5.0
+#include "ArmyCommon.hlsl"
+StructuredBuffer<float> _Costs;
+RWStructuredBuffer<float4> _NoiseEvents;
+RWStructuredBuffer<uint> _NoiseCount,_Seeds;
+RWStructuredBuffer<uint> _HearingSeeds;
+RWStructuredBuffer<float4> _HearingField;
+StructuredBuffer<float4> _Read;
+RWStructuredBuffer<float4> _Write;
+uint _NavRes,_EventCapacity;float _WorldSize,_NoiseTime;
+#include "ZombieHearing.hlsl"
+float CellCost(int2 c){c=WrapCell(c,_NavRes);return _Costs[10*_NavRes*_NavRes+c.x+c.y*_NavRes];}
+[numthreads(128,1,1)]void ClearNoiseSeeds(uint3 id:SV_DispatchThreadID){if(id.x<_NavRes*_NavRes){_Seeds[id.x]=0;_HearingSeeds[id.x]=0;}}
+[numthreads(128,1,1)]void SeedExplosionNoise(uint3 group:SV_GroupID,uint3 local:SV_GroupThreadID){
+ uint i=group.x;if(i>=_EventCapacity||i<992&&i>=min(_NoiseCount[0],992u)||i>=992&&i>=992+min(_NoiseCount[1],32u))return;float4 event=_NoiseEvents[i];if(event.z<=0)return;
+ int2 centre=(int2)(WorldUV(event.xy,_WorldSize)*_NavRes);float cell=_WorldSize/_NavRes;int radius=(int)ceil(event.z/cell);uint width=radius*2+1,total=width*width;bool sourceBlocked=CellCost(centre)>=INF*.5;
+ // One cooperative group per impact: no million-unit event-list scans and no
+ // serial 64K-cell loop for a nuclear explosion. Hearing crosses water/walls.
+ [loop]for(uint splatCell=local.x;splatCell<total;splatCell+=128){
+  int2 c=WrapCell(centre+int2(splatCell%width,splatCell/width)-radius,_NavRes);float2 p=((c+.5)/_NavRes-.5)*_WorldSize;float distance=WorldDistance(p,event.xy,_WorldSize);float budget=event.z-distance;if(budget<=0)continue;
+  uint winner=(min(65535u,max(1u,(uint)budget))<<16)|(i+1);uint at=c.x+c.y*_NavRes;InterlockedMax(_HearingSeeds[at],winner);
+  if(CellCost(c)>=INF*.5)continue;
+  bool seed=distance<cell*1.5;
+  if(sourceBlocked){seed=true;
+   [unroll]for(int y=-1;y<=1;y++)[unroll]for(int x=-1;x<=1;x++){
+    if(x==0&&y==0)continue;int2 q=WrapCell(c+int2(x,y),_NavRes);if(CellCost(q)>=INF*.5)continue;
+    float2 qp=((q+.5)/_NavRes-.5)*_WorldSize;if(WorldDistance(qp,event.xy,_WorldSize)<distance-.01)seed=false;
+   }
+  }
+  // Offshore and foundation impacts route toward accessible shore/perimeter.
+  if(seed)InterlockedMax(_Seeds[at],winner);
+ }
+}
+[numthreads(128,1,1)]void UpdateZombieHearing(uint3 id:SV_DispatchThreadID){
+ uint i=id.x;if(i>=_NavRes*_NavRes)return;float4 old=_HearingField[i];if(old.w<=_NoiseTime)old=0;uint seed=_HearingSeeds[i]&65535u;
+ if(seed>0){float4 event=_NoiseEvents[seed-1];float budget=(float)(_HearingSeeds[i]>>16);if(budget>old.z||old.w<_NoiseTime+event.w-1)old=float4(event.xy,budget,_NoiseTime+event.w);}
+ _HearingField[i]=old;
+}
+[numthreads(128,1,1)]void RelaxZombieNoise(uint3 id:SV_DispatchThreadID){
+ uint i=id.x,total=_NavRes*_NavRes;if(i>=total)return;int2 c=int2(i%_NavRes,i/_NavRes);float4 best=_Read[i];
+ if(best.w<=_NoiseTime)best=0;float cost=CellCost(c);float cell=_WorldSize/_NavRes;
+ uint seed=_Seeds[i]&65535u;
+ if(seed>0){float4 event=_NoiseEvents[seed-1];float budget=event.z+_WorldSize*4-WorldDistance(((c+.5)/_NavRes-.5)*_WorldSize,event.xy,_WorldSize);
+  if(budget>best.z||best.w<_NoiseTime+event.w-1)best=float4(PackNoisePosition(event.xy,_WorldSize),event.z,max(0,budget),_NoiseTime+event.w);
+ }
+ if(cost<INF*.5){[unroll]for(int y=-1;y<=1;y++)[unroll]for(int x=-1;x<=1;x++){
+  if(x==0&&y==0)continue;int2 q=WrapCell(c+int2(x,y),_NavRes);float other=CellCost(q);
+  if(other>=INF*.5||x!=0&&y!=0&&(CellCost(c+int2(x,0))>=INF*.5||CellCost(c+int2(0,y))>=INF*.5))continue;
+  float4 candidate=_Read[q.x+q.y*_NavRes];candidate.z-=cell*(x!=0&&y!=0?1.41421356:1)*max(1,(cost+other)*.5);
+  if(candidate.w>_NoiseTime&&candidate.z>best.z)best=candidate;
+ }}else best=0;
+ _Write[i]=best.z>0?best:0;
+}
+[numthreads(128,1,1)]void ClearNoiseEvents(uint3 id:SV_DispatchThreadID){if(id.x<2)_NoiseCount[id.x]=0;if(id.x<_EventCapacity)_NoiseEvents[id.x]=0;}

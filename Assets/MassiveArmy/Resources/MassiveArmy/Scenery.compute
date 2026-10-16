@@ -1,0 +1,18 @@
+#include "WorldTopology.hlsl"
+float _WorldSize;float3 _RenderFocus;
+#pragma kernel Cull
+#pragma kernel Ground
+struct Instance { float4 positionScale;float4 tintYaw; };
+StructuredBuffer<Instance> _Instances;
+RWStructuredBuffer<Instance> _GroundInstances;
+Texture2D<float4> _Terrain;SamplerState sampler_Terrain;
+AppendStructuredBuffer<uint> _Visible;
+float4 _Planes[6];uint _Count;
+[numthreads(128,1,1)]void Ground(uint id:SV_DispatchThreadID){if(id>=_Count)return;Instance item=_GroundInstances[id];item.positionScale.y=_Terrain.SampleLevel(sampler_Terrain,WorldUV(item.positionScale.xz,_WorldSize),0).x;_GroundInstances[id]=item;}
+[numthreads(128,1,1)]
+void Cull(uint id:SV_DispatchThreadID)
+{
+    if(id>=_Count)return;float4 p=_Instances[id].positionScale;float3 centre=NearestWorld(p.xyz,_RenderFocus,_WorldSize)+float3(0,p.w*1.8,0);
+    for(uint j=0;j<6;j++)if(dot(_Planes[j].xyz,centre)+_Planes[j].w < -p.w*4)return;
+    _Visible.Append(id);
+}
