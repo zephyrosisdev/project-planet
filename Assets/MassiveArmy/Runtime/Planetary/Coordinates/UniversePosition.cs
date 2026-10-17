@@ -16,9 +16,13 @@ namespace MassiveArmy.Planetary
         public static Double3 operator *(Double3 a,double b)=>new Double3(a.x*b,a.y*b,a.z*b);
         public static Double3 Rotate(Quaternion q,Double3 v)
         {
-            // Quaternion is dimensionless; never downcast a spatial offset before rotation.
-            double tx=2*(q.y*v.z-q.z*v.y),ty=2*(q.z*v.x-q.x*v.z),tz=2*(q.x*v.y-q.y*v.x);
-            return new Double3(v.x+q.w*tx+q.y*tz-q.z*ty,v.y+q.w*ty+q.z*tx-q.x*tz,v.z+q.w*tz+q.x*ty-q.y*tx);
+            // Unity's float quaternion can be slightly non-unit, stretching large spatial offsets.
+            // Normalize in double before rotating; never downcast the spatial value itself.
+            double norm=(double)q.x*q.x+(double)q.y*q.y+(double)q.z*q.z+(double)q.w*q.w;
+            if(norm<1e-30)return v;
+            double inverse=1/Math.Sqrt(norm),x=q.x*inverse,y=q.y*inverse,z=q.z*inverse,w=q.w*inverse;
+            double tx=2*(y*v.z-z*v.y),ty=2*(z*v.x-x*v.z),tz=2*(x*v.y-y*v.x);
+            return new Double3(v.x+w*tx+y*tz-z*ty,v.y+w*ty+z*tx-x*tz,v.z+w*tz+x*ty-y*tx);
         }
         public static Double3 Cross(Double3 a,Double3 b)=>new Double3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x);
     }

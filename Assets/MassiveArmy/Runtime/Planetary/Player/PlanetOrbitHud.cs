@@ -14,6 +14,7 @@ namespace MassiveArmy.Planetary
         static string Duration(double seconds)=>seconds>=3600?$"{seconds/3600:0.00} h":$"{seconds/60:0.0} min";
         void RefreshOrbit()
         {
+            if(RefreshGalaxyOrbit())return;
             orbit=PlanetOrbit.Calculate(pose.position,pose.linearVelocity,world.definition.gravitationalParameter);
             double surfaceRadius=world.definition.radius+Math.Max(world.definition.ReliefBound,world.definition.oceanHeight)+(GearDeployed?8:5);
             bool impact=orbit.SurfaceThreatAhead(surfaceRadius);
@@ -39,7 +40,7 @@ namespace MassiveArmy.Planetary
         {
             root.Clear();root.pickingMode=PickingMode.Ignore;
             flightPanel=new VisualElement{pickingMode=PickingMode.Ignore};flightPanel.style.position=UnityEngine.UIElements.Position.Absolute;flightPanel.style.right=16;flightPanel.style.top=110;flightPanel.style.width=366;flightPanel.style.paddingLeft=16;flightPanel.style.paddingRight=16;flightPanel.style.paddingTop=14;flightPanel.style.paddingBottom=16;flightPanel.style.backgroundColor=new Color(.035f,.07f,.11f,.94f);root.Add(flightPanel);
-            weaponLabel=PilotLabel(flightPanel,"ROCKETS READY",12);PilotLabel(flightPanel,"FLIGHT TRAJECTORY / PLANET FRAME",16);statusLabel=PilotLabel(flightPanel,"");statusLabel.style.marginTop=6;
+            weaponLabel=PilotLabel(flightPanel,"ROCKETS READY",12);PilotLabel(flightPanel,"FLIGHT TRAJECTORY / GRAVITY",16);statusLabel=PilotLabel(flightPanel,"");statusLabel.style.marginTop=6;
             mapDrawing=new RtsUiDrawing();mapDrawing.style.height=280;mapDrawing.style.width=334;flightPanel.Add(mapDrawing);
             peLabel=PilotLabel(mapDrawing,"Pe",12);apLabel=PilotLabel(mapDrawing,"Ap",12);peLabel.style.position=apLabel.style.position=UnityEngine.UIElements.Position.Absolute;
             PilotLabel(flightPanel,"Orbit-plane map · white = ship · clipped at edge",12);
@@ -54,6 +55,7 @@ namespace MassiveArmy.Planetary
         void MapDot(Vector2 p,Color color){MapLine(p+Vector2.left*3,p+Vector2.right*3,color);MapLine(p+Vector2.up*3,p+Vector2.down*3,color);}
         void UpdateOrbitMap()
         {
+            if(DrawGalaxyOrbitMap())return;
             mapDrawing.Lines.Clear();Vector2 center=new Vector2(167,140);const float size=126;
             float planet=(float)(world.definition.radius/mapExtent)*size;
             for(int i=0;i<64;i++){float a=i*Mathf.PI*2/64,b=(i+1)*Mathf.PI*2/64;MapLine(center+new Vector2(Mathf.Cos(a),Mathf.Sin(a))*planet,center+new Vector2(Mathf.Cos(b),Mathf.Sin(b))*planet,new Color(.3f,.55f,.8f));}
@@ -70,13 +72,14 @@ namespace MassiveArmy.Planetary
             if(flightPanel==null)return;
             if(pilotVisible!=active){pilotVisible=active;pilotUi.Root.style.display=active?DisplayStyle.Flex:DisplayStyle.None;nextOrbitRefresh=0;}
             if(!active)return;
+            Prediction();
             RefreshLandingPreview();var landingColor=(LandingAvailable||AutoFlightActive)?Color.green:Landed&&!LandingStatus.StartsWith("TAKEOFF BLOCKED")?new Color(.65f,.85f,1):new Color(1,.25f,.15f);landingLabel.text=LandingStatus;landingLabel.style.color=landingColor;landingInfo.text=$"CLEARANCE {GroundClearance:0} m · SPEED {Speed:0} m/s\nV · FLIGHT ASSIST {(FlightAssistEnabled?"ON":"OFF")}";
             landingDrawing.Lines.Clear();if(!Landed){var from=pose.position;var delta=LandingPosition-from;var up=LandingPosition.Float.normalized;var flat=Vector3.ProjectOnPlane(delta.Float,up);float run=Mathf.Max(100,flat.magnitude),drop=Mathf.Max(10,-Vector3.Dot(delta.Float,up));var forward=flat.sqrMagnitude>.01f?flat.normalized:Vector3.ProjectOnPlane(pose.rotation*Vector3.forward,up).normalized;Vector2 previous=Vector2.zero;
                 for(int i=0;i<=16;i++){var d=((AutoFlightActive?AutoPoint(Mathf.Lerp(AutoFlightProgress,1,i/16f)):LandingCurve(from,LandingPosition,i/16f))-from).Float;var point=new Vector2(30+Vector3.Dot(d,forward)/run*220,10-Vector3.Dot(d,up)/drop*60);if(i>0)landingDrawing.Lines.Add((previous,point,landingColor));previous=point;}landingDrawing.Lines.Add((previous+new Vector2(-18,5),previous+new Vector2(18,5),landingColor));}landingDrawing.MarkDirtyRepaint();
             weaponLabel.text=$"ROCKETS {ActiveRockets}/{RocketCapacity} AIRBORNE · {(ActiveRockets>=RocketCapacity?"WAIT FOR DETONATION":fireDelay>0?"RELOADING":"READY")}";
             if(orbitReadout==null||Time.unscaledTime>=nextOrbitRefresh){RefreshOrbit();nextOrbitRefresh=Time.unscaledTime+.2f;statusLabel.text=orbitStatus;statusLabel.style.color=FlightAssistEnabled&&!Landed?new Color(.25f,1,.75f):orbitColor;readoutLabel.text=orbitReadout;UpdateOrbitMap();}
-            progradeDrawing.Lines.Clear();var sight=new Vector2(pilotUi.Root.resolvedStyle.width*.5f,pilotUi.Root.resolvedStyle.height*.5f);progradeDrawing.Lines.Add((sight+Vector2.left*5,sight+Vector2.right*5,Color.green));progradeDrawing.Lines.Add((sight+Vector2.up*5,sight+Vector2.down*5,Color.green));progradeLabel.style.display=Speed>1?DisplayStyle.Flex:DisplayStyle.None;
-            if(Speed>1&&pilotUi.Root.resolvedStyle.width>0&&pilotUi.Root.resolvedStyle.height>0){var v=camera.transform.InverseTransformDirection(pose.linearVelocity.Float.normalized);var c=new Vector2(pilotUi.Root.resolvedStyle.width*.5f,pilotUi.Root.resolvedStyle.height*.5f);Vector2 marker=c+new Vector2(v.x,-v.y)*90;var color=v.z>=0?Color.green:new Color(1,.6f,.2f);progradeDrawing.Lines.Add((marker+Vector2.left*9,marker+Vector2.right*9,color));progradeDrawing.Lines.Add((marker+Vector2.up*9,marker+Vector2.down*9,color));progradeLabel.style.left=marker.x+12;progradeLabel.style.top=marker.y-12;progradeLabel.text=v.z>=0?"PROGRADE":"PROGRADE AFT";progradeLabel.style.color=color;}
+            progradeDrawing.Lines.Clear();var sight=new Vector2(pilotUi.Root.resolvedStyle.width*.5f,pilotUi.Root.resolvedStyle.height*.5f);progradeDrawing.Lines.Add((sight+Vector2.left*5,sight+Vector2.right*5,Color.green));progradeDrawing.Lines.Add((sight+Vector2.up*5,sight+Vector2.down*5,Color.green));var hudVelocity=HudVelocity();progradeLabel.style.display=hudVelocity.Magnitude>1?DisplayStyle.Flex:DisplayStyle.None;
+            if(hudVelocity.Magnitude>1&&pilotUi.Root.resolvedStyle.width>0&&pilotUi.Root.resolvedStyle.height>0){var v=camera.transform.InverseTransformDirection(hudVelocity.Float.normalized);var c=new Vector2(pilotUi.Root.resolvedStyle.width*.5f,pilotUi.Root.resolvedStyle.height*.5f);Vector2 marker=c+new Vector2(v.x,-v.y)*90;var color=v.z>=0?Color.green:new Color(1,.6f,.2f);progradeDrawing.Lines.Add((marker+Vector2.left*9,marker+Vector2.right*9,color));progradeDrawing.Lines.Add((marker+Vector2.up*9,marker+Vector2.down*9,color));progradeLabel.style.left=marker.x+12;progradeLabel.style.top=marker.y-12;progradeLabel.text=v.z>=0?"PROGRADE":"PROGRADE AFT";progradeLabel.style.color=color;}
             progradeDrawing.MarkDirtyRepaint();
         }
     }

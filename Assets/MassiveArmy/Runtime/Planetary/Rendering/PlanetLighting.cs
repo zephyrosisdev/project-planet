@@ -10,12 +10,19 @@ namespace MassiveArmy.Planetary
         public Light Sun {get;}
         public Volume Atmosphere {get;}
         readonly BattleVisualSettings settings;
-        readonly Quaternion savedRotation;readonly LightShadows savedShadows;
+        readonly Quaternion savedRotation;readonly LightShadows savedShadows;readonly Color savedColour;
         readonly Light savedSun;
         readonly bool borrowed;
         readonly GameObject owned;
         readonly VolumeProfile profile;
         int lightingHash;
+        GameObject companionObject;Light companion;
+        internal void SetCompanion(Vector3 direction,Color colour,float relativePower){
+            if(companion==null&&relativePower<=.001f)return;
+            if(companion==null){companionObject=new GameObject("Binary companion starlight");companionObject.transform.SetParent(Sun.transform.parent,false);companion=companionObject.AddComponent<Light>();companion.type=LightType.Directional;companion.shadows=LightShadows.None;companionObject.AddComponent<HDAdditionalLightData>();}
+            companion.enabled=relativePower>.001f;companion.transform.rotation=Quaternion.LookRotation(-direction,Vector3.up);companion.color=Color.Lerp(Color.white,colour,.25f);
+            companion.GetComponent<HDAdditionalLightData>().SetIntensity(Mathf.Max(0,Sun.intensity*relativePower),LightUnit.Lux);
+        }
         public PlanetLighting(Camera camera,Transform parent,Vector3 home)
         {
             settings=Resources.Load<BattleVisualSettings>("MassiveArmy/BattleVisualSettings");savedSun=RenderSettings.sun;
@@ -24,7 +31,7 @@ namespace MassiveArmy.Planetary
             hd.customRenderingSettings=true;hd.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.CustomPass]=true;hd.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.CustomPass,true);
             hd.clearColorMode=HDAdditionalCameraData.ClearColorMode.Color;hd.backgroundColorHDR=new Color(.004f,.007f,.015f);
             if(authored!=null&&authored.sun!=null&&authored.atmosphere!=null){
-                borrowed=true;Sun=authored.sun;Atmosphere=authored.atmosphere;savedRotation=Sun.transform.rotation;savedShadows=Sun.shadows;
+                borrowed=true;Sun=authored.sun;Atmosphere=authored.atmosphere;savedRotation=Sun.transform.rotation;savedShadows=Sun.shadows;savedColour=Sun.color;
                 Sun.transform.rotation=Quaternion.FromToRotation(Vector3.up,home)*savedRotation;authored.Configure(camera,true);
             }else{
                 owned=new GameObject("Planet sun and atmosphere");owned.transform.SetParent(parent,false);
@@ -47,8 +54,8 @@ namespace MassiveArmy.Planetary
             settings.ApplyArmyLighting(Sun,current);
         }
         public void Dispose(){
-            if(borrowed&&Sun!=null){Sun.transform.rotation=savedRotation;Sun.shadows=savedShadows;settings.ApplyArmyLighting(Sun,Atmosphere.HasInstantiatedProfile()?Atmosphere.profile:Atmosphere.sharedProfile);}
-            RenderSettings.sun=savedSun;ArmyLifetime.Destroy(owned);ArmyLifetime.Destroy(profile);
+            if(borrowed&&Sun!=null){Sun.transform.rotation=savedRotation;Sun.shadows=savedShadows;Sun.color=savedColour;settings.ApplyArmyLighting(Sun,Atmosphere.HasInstantiatedProfile()?Atmosphere.profile:Atmosphere.sharedProfile);}
+            RenderSettings.sun=savedSun;ArmyLifetime.Destroy(companionObject);ArmyLifetime.Destroy(owned);ArmyLifetime.Destroy(profile);
         }
     }
 }

@@ -67,7 +67,7 @@ namespace MassiveArmy.Planetary
 
         public PlanetStreamedTerrain StreamedTerrain=>streamed;
 
-        PlanetStreamedTerrain streamed;PlanetTerrainRenderer terrainRenderer;int renderResolution;
+        PlanetStreamedTerrain streamed;PlanetTerrainRenderer terrainRenderer;PlanetFlightHudRenderer flightHudRenderer;int renderResolution;
 
         public bool currentRtsContent=true;
 
@@ -196,7 +196,7 @@ namespace MassiveArmy.Planetary
             if(System.Array.IndexOf(launchArgs,"-planet-deform-terrain")>=0)deformTerrainOnNuke=true;
             if(System.Array.IndexOf(launchArgs,"-planet-no-deform-terrain")>=0)deformTerrainOnNuke=false;
 
-            StrategyEnabled=true;foreach(var arg in launchArgs)if((arg.EndsWith("-validation")&&arg!="-planet-gameplay-validation"&&arg!="-planet-menu-validation"&&arg!="-planet-ship-validation"&&arg!="-planet-landing-validation"&&arg!="-planet-hq-terrain-validation"&&arg!="-planet-system-validation")||arg=="-planet-benchmark"||arg=="-planet-fixture")StrategyEnabled=false;
+            StrategyEnabled=true;foreach(var arg in launchArgs)if((arg.EndsWith("-validation")&&arg!="-planet-gameplay-validation"&&arg!="-planet-menu-validation"&&arg!="-planet-ship-validation"&&arg!="-planet-landing-validation"&&arg!="-planet-hq-terrain-validation"&&arg!="-planet-system-validation"&&arg!="-galaxy-validation")||arg=="-planet-benchmark"||arg=="-planet-fixture")StrategyEnabled=false;
 
             if(System.Array.IndexOf(launchArgs,"-planet-fixture")>=0||System.Array.IndexOf(launchArgs,"-planet-benchmark")>=0||System.Array.IndexOf(launchArgs,"-planet-smoke")>=0)configuredRadius=0;
 
@@ -304,7 +304,7 @@ namespace MassiveArmy.Planetary
 
             if(cbt!=null&&System.Array.IndexOf(args,"-planet-terrain-debug")>=0){showTerrainTriangles=true;terrainMaterial.EnableKeyword("PLANET_CBT_DEBUG");}
 
-            terrainRenderer=new PlanetTerrainRenderer(this);terrainMaterial.SetColor("_TintOverride",Color.clear);scaledRenderer=new ScaledSpaceRenderer(biomeColours);
+            terrainRenderer=new PlanetTerrainRenderer(this);flightHudRenderer=new PlanetFlightHudRenderer(this);terrainMaterial.SetColor("_TintOverride",Color.clear);scaledRenderer=new ScaledSpaceRenderer(biomeColours);
 
             if(System.Array.IndexOf(args,"-planet-system-baseline")>=0){validationDistantBody=ScriptableObject.CreateInstance<PlanetDefinition>();validationDistantBody.bodyId=2;validationDistantBody.radius=10000000;validationDistantBody.position=definition.position.Add(new Double3(-40000000,10000000,-20000000));distantBodies=new[]{validationDistantBody};}
             if(SystemRuntime==null&&(distantBodies==null||distantBodies.Length==0)&&System.Array.IndexOf(args,"-planet-single-body")<0){
@@ -448,7 +448,7 @@ namespace MassiveArmy.Planetary
 
             uint previousTick=SimulationTicks;accumulator=Paused||!SimulationActive?0:Mathf.Min(accumulator+Time.deltaTime,BattleSettings.Tick*4);while(accumulator>=BattleSettings.Tick){encounter?.BeforeTick();if(encounter!=null)encounter.MoveUnits();else movement.Dispatch(moveKernel,(unitCount+127)/128,1,1);encounter?.AfterTick();Base?.Tick(BattleSettings.Tick);accumulator-=BattleSettings.Tick;SimulationTicks++;}SimulationEndForValidation?.Invoke();Base?.Rebase();resourceDecals?.Update();hud?.Tick();if(hud!=null){if(headquartersHud==null)headquartersHud=new PlanetHeadquartersHud(this);headquartersHud.Tick();}
 
-            spacecraft?.RenderTrajectory();spacecraft?.RenderWeapons();spacecraft?.RenderLanding();var vp=GL.GetGPUProjectionMatrix(view.projectionMatrix,true)*view.worldToCameraMatrix;var centre=origin.RenderPosition(definition.position);var bounds=new Bounds(centre,Vector3.one*(definition.radius+definition.ReliefBound)*2);
+            spacecraft?.RenderTrajectory();spacecraft?.RenderWeapons();spacecraft?.RenderLanding();flightHudRenderer?.SetActive(IsPiloting);var vp=GL.GetGPUProjectionMatrix(view.projectionMatrix,true)*view.worldToCameraMatrix;var centre=origin.RenderPosition(definition.position);var bounds=new Bounds(centre,Vector3.one*(definition.radius+definition.ReliefBound)*2);
 
             BindSurface(terrainMaterial,definition);terrainMaterial.SetMatrix("_PlanetVP",vp);terrainMaterial.SetVector("_PlanetCenter",centre);
 
@@ -473,10 +473,13 @@ namespace MassiveArmy.Planetary
             if(catalogRenderer!=null)catalogRenderer.Render(view,centre,unitCount);else{BindSurface(unitMaterial,definition);unitMaterial.SetMatrix("_PlanetVP",vp);unitMaterial.SetVector("_PlanetCenter",centre);Graphics.RenderMeshIndirect(new RenderParams(unitMaterial){camera=view,worldBounds=bounds,shadowCastingMode=ShadowCastingMode.Off},tank,arguments);}
 
             scaledRenderer.Render(view,origin,distantBodies,definition,SystemRuntime?.DistantTerrain);
+            SystemRuntime?.UpdateSky();
 
         }
 
         internal void RenderTerrain(CommandBuffer cmd){
+
+            SystemRuntime?.DrawSky(cmd);
 
             if(terrainMaterial==null)return;int pass=terrainMaterial.FindPass("PlanetLighting");
 
@@ -509,6 +512,7 @@ namespace MassiveArmy.Planetary
         }
 
         internal UniversePosition ObserverPosition=>origin.Origin.Add(new Double3(view.transform.position));
+        internal void FollowCelestialFrame(Double3 observerOffset){origin.Anchor(definition.position.Add(observerOffset));spacecraft?.FollowCelestialFrame();}
         internal void InitializeNow(){var steps=InitializeSteps();while(steps.MoveNext()){} }
         internal System.Collections.IEnumerator InitializeOverFrames(){
             int step=0;var steps=InitializeSteps();while(true){var timer=System.Diagnostics.Stopwatch.StartNew();bool more=steps.MoveNext();timer.Stop();SystemRuntime.RecordPreparationStep(timer.Elapsed.TotalMilliseconds,step++);HideResidentChildren();if(!more)break;yield return null;}
@@ -524,12 +528,12 @@ namespace MassiveArmy.Planetary
         }
         internal void SetResidentActive(bool value){
             if(ResidentActive==value)return;ResidentActive=value;accumulator=0;
-            if(!value){spacecraft?.SetActive(false);lighting?.Dispose();lighting=null;}
+            if(!value){flightHudRenderer?.SetActive(false);spacecraft?.SetActive(false);lighting?.Dispose();lighting=null;}
             HideResidentChildren();
             if(value&&Ready){lighting=new PlanetLighting(view,transform,rig.FocusDirection);if(SystemRuntime!=null){lighting.Sun.transform.rotation=SystemRuntime.SunRotation;lighting.Update();}}
         }
 
-        void OnDestroy(){headquartersHud?.Dispose();spacecraft?.Dispose();terrainRenderer?.Dispose();lighting?.Dispose();encounter?.Dispose();resourceDecals?.Dispose();placementProbe?.Dispose();hud?.Dispose();Base?.Dispose();catalogRenderer?.Dispose();archetypes?.Dispose();traits?.Dispose();buildingFootprints?.Dispose();commands?.Dispose();player?.Dispose();streamed?.Dispose();cbt?.Dispose();scaledRenderer?.Dispose();navigation?.Dispose();costs?.Dispose();units?.Dispose();arguments?.Dispose();biomeColours?.Dispose();ArmyLifetime.Destroy(movement);TerrainSurfaceLibrary.Unbind(terrainMaterial);ArmyLifetime.Destroy(terrainMaterial);ArmyLifetime.Destroy(unitMaterial);ArmyLifetime.Destroy(tank);ArmyLifetime.Destroy(validationDistantBody);if(ownsDefinition)ArmyLifetime.Destroy(definition);if(view!=null)ArmyLifetime.Destroy(view.gameObject);}
+        void OnDestroy(){headquartersHud?.Dispose();spacecraft?.Dispose();terrainRenderer?.Dispose();flightHudRenderer?.Dispose();lighting?.Dispose();encounter?.Dispose();resourceDecals?.Dispose();placementProbe?.Dispose();hud?.Dispose();Base?.Dispose();catalogRenderer?.Dispose();archetypes?.Dispose();traits?.Dispose();buildingFootprints?.Dispose();commands?.Dispose();player?.Dispose();streamed?.Dispose();cbt?.Dispose();scaledRenderer?.Dispose();navigation?.Dispose();costs?.Dispose();units?.Dispose();arguments?.Dispose();biomeColours?.Dispose();ArmyLifetime.Destroy(movement);TerrainSurfaceLibrary.Unbind(terrainMaterial);ArmyLifetime.Destroy(terrainMaterial);ArmyLifetime.Destroy(unitMaterial);ArmyLifetime.Destroy(tank);ArmyLifetime.Destroy(validationDistantBody);if(ownsDefinition)ArmyLifetime.Destroy(definition);if(view!=null)ArmyLifetime.Destroy(view.gameObject);}
 
     }
 

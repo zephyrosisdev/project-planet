@@ -31,6 +31,7 @@ namespace MassiveArmy.Planetary
     {
         readonly Dictionary<int,ReferenceFrame> frames=new Dictionary<int,ReferenceFrame>();
         public UniversePosition Origin;
+        public Double3 OriginVelocity;
         public void Register(ReferenceFrame frame)
         {
             if(frame.Id<=0||frames.ContainsKey(frame.Id))throw new ArgumentException("Frame ID must be unique and positive");
@@ -47,7 +48,7 @@ namespace MassiveArmy.Planetary
         }
         UniversePose ResolveFrame(int id,int depth)
         {
-            if(id==0)return new UniversePose{position=Origin,rotation=Quaternion.identity};
+            if(id==0)return new UniversePose{position=Origin,rotation=Quaternion.identity,linearVelocity=OriginVelocity};
             if(depth>=64)throw new InvalidOperationException("Reference frame hierarchy exceeds 64 levels");
             var frame=frames[id];var p=ResolveFrame(frame.ParentId,depth+1);var local=frame.Pose;
             var offset=Double3.Rotate(p.rotation,local.position);

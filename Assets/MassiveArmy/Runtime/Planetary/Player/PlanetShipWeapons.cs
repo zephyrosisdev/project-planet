@@ -31,7 +31,7 @@ namespace MassiveArmy.Planetary
             for(int i=0;i<rocketBursts.Length;i++)if(rocketBursts[i]!=null){rocketBursts[i].pause=world.Paused;rocketBursts[i].transform.position=world.RenderBodyPosition(burstPositions[i]);}
         }
         internal void IntegrateRockets(float dt){for(int i=0;i<rockets.Length;i++){var r=rockets[i];if(!r.alive)continue;var start=r.position;double radius=start.Magnitude;Vector3 up=start.Float.normalized;Vector3 heading=r.thrustDirection;
-                var acceleration=new Double3(up)*(-world.definition.gravitationalParameter/Math.Max(1,radius*radius));if(r.age<2)acceleration+=new Double3(heading)*60;r.velocity+=acceleration*dt;var end=start+r.velocity*dt;var delta=end-start;float distance=(float)delta.Magnitude;double fraction=2;
+                var galaxy=world.SystemRuntime?.Galaxy;var acceleration=galaxy!=null?galaxy.RelativeAcceleration(start,galaxy.NodeFor(world.definition),galaxy.Time):new Double3(up)*(-world.definition.gravitationalParameter/Math.Max(1,radius*radius));if(r.age<2)acceleration+=new Double3(heading)*60;r.velocity+=acceleration*dt;var end=start+r.velocity*dt;var delta=end-start;float distance=(float)delta.Magnitude;double fraction=2;
                 // A swept physics ray handles building hulls. The ship firing the rocket is excluded.
                 if(distance>1e-5f){int count=Physics.RaycastNonAlloc(new Ray(world.RenderBodyPosition(start),delta.Float/distance),rocketHits,distance,~0,QueryTriggerInteraction.Ignore);for(int h=0;h<count;h++)if(!Owns(rocketHits[h].collider))fraction=Math.Min(fraction,rocketHits[h].distance/distance);}
                 // Canonical terrain/ocean sweep remains accurate when the camera origin moves.

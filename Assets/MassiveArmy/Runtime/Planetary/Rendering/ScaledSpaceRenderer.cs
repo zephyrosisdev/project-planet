@@ -9,6 +9,7 @@ namespace MassiveArmy.Planetary
     {
         readonly Material material;PlanetDistantTerrain ownPreviews;
         readonly List<MaterialPropertyBlock> blocks=new List<MaterialPropertyBlock>();readonly List<int> counts=new List<int>();
+        readonly PlanetDefinition[] nearest=new PlanetDefinition[16];readonly double[] distances=new double[16];
         public ScaledSpaceRenderer(GraphicsBuffer colours){material=new Material(Resources.Load<Shader>("MassiveArmy/PlanetScaledBody"));material.SetBuffer("_BiomeColours",colours);material.SetInteger("_BodyDebug",Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-preview-debug")>=0?1:0);Resources.Load<TerrainSurfaceLibrary>("MassiveArmy/TerrainArt/SurfaceLibrary").Bind(material);}
         public void Render(Camera camera,FloatingOrigin origin,IReadOnlyList<PlanetDefinition> bodies,PlanetDefinition foreground=null,PlanetDistantTerrain previews=null)
         {
@@ -16,8 +17,15 @@ namespace MassiveArmy.Planetary
             if(previews==null)previews=ownPreviews??(ownPreviews=new PlanetDistantTerrain());
             var observer=origin.Origin.Add(new Double3(camera.transform.position));var vp=GL.GetGPUProjectionMatrix(camera.projectionMatrix,true)*camera.worldToCameraMatrix;
             counts.Clear();
-            for(int i=0;i<bodies.Count;i++){
-                var body=bodies[i];if(body==null)continue;var preview=previews.Get(body);var visual=ScaledSpace.Project(body.position,observer,body.radius);
+            int used=0,budget=Math.Min(nearest.Length,previews.MaximumCount);
+            for(int j=0;j<bodies.Count;j++){var body=bodies[j];if(body==null)continue;double distance=body.position.RelativeTo(observer).Magnitude;
+                if(body.radius/Math.Max(1,distance)*camera.pixelHeight/Math.Tan(camera.fieldOfView*Math.PI/360)<.5)continue;
+                int at=0;while(at<used&&distances[at]<distance)at++;if(at>=budget)continue;
+                used=Math.Min(budget,used+1);for(int k=used-1;k>at;k--){nearest[k]=nearest[k-1];distances[k]=distances[k-1];}nearest[at]=body;distances[at]=distance;
+            }
+            for(int i=0;i<used;i++){
+                var body=nearest[i];
+                var preview=previews.Get(body);var visual=ScaledSpace.Project(body.position,observer,body.radius);
                 while(blocks.Count<=counts.Count)blocks.Add(new MaterialPropertyBlock());var properties=blocks[counts.Count];
                 var centre=camera.transform.position+visual.position;properties.Clear();properties.SetMatrix("_PlanetVP",vp);properties.SetVector("_ScaledCentre",centre);properties.SetFloat("_ScaledRadius",visual.radius);properties.SetVector("_CameraPosition",camera.transform.position);
                 var physical=body.position.RelativeTo(observer).Float;properties.SetVector("_PhysicalBody",new Vector4(physical.x,physical.y,physical.z,body.radius));

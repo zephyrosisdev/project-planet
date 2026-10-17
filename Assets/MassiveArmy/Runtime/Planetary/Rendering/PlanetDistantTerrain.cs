@@ -10,18 +10,22 @@ namespace MassiveArmy.Planetary
         public const int Resolution=128,Extent=Resolution+2;
         public sealed class Preview:IDisposable
         {
-            internal PlanetDefinition source,visual;internal int revision,signature;internal ComputeShader baker;
+            internal PlanetDefinition source,visual;internal int revision,signature;internal ComputeShader baker;internal LinkedListNode<int> link;
             public RenderTexture Surface {get;internal set;}
             public int BakeCount {get;internal set;}
             internal PlanetDefinition Definition=>visual!=null?visual:source;
             public void Dispose(){if(Surface!=null){Surface.Release();ArmyLifetime.Destroy(Surface);}ArmyLifetime.Destroy(visual);ArmyLifetime.Destroy(baker);}
         }
         readonly Dictionary<int,Preview> previews=new Dictionary<int,Preview>();
+        public int MaximumCount=16;
+        readonly System.Collections.Generic.LinkedList<int> recent=new System.Collections.Generic.LinkedList<int>();
         public int Count=>previews.Count;
         static int Signature(PlanetDefinition d){unchecked{return (((d.terrainSeed*397^d.radius.GetHashCode())*397^d.terrainHeight.GetHashCode())*397^d.oceanHeight.GetHashCode())*397^(d.stampTerrain?1:0);}}
         public Preview Get(PlanetDefinition body){
+            while(previews.Count>=Math.Max(1,MaximumCount)&&!previews.ContainsKey(body.bodyId)){int oldest=recent.First.Value;recent.RemoveFirst();if(previews.TryGetValue(oldest,out var expired)){expired.Dispose();previews.Remove(oldest);}}
             int signature=Signature(body),revision=body.edits?.Revision??0;
-            if(!previews.TryGetValue(body.bodyId,out var preview)){preview=new Preview();previews.Add(body.bodyId,preview);}
+            if(!previews.TryGetValue(body.bodyId,out var preview)){preview=new Preview{link=new LinkedListNode<int>(body.bodyId)};previews.Add(body.bodyId,preview);}else recent.Remove(preview.link);
+            recent.AddLast(preview.link);
             if(preview.Surface!=null&&preview.signature==signature&&preview.revision==revision)return preview;
             ArmyLifetime.Destroy(preview.visual);preview.visual=null;preview.source=body;preview.signature=signature;preview.revision=revision;
             // A preview owns only compact stamp descriptors; unvisited gameplay definitions remain untouched.
@@ -31,6 +35,6 @@ namespace MassiveArmy.Planetary
             PlanetDevelopment.BindSurface(baker,preview.Definition);baker.SetInt("_PreviewResolution",Resolution);baker.SetTexture(0,"_PreviewSurface",preview.Surface);baker.Dispatch(0,(Extent+7)/8,(Extent+7)/8,6);preview.BakeCount++;
             return preview;
         }
-        public void Dispose(){foreach(var preview in previews.Values)preview.Dispose();previews.Clear();}
+        public void Dispose(){foreach(var preview in previews.Values)preview.Dispose();previews.Clear();recent.Clear();}
     }
 }

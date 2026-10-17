@@ -6,6 +6,7 @@ namespace MassiveArmy.Planetary
     public sealed class PlanetSystemDefinition:ScriptableObject
     {
         public int seed=73129;
+        public GalaxyDefinition galaxy;
         [Range(1,8)] public int planetCount=4;
         public Vector2 radiusRange=new Vector2(80000,160000);
         [Min(500000)] public float spacing=1200000;
