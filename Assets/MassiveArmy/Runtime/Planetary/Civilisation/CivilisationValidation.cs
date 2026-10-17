@@ -33,6 +33,13 @@ namespace MassiveArmy.Planetary
             bool rich=false;foreach(var planet in state.planets)if(planet.composition.Get("titanium")>.5)rich=true;Check(rich&&home.composition.Get("titanium")<.01,"Strategic scarcity differs from useful expansion worlds");
             Check(state.Faction(0).knowledge.bodies.Count==1&&state.Faction(1).knowledge.bodies.Count==1,"Both factions begin with home knowledge only");
             string unknown=state.planets[1].body;state.Faction(0).knowledge.Record(unknown).level=DiscoveryLevel.Detected;Check(!state.Faction(1).knowledge.Knows(unknown),"Faction discovery never mutates another faction's knowledge");
+            int civilians=colony.population;
+            colony.population=0;CivilisationRuntime.AllocateWorkers(local,colony,0);
+            Check(colony.employed==0,"Zero population cannot staff buildings");
+            foreach(var b in local.Buildings)if(b.team==0&&b.definition.workers>0)Check(b.WorkforceEfficiency==0,"Unstaffed production stops: "+b.definition.id);
+            colony.population=civilians;CivilisationRuntime.AllocateWorkers(local,colony,0);
+            Check(colony.employed<=colony.population&&colony.employed<=colony.workerDemand,"Worker allocation conserves civilian population and jobs");
+            Check(local.Catalog.Buildings["civil_food_processing"].workers>0&&local.Catalog.Buildings["civil_farm_wheat"].workers>0,"Factories and farms require civilian workers");
             double old=local.Faction.wallet.Stock.materials;colony.inventory.Deposit("construction_materials",10);Check(Math.Abs(local.Faction.wallet.Stock.materials-old-10)<.001,"Extended materials use the existing wallet balance");colony.inventory.Spend("construction_materials",10);
             var inventory=new ResourceInventory();inventory.Bind(simulation.Catalogue);inventory.Deposit("iron",8);inventory.Deposit("carbon",2);IndustryRecipe steel=null;foreach(var recipe in simulation.Catalogue.recipes)if(recipe.id=="steel")steel=recipe;
             inventory.RunRecipe(steel,steel.seconds*2);Check(inventory.Get("iron")==0&&inventory.Get("carbon")==0&&inventory.Get("steel")==8,"Recipes consume finite inputs and create configured outputs");double before=inventory.Get("steel");inventory.RunRecipe(steel,100);Check(inventory.Get("steel")==before,"Missing inputs stop manufacturing");
@@ -47,6 +54,11 @@ namespace MassiveArmy.Planetary
             Check(colony.cargoVehicles.Count==1,"Player and AI begin with an explicit starter cargo vehicle");
             Check(simulation.Logistics.Order(local,0,false),"Additional cargo transport is ordered through paid connected production");
             Check(local.TryConstructInfrastructure("civil_mine_iron",0),"New elemental extractor uses existing paid building placement");var mine=Find("civil_mine_iron");mine.construction=mine.definition.time;Step(1);var mineState=Installation(colony,mine);Supply(colony,mineState,"food",5);
+            int savedPopulation=colony.population;double savedGrowth=colony.growthProgress;colony.population=0;colony.growthProgress=0;
+            double oreBefore=mineState.inventory.Get("iron");Step(3);
+            Check(mine.WorkersAssigned==0&&mineState.inventory.Get("iron")==oreBefore,"Actual extraction halts with no civilian workers");
+            colony.population=savedPopulation;colony.growthProgress=savedGrowth;Step(1);
+            Check(mine.WorkersAssigned>0&&mineState.inventory.Get("iron")>oreBefore,"Supplied extraction resumes when residents staff it");
             Check(!local.Roads.Connected(mine,warehouse),"GPU road graph excludes a disconnected production building");
             double warehouseIron=colony.inventory.Get("iron");Step(30);Check(mineState.inventory.Get("iron")>0&&Math.Abs(colony.inventory.Get("iron")-warehouseIron)<1e-6,"Disconnected extraction stores goods locally without teleporting them to the warehouse");
             int roads=local.Roads.Tiles.Count;double materials=colony.inventory.Get("construction_materials");Check(local.Roads.Connect(mine,warehouse,out var roadReason),"Player command constructs a valid road to the extractor: "+roadReason);Check(local.Roads.Tiles.Count>roads&&colony.inventory.Get("construction_materials")<materials,"Road construction consumes materials only for new tiles");
@@ -67,7 +79,17 @@ namespace MassiveArmy.Planetary
             string saved=simulation.Serialize();var loaded=CivilisationRuntime.Deserialize(saved,state.galaxySeed,simulation.Catalogue);Check(loaded.colonies.Count==state.colonies.Count&&loaded.colonies[0].population==colony.population,"Strategic save roundtrip preserves settlement identities and population");
             Check(loaded.planets[0].roads.Count==home.roads.Count&&loaded.colonies[0].cargoVehicles.Count==colony.cargoVehicles.Count,"Strategic save roundtrip preserves roads and cargo vehicle state");
             var root=world.Hud.Root;var button=root.Q<Button>("civilisation-open");Check(button!=null,"Settlement UI is integrated into the original RTS front");((Action)button.userData)();yield return null;Check(root.Q("modal").style.display==DisplayStyle.Flex,"Settlement panel opens through the real HUD command");
-            double visualDeadline=Time.realtimeSinceStartupAsDouble+10;while(!world.SettlementVisualsReadyForValidation&&Time.realtimeSinceStartupAsDouble<visualDeadline)yield return null;Check(world.SettlementVisualsReadyForValidation,"Batched parcel and road rendering catches up with the newly expanded network");for(int i=0;i<4;i++)yield return null;Capture("settlement");report.roadTiles=home.roads.Count;report.population=colony.population;Check(report.runtimeErrors==0,"Integrated roads, economy, farms, populations and catch-up emit no runtime errors");
+            ((Action)root.Q<Button>("resources-open").userData)();yield return null;
+            foreach(var resource in simulation.Catalogue.resources)Check(root.Q("resource-row-"+resource.id)!=null,"Resource overview includes zero and nonzero stocks: "+resource.id);
+            Check(root.Q("resource-population")!=null,"Resource overview exposes population, housing and workforce");
+            CivilisationRuntime.ResourceTotals(colony,"food",out double storedFood,out double localFood,out double cargoFood);
+            Check(storedFood==colony.inventory.Get("food")&&localFood>=0&&cargoFood>=0,"Resource overview separates warehouse, local and loaded cargo without counting warehouse twice");
+            ((Action)root.Q<Button>("tech").userData)();Check(world.Hud.ModalOpen,"Technology can replace the resource modal");
+            ((Action)root.Q<Button>("tech").userData)();Check(!world.Hud.ModalOpen,"Closing technology after resources releases modal input capture");
+            ((Action)root.Q<Button>("resources-open").userData)();yield return null;
+            double visualDeadline=Time.realtimeSinceStartupAsDouble+10;while(!world.SettlementVisualsReadyForValidation&&Time.realtimeSinceStartupAsDouble<visualDeadline)yield return null;Check(world.SettlementVisualsReadyForValidation,"Batched parcel and road rendering catches up with the newly expanded network");for(int i=0;i<4;i++)yield return null;Capture("settlement");var uiTarget=new RenderTexture(1440,900,0,RenderTextureFormat.ARGB32);uiTarget.Create();world.Hud.SetRenderTarget(uiTarget);
+            for(int frame=0;frame<6;frame++)yield return null;
+            var previousTarget=RenderTexture.active;RenderTexture.active=uiTarget;var screen=new Texture2D(1440,900,TextureFormat.RGBA32,false);screen.ReadPixels(new Rect(0,0,1440,900),0,0);screen.Apply();File.WriteAllBytes(Path.Combine(output,"resources-screen.png"),screen.EncodeToPNG());Destroy(screen);RenderTexture.active=previousTarget;world.Hud.SetRenderTarget(null);uiTarget.Release();Destroy(uiTarget);report.roadTiles=home.roads.Count;report.population=colony.population;Check(report.runtimeErrors==0,"Integrated roads, economy, farms, populations and catch-up emit no runtime errors");
         }
         void ValidateGrid(PlanetRtsBase local){
             foreach(var building in local.Buildings){var up=CubeSphere.Decode(building.position);var area=local.Area(building);Check(CubeSphere.ArcDistance(up,local.Grid.Centre(area),world.definition.radius)<.04,"Building snaps to the shared road lattice: "+building.definition.id);Check(Vector3.Dot(building.visual.transform.up,up)>.99999,"Building frame follows the local planetary up direction");Check(!area.Contains(local.Grid.Port(area)),"Road entrance lies immediately outside its building grid footprint");}

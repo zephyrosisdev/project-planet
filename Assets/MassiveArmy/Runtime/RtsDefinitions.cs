@@ -31,6 +31,7 @@ namespace MassiveArmy
         public string extractedResource;
         public float foodUse;
         public int housingCapacity;
+        public int workers;
         public BuildingCategory category;
         public TerrainRule terrain;
         public NodeKind[] nodes = Array.Empty<NodeKind>();
@@ -91,7 +92,7 @@ namespace MassiveArmy
         {
             Buildings=buildings.ToDictionary(d=>d.id);Units=units.ToDictionary(d=>d.id);Technologies=technologies.ToDictionary(d=>d.id);
             if(units.Length>256)throw new InvalidOperationException("Packed GPU type index exceeds 8 bits");
-            foreach(var b in buildings) { ValidateCost(b.cost,b.id);ValidateTech(b.requiredTech);foreach(var id in b.production)if(!Units.ContainsKey(id))throw new InvalidOperationException("Unknown production "+id);if(b.radius<=0||b.time<=0||b.health<=0||b.tier<1||b.tier>5||b.maxLevel<1||b.footprintWidth<1||b.footprintDepth<1||b.footprintWidth>16||b.footprintDepth>16)throw new InvalidOperationException("Invalid building / footprint "+b.id); }
+            foreach(var b in buildings) { ValidateCost(b.cost,b.id);ValidateTech(b.requiredTech);foreach(var id in b.production)if(!Units.ContainsKey(id))throw new InvalidOperationException("Unknown production "+id);if(b.workers<0||b.housingCapacity<0||b.radius<=0||b.time<=0||b.health<=0||b.tier<1||b.tier>5||b.maxLevel<1||b.footprintWidth<1||b.footprintDepth<1||b.footprintWidth>16||b.footprintDepth>16)throw new InvalidOperationException("Invalid building / footprint "+b.id); }
             foreach(var u in units) { ValidateCost(u.cost,u.id);ValidateTech(u.requiredTech);if(!Buildings.ContainsKey(u.producer)||u.time<=0||u.health<=0||u.transportCapacity<0||u.transportCapacity>65535)throw new InvalidOperationException("Invalid unit "+u.id); }
             var visiting=new HashSet<string>();var visited=new HashSet<string>();
             foreach(var t in technologies) { ValidateCost(t.cost,t.id);if(!Buildings.ContainsKey(t.requiredBuilding)||t.time<=0||t.tier<2||t.tier>5)throw new InvalidOperationException("Invalid technology "+t.id);foreach(var id in t.unlockUnits)if(!Units.ContainsKey(id))throw new InvalidOperationException("Unknown unit unlock "+id);foreach(var id in t.unlockBuildings)if(!Buildings.ContainsKey(id))throw new InvalidOperationException("Unknown building unlock "+id);Visit(t.id,visiting,visited); }

@@ -32,7 +32,7 @@ namespace MassiveArmy.Planetary
         public float farmRainEfficiency=.5f,soilRecoveryPerSecond=.0002f;
         [Header("Population and upkeep")]
         public int startingPopulation=24;
-        public float populationFoodPerSecond=.002f,populationGrowthSeconds=120,buildingInputReserveSeconds=120;
+        public float populationFoodPerSecond=.002f,populationGrowthSeconds=30,buildingInputReserveSeconds=120;
         [Header("Dormant settlements")]
         public float catchupBudgetMilliseconds=.5f,catchupMaximumStepSeconds=60;
         public int catchupStepsPerFrame=4;

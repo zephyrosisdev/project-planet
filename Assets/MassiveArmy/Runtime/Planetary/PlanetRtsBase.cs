@@ -104,7 +104,7 @@ namespace MassiveArmy.Planetary
             RefreshSettlementPower(team);
             Faction.efficiency=Faction.demand<=0?1:Mathf.Clamp(Faction.generation/Faction.demand,Civilisation==null?.25f:0,1);
             foreach(var b in Buildings){if(b.team!=team||b.removed)continue;if(!b.Complete){b.construction=Mathf.Min(b.definition.time,b.construction+dt*Mathf.Max(.35f,Faction.efficiency));if(b.Complete)Revision++;continue;}
-                if(b.paused||!b.powered)continue;b.Efficiency=Faction.efficiency*b.FoodEfficiency;
+                if(b.paused||!b.powered)continue;b.Efficiency=Faction.efficiency*b.FoodEfficiency*(Civilisation==null?1:b.WorkforceEfficiency);
                 if(b.node>=0&&Civilisation==null){var node=Nodes[b.node];if(string.IsNullOrEmpty(node.elementId)){float extracted=Mathf.Min(node.remaining,b.definition.extraction*node.rateMultiplier*b.level*b.Efficiency*dt);node.remaining-=Faction.wallet.Deposit(node.resource,extracted);}}
                 if(b.definition.researchRate>0)Faction.wallet.Deposit(ResourceKind.Research,b.definition.researchRate*b.Efficiency*dt);
                 if(b.Upgrading){b.upgradeProgress+=dt*b.Efficiency;if(b.upgradeProgress>=b.upgradeTime){b.level++;if(b.definition.id=="command")Faction.tier=b.level;b.upgradeTime=0;b.health=b.MaxHealth;Revision++;}}

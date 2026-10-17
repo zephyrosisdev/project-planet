@@ -58,5 +58,5 @@ MonoBehaviour:
   soilRecoveryPerSecond: 0.0002
   startingPopulation: 24
   populationFoodPerSecond: 0.002
-  populationGrowthSeconds: 120
+  populationGrowthSeconds: 30
   buildingInputReserveSeconds: 120

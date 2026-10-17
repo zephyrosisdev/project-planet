@@ -1461,7 +1461,8 @@
       "upgrades": [],
       "extractedResource": "iron",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_copper",
@@ -1490,7 +1491,8 @@
       "upgrades": [],
       "extractedResource": "copper",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_silicon",
@@ -1519,7 +1521,8 @@
       "upgrades": [],
       "extractedResource": "silicon",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_aluminium",
@@ -1548,7 +1551,8 @@
       "upgrades": [],
       "extractedResource": "aluminium",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_carbon",
@@ -1577,7 +1581,8 @@
       "upgrades": [],
       "extractedResource": "carbon",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_water",
@@ -1606,7 +1611,8 @@
       "upgrades": [],
       "extractedResource": "water",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_sulfur",
@@ -1635,7 +1641,8 @@
       "upgrades": [],
       "extractedResource": "sulfur",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_nickel",
@@ -1664,7 +1671,8 @@
       "upgrades": [],
       "extractedResource": "nickel",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_chromium",
@@ -1693,7 +1701,8 @@
       "upgrades": [],
       "extractedResource": "chromium",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_titanium",
@@ -1722,7 +1731,8 @@
       "upgrades": [],
       "extractedResource": "titanium",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_lithium",
@@ -1751,7 +1761,8 @@
       "upgrades": [],
       "extractedResource": "lithium",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_uranium",
@@ -1780,7 +1791,8 @@
       "upgrades": [],
       "extractedResource": "uranium",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_rare_earth",
@@ -1809,7 +1821,8 @@
       "upgrades": [],
       "extractedResource": "rare_earth",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_platinum",
@@ -1838,7 +1851,8 @@
       "upgrades": [],
       "extractedResource": "platinum",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_hydrogen",
@@ -1867,7 +1881,8 @@
       "upgrades": [],
       "extractedResource": "hydrogen",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_oxygen",
@@ -1896,7 +1911,8 @@
       "upgrades": [],
       "extractedResource": "oxygen",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mine_helium_3",
@@ -1925,7 +1941,8 @@
       "upgrades": [],
       "extractedResource": "helium_3",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_smelter",
@@ -1950,7 +1967,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_fabricator",
@@ -1975,7 +1993,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_electronics",
@@ -2000,7 +2019,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_fuel_refinery",
@@ -2025,7 +2045,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_life_support",
@@ -2050,7 +2071,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_advanced_materials",
@@ -2075,7 +2097,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_composites",
@@ -2100,7 +2123,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_isotopes",
@@ -2125,7 +2149,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_hydroponics",
@@ -2150,7 +2175,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_chemistry",
@@ -2175,7 +2201,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_rocket_assembly",
@@ -2200,7 +2227,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_launch_pad",
@@ -2225,7 +2253,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_mission_control",
@@ -2250,7 +2279,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_tracking",
@@ -2275,7 +2305,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_satellite_factory",
@@ -2300,7 +2331,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_payload_integration",
@@ -2325,7 +2357,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_observatory",
@@ -2350,7 +2383,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_radio_telescope",
@@ -2375,7 +2409,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_spectroscopy",
@@ -2400,7 +2435,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_communications",
@@ -2425,7 +2461,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_spaceport",
@@ -2450,7 +2487,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_warehouse",
@@ -2476,7 +2514,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "storage": 5000
+      "storage": 5000,
+      "workers": 0
     },
     {
       "id": "civil_habitat",
@@ -2501,7 +2540,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_colonial_admin",
@@ -2526,7 +2566,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_sigint",
@@ -2551,7 +2592,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_market",
@@ -2576,7 +2618,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 0
     },
     {
       "id": "civil_oil_well",
@@ -2605,7 +2648,8 @@
       "upgrades": [],
       "extractedResource": "crude_oil",
       "extraction": 4,
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_oil_refinery",
@@ -2630,7 +2674,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 3
     },
     {
       "id": "civil_food_processing",
@@ -2655,7 +2700,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.02
+      "foodUse": 0.02,
+      "workers": 2
     },
     {
       "id": "civil_farm_wheat",
@@ -2680,7 +2726,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.015
+      "foodUse": 0.015,
+      "workers": 2
     },
     {
       "id": "civil_farm_rice",
@@ -2705,7 +2752,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.015
+      "foodUse": 0.015,
+      "workers": 2
     },
     {
       "id": "civil_farm_potatoes",
@@ -2730,7 +2778,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.015
+      "foodUse": 0.015,
+      "workers": 2
     },
     {
       "id": "civil_farm_vegetables",
@@ -2755,7 +2804,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.015
+      "foodUse": 0.015,
+      "workers": 2
     },
     {
       "id": "civil_farm_orchard",
@@ -2780,7 +2830,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.015
+      "foodUse": 0.015,
+      "workers": 2
     },
     {
       "id": "civil_farm_flax",
@@ -2805,7 +2856,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.015
+      "foodUse": 0.015,
+      "workers": 2
     },
     {
       "id": "civil_farm_oilseed",
@@ -2830,7 +2882,8 @@
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "foodUse": 0.015
+      "foodUse": 0.015,
+      "workers": 2
     },
     {
       "id": "civil_housing",
@@ -2856,12 +2909,13 @@
       "production": [],
       "upgrades": [],
       "housingCapacity": 50,
-      "foodUse": 0.03
+      "foodUse": 0.03,
+      "workers": 0
     },
     {
       "id": "civil_road",
       "name": "Road module",
-      "description": "1\u00d71 cargo road. Adjacent modules form corners, junctions and crossings automatically.",
+      "description": "1×1 cargo road. Adjacent modules form corners, junctions and crossings automatically.",
       "mesh": "wall",
       "category": 5,
       "terrain": 0,
@@ -2884,7 +2938,8 @@
       "extractedResource": "",
       "extraction": 0,
       "foodUse": 0.001,
-      "storage": 0
+      "storage": 0,
+      "workers": 0
     }
   ],
   "technologies": [

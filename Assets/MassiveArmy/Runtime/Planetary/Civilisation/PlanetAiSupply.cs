@@ -7,7 +7,7 @@ namespace MassiveArmy.Planetary {
         internal int ProductiveCount(string id,int team)=>Buildings.Count(b=>b.team==team&&!b.removed&&b.definition.id==id&&(b.node<0||Nodes[b.node].remaining>0));
         internal bool AiCanSpend(int team,ResourceCost cost)=>Factions[team].wallet.CanAfford(cost)&&(Civilisation==null||(Factions[team].wallet.Stock.materials-cost.materials>=Civilisation.Settings.aiConstructionReserve&&Factions[team].wallet.Stock.fuel-cost.fuel>=Civilisation.Settings.aiLogisticsFuelReserve));
         internal bool AiEconomyReady(int team){
-            if(Civilisation==null)return true;if(Factions[team].wallet.Stock.materials<Civilisation.Settings.aiConstructionReserve*2)return false;var hq=Buildings.Find(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.id=="command");if(hq==null||Roads==null)return false;
+            if(Civilisation==null)return true;var settlement=Settlements?[team];if(settlement!=null&&settlement.plannedWorkerDemand>settlement.workforce)return false;if(Factions[team].wallet.Stock.materials<Civilisation.Settings.aiConstructionReserve*2)return false;var hq=Buildings.Find(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.id=="command");if(hq==null||Roads==null)return false;
             int mines=0;foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.Complete&&b.definition.id=="mine"&&b.node>=0&&Nodes[b.node].remaining>0&&Roads.Connected(b,hq))mines++;
             if(mines<Civilisation.Settings.aiMinimumMaterialMines||Settlements?[team]?.cargoVehicles.Count<3)return false;
             foreach(string id in new[]{"civil_mine_water","civil_farm_wheat","civil_food_processing"})if(!Buildings.Exists(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.id==id&&Roads.Connected(b,hq)))return false;

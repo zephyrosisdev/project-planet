@@ -25,6 +25,8 @@ namespace MassiveArmy
         public float UpgradeFraction => upgradeTime>0?upgradeProgress/upgradeTime:0;
         public float Efficiency=1;
         public float FoodEfficiency=1;
+        public float WorkforceEfficiency=1;
+        public int WorkersAssigned;
     }
     public sealed class RtsFaction
     {

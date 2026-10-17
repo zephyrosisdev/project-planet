@@ -33,7 +33,10 @@ namespace MassiveArmy.Planetary {
                 if(colony.inventory.Get("propellant")<civilisation.Settings.aiLogisticsFuelReserve*2&&Required("oil"))continue;
                 int desiredMines=local.Factions[team].wallet.Stock.materials<civilisation.Settings.aiConstructionReserve*2&&local.MaterialBacklog(team)<civilisation.Settings.cargoCapacity*2?civilisation.Settings.aiMaximumMaterialMines:civilisation.Settings.aiMinimumMaterialMines;
                 if(local.ProductiveCount("mine",team)<desiredMines){faction.priority="Scale material extraction";if((local.AiCanSpend(team,local.Catalog.Buildings["mine"].cost)&&Build("mine"))||local.ExpandForDeposit("mine",team))continue;}
-                if(housing<colony.population+8){faction.priority="Provide civilian housing";Build("civil_housing");continue;}
+                if(housing<Math.Max(colony.population+8,colony.plannedWorkerDemand+8)){faction.priority="Provide civilian housing";Build("civil_housing");continue;}
+                foreach(string supply in new[]{"civil_mine_water","civil_farm_wheat","civil_food_processing"})if(local.AiSupplyShort(supply,team)&&local.AiCanSpend(team,local.Catalog.Buildings[supply].cost)&&Build(supply)){extended=true;break;}
+                if(extended)continue;
+                if(colony.plannedWorkerDemand>colony.workforce){faction.priority="Grow civilian workforce";faction.reason="Waiting for supplied housing: population "+colony.population+", planned jobs "+colony.plannedWorkerDemand;continue;}
                 string[] priorities={"civil_mine_water","civil_farm_wheat","civil_food_processing","civil_farm_potatoes","civil_mine_iron","civil_mine_carbon","civil_smelter","civil_mine_silicon","civil_fabricator","civil_market","civil_mine_copper","civil_electronics","civil_oil_well","civil_oil_refinery","civil_farm_vegetables","civil_chemistry","civil_mine_sulfur"};
                 faction.priority="Balance connected production";faction.reason=$"Materials {local.Factions[team].wallet.Stock.materials:0}; extractors {local.ProductiveCount("mine",team)}; reserve {civilisation.Settings.aiConstructionReserve:0}";
                 foreach(string id in priorities)if(local.AiSupplyShort(id,team)&&local.AiCanSpend(team,local.Catalog.Buildings[id].cost)){if(Build(id)||local.ExpandForDeposit(id,team))break;}

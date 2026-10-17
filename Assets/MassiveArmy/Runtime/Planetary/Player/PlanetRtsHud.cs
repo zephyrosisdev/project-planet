@@ -81,7 +81,7 @@ namespace MassiveArmy.Planetary
             if(fixture.sessionMode==PlanetGameMode.AiTest){construction.SetEnabled(false);front.Q("commands").SetEnabled(false);front.Q("quick-actions").SetEnabled(false);}
 
             MakeMap();context=front.Q("context");Refresh();
-            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
+            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
 
         }
 
@@ -103,7 +103,7 @@ namespace MassiveArmy.Planetary
 
                 case "construct":buildOpen=!buildOpen;front.Q("construction").style.display=buildOpen?DisplayStyle.Flex:DisplayStyle.None;break;
 
-                case "tech":technologyOpen=!technologyOpen;ShowTechnology();break;
+                case "tech":civilisationOpen=false;technologyOpen=!technologyOpen;ShowTechnology();break;
 
                 case "map":fixture.Rig.Distance=fixture.definition.radius*2;break;
 
@@ -232,7 +232,7 @@ namespace MassiveArmy.Planetary
 
             RefreshMap();
 
-            var b=world.Selected;if(b!=null&&queueStatus!=null)queueStatus.text=b.Complete?$"LEVEL {b.level} • HEALTH {b.health:0} / {b.MaxHealth:0}\n"+(b.queue.Count==0?"Queue empty":$"{b.queue[0].id}: {b.queue[0].Fraction:P0}"):$"CONSTRUCTION {b.construction/b.definition.time:P0}";
+            var b=world.Selected;if(b!=null&&queueStatus!=null)queueStatus.text=b.Complete?$"LEVEL {b.level} • HEALTH {b.health:0} / {b.MaxHealth:0}\n"+(world.Civilisation==null?"":$"WORKERS {b.WorkersAssigned}/{b.definition.workers*b.level} · STAFFING {b.WorkforceEfficiency:P0}\n")+(b.queue.Count==0?"Queue empty":$"{b.queue[0].id}: {b.queue[0].Fraction:P0}"):$"CONSTRUCTION {b.construction/b.definition.time:P0}";
 
         }
 
