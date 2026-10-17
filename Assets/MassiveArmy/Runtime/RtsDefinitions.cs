@@ -28,6 +28,9 @@ namespace MassiveArmy
     public sealed class BuildingDefinition
     {
         public string id, name, description, requiredTech, mesh, icon;
+        public string extractedResource;
+        public float foodUse;
+        public int housingCapacity;
         public BuildingCategory category;
         public TerrainRule terrain;
         public NodeKind[] nodes = Array.Empty<NodeKind>();
@@ -119,6 +122,7 @@ namespace MassiveArmy
         public ResourceKind resource;
         public Vector2 position;
         public float capacity,remaining,rateMultiplier,quality,radius=12;
+        public string elementId;
     }
     public sealed class QueueOrder
     {

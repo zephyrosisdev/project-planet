@@ -8,6 +8,7 @@ namespace MassiveArmy.Planetary
         public PlanetSystemDefinition Settings {get;private set;}
         public PlanetDefinition[] Bodies {get;private set;}
         public GalaxyModel Galaxy {get;private set;}
+        public CivilisationRuntime Civilisation {get;private set;}
         GalaxySkyRenderer sky;
         internal GalaxySkyRenderer SkyForValidation=>sky;
         internal bool IsPreparedForValidation(int index)=>worlds[index]!=null&&worlds[index].Ready;
@@ -42,13 +43,14 @@ namespace MassiveArmy.Planetary
             root=ActiveWorld=home;SunRotation=home.LightingForValidation.Sun.transform.rotation;Settings=settings;
             if(settings.galaxy!=null&&settings.galaxy.enabledInGame&&Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-legacy-system")<0){Galaxy=new GalaxyModel(settings.galaxy,settings,home.definition,out var planets,-home.LightingForValidation.Sun.transform.forward);Bodies=planets;sky=new GalaxySkyRenderer(Galaxy);DistantTerrain.MaximumCount=settings.galaxy.terrainPreviewBudget;}
             else Bodies=settings.Generate(home.definition);
+            if(Galaxy!=null){var config=Resources.Load<CivilisationSettings>("MassiveArmy/Civilisation/DefaultCivilisation");if(config!=null&&config.enabledInGame)Civilisation=new CivilisationRuntime(this,config);}
             worlds=new PlanetDevelopment[Bodies.Length];failed=new bool[Bodies.Length];worlds[0]=home;ResidentWorldCount=1;RefreshDistantBodies();
         }
         void RefreshDistantBodies(){for(int i=0;i<worlds.Length;i++)if(worlds[i]!=null){var far=new PlanetDefinition[Bodies.Length-1];int k=0;for(int j=0;j<Bodies.Length;j++)if(j!=i)far[k++]=Bodies[j];worlds[i].distantBodies=far;}}
         void Update(){
             if(Galaxy==null||ActiveWorld==null||!ActiveWorld.Ready)return;
             var observer=ActiveWorld.ObserverPosition;var offset=observer.RelativeTo(ActiveWorld.definition.position);
-            if(!ActiveWorld.Paused)Galaxy.Publish(Galaxy.Time+Math.Min(Time.deltaTime,.05),Bodies);
+            if(!ActiveWorld.Paused){double step=Math.Min(Time.deltaTime,.05);Galaxy.Publish(Galaxy.Time+step,Bodies);Civilisation?.Advance(step);}
             for(int i=0;i<worlds.Length;i++)if(worlds[i]!=null&&worlds[i].definition!=Bodies[i]){worlds[i].definition.position=Bodies[i].position;worlds[i].definition.velocity=Bodies[i].velocity;}
             ActiveWorld.FollowCelestialFrame(offset);
             UpdateStarlight();
@@ -91,6 +93,7 @@ namespace MassiveArmy.Planetary
                 next.PlayerForValidation.CopySessionFrom(previous.PlayerForValidation);next.ShipForValidation.CopyDoorsFrom(ship);
                 next.SetShipControl(true);next.ShipForValidation.Arrive(pose,assist,gear);next.ShipForValidation.SetActive(true);next.Base?.Rebase();Physics.SyncTransforms();
                 ActiveWorld=next;
+                Civilisation?.ObserveArrival(next.definition.bodyId,0);
             }catch{
                 next.SetResidentActive(false);ActiveWorld=previous;
                 previous.SetResidentActive(true);ship.SetActive(true);throw;
@@ -103,13 +106,14 @@ namespace MassiveArmy.Planetary
             int row=0;int system=Galaxy!=null?Galaxy.Nodes[Galaxy.NodeFor(ActiveWorld.definition)].system:-1;
             for(int i=0;i<Bodies.Length;i++){
                 var body=Bodies[i];if(worlds[i]==ActiveWorld)continue;
+                if(Civilisation!=null&&ActiveWorld.sessionMode!=PlanetGameMode.AiTest&&!Civilisation.Known(0,body.bodyId))continue;
                 if(Galaxy!=null&&Galaxy.Nodes[Galaxy.NodeFor(body)].system!=system)continue;
                 var offset=body.position.RelativeTo(observer);double distance=Math.Max(0,offset.Magnitude-body.radius);
                 GUI.Label(new Rect(12,128+row++*22,280,24),body.displayName+" / "+(distance/1000).ToString("0.0")+" km / "+(worlds[i]==null?"UNVISITED":!worlds[i].Ready?"PREPARING":"ASLEEP"));
                 var point=ActiveWorld.View.WorldToScreenPoint(ActiveWorld.View.transform.position+offset.Float.normalized*1000);
                 if(point.z>0&&point.x>15&&point.x<Screen.width-180&&point.y>100&&point.y<Screen.height-100){GUI.Label(new Rect(point.x-6,Screen.height-point.y-9,20,22),"+");GUI.Label(new Rect(point.x+12,Screen.height-point.y-9,180,40),body.displayName+"\n"+(distance/1000).ToString("0.0")+" km");}
             }
-            if(Galaxy!=null){GUI.Label(new Rect(12,130+row++*22,280,24),Galaxy.SystemNodes.Length+" star systems · "+Bodies.Length+" planets");
+            if(Galaxy!=null){GUI.Label(new Rect(12,130+row++*22,280,24),Civilisation!=null&&ActiveWorld.sessionMode!=PlanetGameMode.AiTest?"Astronomical survey incomplete":Galaxy.SystemNodes.Length+" star systems · "+Bodies.Length+" planets");
                 int shown=0;for(int i=0;i<Galaxy.Nodes.Length&&shown<5;i++){var body=Galaxy.Nodes[i];if(body.kind!=CelestialKind.Star||body.system!=system)continue;var offset=Galaxy.Origin.Add(Galaxy.Current[i].position).RelativeTo(observer);GUI.Label(new Rect(12,130+row++*22,280,24),body.name+" · "+body.stellarClass+" · "+(offset.Magnitude/1000).ToString("0")+" km");shown++;}}
             if(PreparationError.Length>0)GUI.Label(new Rect(12,310,390,70),PreparationError);
             GUI.color=Color.white;

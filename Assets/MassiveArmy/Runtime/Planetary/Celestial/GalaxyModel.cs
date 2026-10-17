@@ -3,10 +3,16 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace MassiveArmy.Planetary
 {
-    public enum CelestialKind { BlackHole,Barycentre,Star,Planet }
+    public enum CelestialKind { BlackHole,Barycentre,Star,Planet,Moon,Asteroid,Artificial }
     public enum StellarClass { RedDwarf,YellowDwarf,BlueStar,RedGiant,WhiteDwarf }
     public sealed class CelestialBody
     {
+        public string stableId;
+        public double Mass=>mu/6.67430e-11;
+        public double SurfaceGravity=>radius>0?mu/(radius*radius):0;
+        public double rotationRate;
+        public CelestialEnvironment environment;
+        public PlanetResourceProfile composition;
         public int id,parent=-1,system=-1,planet=-1;
         public string name;
         public CelestialKind kind;

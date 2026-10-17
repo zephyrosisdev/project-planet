@@ -14,7 +14,7 @@ namespace MassiveArmy.Planetary
 
     /// <summary>The production Front layout, theme, portraits and panel lifecycle with a planet backend.</summary>
 
-    public sealed class PlanetRtsHud : IDisposable
+    public sealed partial class PlanetRtsHud : IDisposable
 
     {
 
@@ -34,7 +34,7 @@ namespace MassiveArmy.Planetary
 
         public bool Blocks(Vector2 point)=>ui.Blocks(point);
 
-        public bool ModalOpen=>technologyOpen;
+        public bool ModalOpen=>technologyOpen||civilisationOpen;
 
         public bool TextFocused=>ui.TextFocused;
 
@@ -81,6 +81,7 @@ namespace MassiveArmy.Planetary
             if(fixture.sessionMode==PlanetGameMode.AiTest){construction.SetEnabled(false);front.Q("commands").SetEnabled(false);front.Q("quick-actions").SetEnabled(false);}
 
             MakeMap();context=front.Q("context");Refresh();
+            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
 
         }
 
@@ -174,15 +175,16 @@ namespace MassiveArmy.Planetary
 
         {
 
-            context.Clear();var building=world.Selected;if(building==null){Label(context,"SELECT A BUILDING","heading");return;}
+            context.Clear();queueStatus=null;var building=world.Selected;if(building==null){Label(context,"SELECT A BUILDING","heading");return;}
 
-            Label(context,building.definition.name.ToUpperInvariant(),"heading");Label(context,building.definition.description,"body");
+            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");
 
             var portrait=new Image{image=art?.Find("building",building.definition.id)?.portrait,scaleMode=ScaleMode.ScaleToFit};portrait.AddToClassList("portrait-large");context.Add(portrait);
 
+            queueStatus=Label(context,"","muted");queueStatus.name="planet-building-status";
             if(building.team!=0||fixture.sessionMode==PlanetGameMode.AiTest){Label(context,"AI faction "+(building.team+1)+" · autonomous base","muted");return;}
 
-            queueStatus=Label(context,"","muted");var row=new VisualElement();row.AddToClassList("row");context.Add(row);Button(row,"UPGRADE",()=>world.Upgrade(building),"planet-upgrade");Button(row,building.paused?"RESUME":"PAUSE",()=>{building.paused=!building.paused;revision=-1;},"planet-pause");
+            var row=new VisualElement();row.AddToClassList("row");context.Add(row);Button(row,"UPGRADE",()=>world.Upgrade(building),"planet-upgrade");Button(row,building.paused?"RESUME":"PAUSE",()=>{building.paused=!building.paused;revision=-1;},"planet-pause");
 
             row=new VisualElement();row.AddToClassList("row");context.Add(row);Button(row,building.repeat?"REPEAT ON":"REPEAT OFF",()=>{building.repeat=!building.repeat;world.NotifyChanged();});Button(row,building.repairing?"REPAIR ON":"REPAIR",()=>{building.repairing=!building.repairing;world.NotifyChanged();});
 
@@ -191,6 +193,11 @@ namespace MassiveArmy.Planetary
             if(building.definition.id=="silo")Button(context,"LAUNCH NUKE · 100F / 25I",()=>{fixture.NuclearTargetArmed=true;world.Notice="Click a target within silo range · right-click cancels";},"planet-launch-nuke");
 
             var scroll=new ScrollView();scroll.style.flexGrow=1;context.Add(scroll);
+            if(world.Civilisation!=null){
+                Button(scroll,"CONNECT TO WAREHOUSE",()=>world.ConnectSelectedToWarehouse(),"civilisation-connect");
+                foreach(var recipe in world.Civilisation.Catalogue.recipes)if(recipe.building==building.definition.id){var selectedRecipe=recipe;Button(scroll,"PRODUCE "+recipe.name,()=>{world.Civilisation.SetRecipe(fixture.definition.bodyId,building,selectedRecipe.id,0);world.Notice="Recipe selected: "+selectedRecipe.name;},"recipe-"+recipe.id);}
+                if(building.definition.id=="light_depot"||building.definition.id=="helipad")Button(scroll,building.definition.id=="helipad"?"MANUFACTURE AIR CARGO":"MANUFACTURE CARGO TRUCK",()=>{bool ok=world.Civilisation.Logistics.Order(world,building.team,building.definition.id=="helipad");world.Notice=ok?"Cargo vehicle ordered":"Requires connected production and construction materials";},"civilisation-hauler");
+            }
 
             foreach(string id in building.definition.production){var d=world.Catalog.Units[id];var button=Card(scroll,"unit",id,d.name,d.cost+" • "+d.time+"s",()=>{if(!world.QueueUnit(building,d.id))world.Notice="Training unavailable: check construction, technology, level or resources";},"train-"+id);
 
@@ -209,6 +216,7 @@ namespace MassiveArmy.Planetary
         {
 
             if(front==null)return;front.Q("hud").style.display=fixture.IsFirstPerson||fixture.IsPiloting?DisplayStyle.None:DisplayStyle.Flex;
+            RefreshCivilisation();
 
             if(Time.realtimeSinceStartupAsDouble<nextRefresh&&revision==world.Revision)return;nextRefresh=Time.realtimeSinceStartupAsDouble+.1;
 
@@ -237,4 +245,5 @@ namespace MassiveArmy.Planetary
     }
 
 }
+
 

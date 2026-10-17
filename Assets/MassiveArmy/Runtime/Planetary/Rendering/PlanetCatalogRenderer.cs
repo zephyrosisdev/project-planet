@@ -19,8 +19,10 @@ namespace MassiveArmy.Planetary
             materials=new Material[3];for(int i=0;i<3;i++){reset[i].indexCountPerInstance=meshes[i].GetIndexCount(0);materials[i]=new Material(Resources.Load<Shader>("MassiveArmy/PlanetArtUnits")){enableInstancing=true};art.Bind(materials[i],i);materials[i].SetBuffer("_PlanetUnits",units);materials[i].SetBuffer("_Traits",traits);materials[i].SetBuffer("_Visible",visible);materials[i].SetInt("_Mode",i);materials[i].SetInt("_Capacity",capacity);Bind(materials[i]);}
         }
         void Bind(Material material){material.SetFloat("_PlanetRadius",definition.radius);material.SetFloat("_PlanetHeight",definition.terrainHeight);material.SetFloat("_PlanetSeed",(definition.terrainSeed%1009)*.017f);material.SetFloat("_PlanetOcean",definition.oceanHeight);definition.Edits.Bind(material);}
+        internal void BindArt(Material material)=>art.Bind(material,0);
         public void Render(Camera camera,Vector3 centre,int count)
         {
+            if(count<=0)return;
             GeometryUtility.CalculateFrustumPlanes(camera,planes);for(int i=0;i<6;i++)frustum[i]=new Vector4(planes[i].normal.x,planes[i].normal.y,planes[i].normal.z,planes[i].distance+Vector3.Dot(planes[i].normal,centre));
             args.SetData(reset);cull.SetVectorArray("_Frustum",frustum);cull.SetVector("_CameraLocal",camera.transform.position-centre);cull.SetFloat("_ProjectionScale",camera.pixelHeight/(2*Mathf.Tan(camera.fieldOfView*Mathf.Deg2Rad*.5f)));cull.SetInt("_Count",count);cull.Dispatch(kernel,(count+127)/128,1,1);
             var vp=GL.GetGPUProjectionMatrix(camera.projectionMatrix,true)*camera.worldToCameraMatrix;var bounds=new Bounds(centre,Vector3.one*(definition.radius+definition.ReliefBound+1000)*2);
@@ -30,3 +32,4 @@ namespace MassiveArmy.Planetary
         public void Dispose(){art.Dispose();ArmyLifetime.Destroy(meshes[2]);foreach(var m in materials)ArmyLifetime.Destroy(m);ArmyLifetime.Destroy(cull);visible.Dispose();args.Dispose();}
     }
 }
+

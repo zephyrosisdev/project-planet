@@ -54,7 +54,7 @@ RWStructuredBuffer<float4> _Steering;
 StructuredBuffer<float2> _Sites;StructuredBuffer<UnitArchetype> _Types;StructuredBuffer<UnitTraits> _Traits;
 StructuredBuffer<float4> _Structures;RWStructuredBuffer<uint> _StructureDamage;uint _StructureCount;
 struct Remains{float4 centre,tangent,metadata;};RWStructuredBuffer<Remains> _Remains;RWStructuredBuffer<uint> _RemainsIndex,_RemainsCounter;uint _RemainsResolution;
-RWStructuredBuffer<uint> _Presence,_Objectives,_Noise,_Hearing;StructuredBuffer<uint> _Eligibility;StructuredBuffer<float> _NavCosts;float3 _Home;float _Refuge;uint _SpawnSeed;
+RWStructuredBuffer<uint> _Presence,_Objectives,_Noise,_Hearing;StructuredBuffer<uint> _Eligibility;StructuredBuffer<float> _NavCosts;float3 _Home;float _Refuge;uint _SpawnSeed;uint _SeparatedFactions;
 float _SpawnLocalRadius;
 RWStructuredBuffer<float2> _RoamOrigins;
 #include "PlanetZombieRoaming.hlsl"
@@ -170,7 +170,7 @@ groupshared uint StatisticsLocal[4];
 
  if(target!=INVALID){InterlockedAdd(_Damage[target],(uint)max(1,_Structures[id.x*3+2].x*_Dt));InterlockedMax(_Noise[PlanetIndex(cell,_Res)],_Tick+1);}}
 
-[numthreads(128,1,1)]void Objectives(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=6*_Res*_Res||(_Eligibility[i]&4)==0)return;uint teams=_Presence[i];if(teams==0)return;float3 d=PlanetCellDirection(PlanetCell(i,_Res),_Res);uint rank=(uint)min(32766.0,length(d-_Home)*16000);uint key=(rank<<17)|i;if((teams&6)!=0)InterlockedMin(_Objectives[0],key);if((teams&5)!=0)InterlockedMin(_Objectives[1],key);}
+[numthreads(128,1,1)]void Objectives(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=6*_Res*_Res||(_Eligibility[i]&4)==0)return;uint teams=_Presence[i];if(teams==0)return;float3 d=PlanetCellDirection(PlanetCell(i,_Res),_Res);uint rank=(uint)min(32766.0,length(d-(_SeparatedFactions!=0?_StartingRefuges[0].xyz:_Home))*16000);uint key=(rank<<17)|i;if((teams&6)!=0)InterlockedMin(_Objectives[0],key);if((teams&5)!=0){if(_SeparatedFactions!=0)key=((uint)min(32766.0,length(d-_StartingRefuges[1].xyz)*16000)<<17)|i;InterlockedMin(_Objectives[1],key);}}
 
 [numthreads(128,1,1)]void Hearing(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=6*_Res*_Res)return;int2 cell=PlanetCell(i,_Res);uint newest=0,best=0;for(int y=-2;y<=2;y++)for(int x=-2;x<=2;x++){uint index=PlanetIndex(OffsetCell(cell,x,y),_Res),stamp=_Noise[index];if(stamp>newest&&_Tick+1-stamp<=450){newest=stamp;best=index+1;}}_Hearing[i]=best;}
 

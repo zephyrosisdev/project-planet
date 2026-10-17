@@ -1,0 +1,37 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.Profiling;
+namespace MassiveArmy.Planetary {
+    [DefaultExecutionOrder(-230)]public sealed class SettlementAiSupplyValidation:MonoBehaviour {
+        [Serializable]sealed class TeamReport {public int maximumMines,totalMines,connectedMines,buildings,cargo;public float endingMaterials;public double longestMaterialDrought,deliveredMaterials;public bool recovered;public string activity;public List<string> installations=new List<string>(),trucks=new List<string>();}
+        [Serializable]sealed class Report {public string status="PASS",error="",measurement="Actual autonomous AI, 900 simulation seconds; wall frame intervals, no CPU army mirror or wallet grants";public List<string> checks=new List<string>();public TeamReport[] teams={new TeamReport(),new TeamReport()};public int units,width,height,runtimeErrors;public double economySeconds;public double medianMs,p95Ms,simulationHz;public long allocatedBytes,reservedBytes;public double[] frameSamplesMs;}
+        readonly Report report=new Report();readonly List<double> frames=new List<double>();readonly double[] drought=new double[2];readonly bool[] depleted=new bool[2];PlanetDevelopment world;string output;double started,previous;uint firstTick;
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]static void Install(){if(!Application.isEditor&&Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-economy-ai-validation")>=0)new GameObject("Autonomous settlement supply validation").AddComponent<SettlementAiSupplyValidation>();}
+        void Awake(){var args=Environment.GetCommandLineArgs();output=args[Array.IndexOf(args,"-planet-output")+1];Directory.CreateDirectory(output);world=FindAnyObjectByType<PlanetDevelopment>();world.currentRtsContent=true;world.sessionMode=PlanetGameMode.AiTest;world.configuredRadius=120000;world.requestedCapacity=8192;world.ambientZombies=0;world.Paused=true;Application.targetFrameRate=-1;QualitySettings.vSyncCount=0;Application.logMessageReceived+=Log;}
+        void Log(string message,string stack,LogType type){if(type==LogType.Exception||type==LogType.Error||type==LogType.Assert)report.runtimeErrors++;}
+        void Check(bool value,string label){report.checks.Add((value?"PASS ":"FAIL ")+label);if(!value){report.status="FAIL";report.error+=label+"; ";}}
+        IEnumerator Start(){double deadline=Time.realtimeSinceStartupAsDouble+120;while(!world.Ready&&Time.realtimeSinceStartupAsDouble<deadline)yield return null;if(!world.Ready){Check(false,"Session initialises");Finish();yield break;}
+            Check(world.StrategyEnabled&&world.Base.Civilisation!=null,"Real autonomous strategy and settlement economy enabled");world.Base.Civilisation.Logistics.DeliveredForValidation=(team,resource,amount)=>{if(resource=="construction_materials")report.teams[team].deliveredMaterials+=amount;};report.width=Screen.width;report.height=Screen.height;firstTick=world.SimulationTicks;started=previous=Time.realtimeSinceStartupAsDouble;Time.captureDeltaTime=BattleSettings.Tick;world.Rig.InputEnabled=false;world.Paused=false;
+            while(world.SimulationTicks-firstTick<27000){yield return null;if(Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-cargo-sync")>=0)world.Base.CargoNavigation.Step(0,true);double now=Time.realtimeSinceStartupAsDouble;uint ticks=world.SimulationTicks-firstTick;if(ticks>900)frames.Add((now-previous)*1000);previous=now;
+                for(int team=0;team<2;team++){var mines=world.Base.Buildings.Where(b=>b.team==team&&!b.removed&&b.definition.id=="mine"&&b.node>=0&&world.Base.Nodes[b.node].remaining>0).ToArray();report.teams[team].maximumMines=Math.Max(report.teams[team].maximumMines,mines.Length);
+                    if(ticks>3600&&world.Base.Factions[team].wallet.Stock.materials<20)drought[team]+=Time.deltaTime;else drought[team]=0;report.teams[team].longestMaterialDrought=Math.Max(report.teams[team].longestMaterialDrought,drought[team]);
+                    if(ticks>=15000&&!depleted[team]){depleted[team]=true;Check(mines.Length>=2,"Faction "+team+" expands extraction before depletion");if(mines.Length>0)world.Base.Nodes[mines[0].node].remaining=0;}
+                }
+            }
+            world.Paused=true;double elapsed=Time.realtimeSinceStartupAsDouble-started;report.simulationHz=(world.SimulationTicks-firstTick)/elapsed;report.units=world.unitCount;report.economySeconds=world.Base.Civilisation.SimulationTime;
+            for(int team=0;team<2;team++){var hq=world.Base.Buildings.First(b=>b.team==team&&!b.removed&&b.definition.id=="command");var colony=world.Base.Settlements[team];var summary=report.teams[team];summary.endingMaterials=world.Base.Factions[team].wallet.Stock.materials;summary.buildings=world.Base.Buildings.Count(b=>b.team==team&&!b.removed);summary.cargo=colony.cargoVehicles.Count;
+                summary.totalMines=world.Base.Buildings.Count(b=>b.team==team&&!b.removed&&b.definition.id=="mine");summary.connectedMines=world.Base.Buildings.Count(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.id=="mine"&&b.node>=0&&world.Base.Nodes[b.node].remaining>0&&world.Base.Roads.Connected(b,hq));summary.recovered=summary.connectedMines>=2;
+                summary.activity=world.Base.Civilisation.State.Faction(team).priority+": "+world.Base.Civilisation.State.Faction(team).reason;
+                foreach(var b in world.Base.Buildings)if(b.team==team&&!b.removed){var item=colony.installations.Find(i=>i.id==b.persistentId);summary.installations.Add(b.definition.id+" complete="+b.Complete+" powered="+b.powered+" foodEff="+b.FoodEfficiency+" efficiency="+b.Efficiency+" food="+(item?.inventory.Get("food")??0)+" mats="+(item?.inventory.Get("construction_materials")??0)+" HQroad="+world.Base.Roads.Connected(b,hq)+" remaining="+(b.node>=0?world.Base.Nodes[b.node].remaining:0));}
+                foreach(var vehicle in colony.cargoVehicles){summary.trucks.Add(vehicle.id+" "+vehicle.phase+" "+vehicle.resource+" arrived="+vehicle.gpuArrived+" version="+vehicle.navigationVersion+" distance="+vehicle.gpuRouteMetres+" loaded="+vehicle.loaded+" delivered="+vehicle.delivered+" departure="+vehicle.departure+" arrival="+vehicle.arrival);}
+                Check(summary.totalMines>=3,"Faction "+team+" constructs multiple extractors and a paid replacement on another node");Check(summary.recovered,"Faction "+team+" retains two working HQ-road-connected mines after depletion");Check(summary.endingMaterials>=100&&summary.longestMaterialDrought<120,"Faction "+team+" maintains construction funds without prolonged material starvation");Check(summary.deliveredMaterials>100,"Faction "+team+" receives physical cargo deliveries of construction materials");
+            }Check(report.runtimeErrors==0,"No runtime errors during autonomous growth");Finish();
+        }
+        void Finish(){Time.captureDeltaTime=0;frames.Sort();report.frameSamplesMs=frames.ToArray();if(frames.Count>0){report.medianMs=frames[frames.Count/2];report.p95Ms=frames[(int)((frames.Count-1)*.95)];}report.allocatedBytes=Profiler.GetTotalAllocatedMemoryLong();report.reservedBytes=Profiler.GetTotalReservedMemoryLong();File.WriteAllText(Path.Combine(output,"validation.json"),JsonUtility.ToJson(report,true));Application.Quit(report.status=="PASS"?0:1);}
+        void OnDestroy(){Time.captureDeltaTime=0;Application.logMessageReceived-=Log;}
+    }
+}

@@ -14,6 +14,18 @@ namespace MassiveArmy.Planetary
             for(int i=0;i<256;i++){float a=i*2.39996323f,r=Mathf.Sqrt(i)*1800;yield return (preferred+(east*Mathf.Cos(a)+north*Mathf.Sin(a))*(r/definition.radius)).normalized;}
             for(int i=0;i<1024;i++){float y=1-2*(i+.5f)/1024,a=i*2.39996323f,r=Mathf.Sqrt(1-y*y);yield return new Vector3(r*Mathf.Cos(a),y,r*Mathf.Sin(a));}
         }
+        // Search a deterministic 30-degree cap around the antipode. Never manufacture an ocean island.
+        internal static System.Collections.Generic.IEnumerable<Vector3> OppositeCandidates(PlanetDefinition definition,Vector3 home){
+            var opposite=-home.normalized;var east=Vector3.Cross(Mathf.Abs(opposite.y)>.95f?Vector3.right:Vector3.up,opposite).normalized;var north=Vector3.Cross(opposite,east);
+            for(int i=0;i<2048;i++){float angle=i*2.39996323f,r=Mathf.Sqrt(i/2047f)*Mathf.Tan(30*Mathf.Deg2Rad);yield return (opposite+(east*Mathf.Cos(angle)+north*Mathf.Sin(angle))*r).normalized;}
+        }
+        internal static bool ExpansionPlain(PlanetDefinition definition,Vector3 home){
+            var east=Vector3.Cross(Mathf.Abs(home.y)>.95f?Vector3.right:Vector3.up,home).normalized;var north=Vector3.Cross(home,east);float low=float.MaxValue,high=float.MinValue;
+            for(int x=-1800;x<=1800;x+=450)for(int z=-1800;z<=1800;z+=450){var d=(home+(east*x+north*z)/definition.radius).normalized;
+                if(PlanetTerrainEdits.MountainWeight(definition,d)>.1f)return false;float h=PlanetTerrainEdits.BaseHeight(definition,d);if(h<definition.oceanHeight+60)return false;
+                low=Mathf.Min(low,h);high=Mathf.Max(high,h);if(high-low>300)return false;
+            }return true;
+        }
         public static bool ConnectedPlain(PlanetDefinition definition,Vector3 home){
             var east=Vector3.Cross(Mathf.Abs(home.y)>.9999f?Vector3.forward:Vector3.up,home).normalized;var north=Vector3.Cross(home,east);float low=float.MaxValue,high=float.MinValue;
             // Both 4.5 km-separated homes, expansion areas and a 4 km-wide land corridor must already be dry plains.

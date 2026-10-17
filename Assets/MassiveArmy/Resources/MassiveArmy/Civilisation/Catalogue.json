@@ -1,0 +1,3522 @@
+{
+  "resources": [
+    {
+      "id": "iron",
+      "name": "Iron",
+      "element": true,
+      "bootstrap": true,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 160
+    },
+    {
+      "id": "copper",
+      "name": "Copper",
+      "element": true,
+      "bootstrap": true,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 50
+    },
+    {
+      "id": "silicon",
+      "name": "Silicon",
+      "element": true,
+      "bootstrap": true,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 70
+    },
+    {
+      "id": "aluminium",
+      "name": "Aluminium",
+      "element": true,
+      "bootstrap": true,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 80
+    },
+    {
+      "id": "carbon",
+      "name": "Carbon",
+      "element": true,
+      "bootstrap": true,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 60
+    },
+    {
+      "id": "water",
+      "name": "Water",
+      "element": true,
+      "bootstrap": true,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 200
+    },
+    {
+      "id": "sulfur",
+      "name": "Sulfur",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "nickel",
+      "name": "Nickel",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "chromium",
+      "name": "Chromium",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "titanium",
+      "name": "Titanium",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "lithium",
+      "name": "Lithium",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "uranium",
+      "name": "Uranium",
+      "element": true,
+      "bootstrap": false,
+      "legacy": 3,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "rare_earth",
+      "name": "Rare Earth",
+      "element": true,
+      "bootstrap": false,
+      "legacy": 2,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "platinum",
+      "name": "Platinum",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "hydrogen",
+      "name": "Hydrogen",
+      "element": true,
+      "bootstrap": true,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 80
+    },
+    {
+      "id": "oxygen",
+      "name": "Oxygen",
+      "element": true,
+      "bootstrap": true,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 120
+    },
+    {
+      "id": "helium_3",
+      "name": "Helium 3",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "steel",
+      "name": "Steel",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "alloys",
+      "name": "Alloys",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "electronics",
+      "name": "Electronics",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "advanced_electronics",
+      "name": "Advanced Electronics",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "machine_parts",
+      "name": "Machine Parts",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "construction_materials",
+      "name": "Construction Materials",
+      "element": false,
+      "bootstrap": false,
+      "legacy": 0,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "composites",
+      "name": "Composites",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "propellant",
+      "name": "Propellant",
+      "element": false,
+      "bootstrap": false,
+      "legacy": 1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "nuclear_fuel",
+      "name": "Nuclear Fuel",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "superconductors",
+      "name": "Superconductors",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "life_support",
+      "name": "Life Support",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "aerospace_structures",
+      "name": "Aerospace Structures",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "food",
+      "name": "Food",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 500
+    },
+    {
+      "id": "medicine",
+      "name": "Medicine",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 100
+    },
+    {
+      "id": "research",
+      "name": "Research",
+      "element": false,
+      "bootstrap": false,
+      "legacy": 4,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "crude_oil",
+      "name": "Crude Oil",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "seeds",
+      "name": "Seeds",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 100
+    },
+    {
+      "id": "fertiliser",
+      "name": "Fertiliser",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 30
+    },
+    {
+      "id": "grain",
+      "name": "Grain",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "rice",
+      "name": "Rice",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "potatoes",
+      "name": "Potatoes",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "vegetables",
+      "name": "Vegetables",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "fruit",
+      "name": "Fruit",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "fibre",
+      "name": "Fibre",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "oilseeds",
+      "name": "Oilseeds",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "plastics",
+      "name": "Plastics",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    }
+  ],
+  "recipes": [
+    {
+      "id": "steel",
+      "name": "Steel",
+      "building": "civil_smelter",
+      "inputs": [
+        {
+          "resource": "iron",
+          "amount": 4
+        },
+        {
+          "resource": "carbon",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "steel",
+          "amount": 4
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "construction_materials",
+      "name": "Construction Materials",
+      "building": "civil_fabricator",
+      "inputs": [
+        {
+          "resource": "steel",
+          "amount": 3
+        },
+        {
+          "resource": "silicon",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "construction_materials",
+          "amount": 12
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "electronics",
+      "name": "Electronics",
+      "building": "civil_electronics",
+      "inputs": [
+        {
+          "resource": "copper",
+          "amount": 2
+        },
+        {
+          "resource": "silicon",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "electronics",
+          "amount": 3
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "advanced_electronics",
+      "name": "Advanced Electronics",
+      "building": "civil_electronics",
+      "inputs": [
+        {
+          "resource": "electronics",
+          "amount": 2
+        },
+        {
+          "resource": "rare_earth",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "advanced_electronics",
+          "amount": 2
+        }
+      ],
+      "seconds": 20,
+      "requiredTech": "civil_spectroscopy"
+    },
+    {
+      "id": "machine_parts",
+      "name": "Machine Parts",
+      "building": "civil_fabricator",
+      "inputs": [
+        {
+          "resource": "steel",
+          "amount": 2
+        },
+        {
+          "resource": "electronics",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "machine_parts",
+          "amount": 2
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "propellant",
+      "name": "Propellant",
+      "building": "civil_fuel_refinery",
+      "inputs": [
+        {
+          "resource": "hydrogen",
+          "amount": 2
+        },
+        {
+          "resource": "oxygen",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "propellant",
+          "amount": 5
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "life_support",
+      "name": "Life Support",
+      "building": "civil_life_support",
+      "inputs": [
+        {
+          "resource": "water",
+          "amount": 2
+        },
+        {
+          "resource": "oxygen",
+          "amount": 2
+        },
+        {
+          "resource": "carbon",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "life_support",
+          "amount": 5
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "alloys",
+      "name": "Alloys",
+      "building": "civil_advanced_materials",
+      "inputs": [
+        {
+          "resource": "steel",
+          "amount": 2
+        },
+        {
+          "resource": "nickel",
+          "amount": 1
+        },
+        {
+          "resource": "chromium",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "alloys",
+          "amount": 3
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "composites",
+      "name": "Composites",
+      "building": "civil_composites",
+      "inputs": [
+        {
+          "resource": "carbon",
+          "amount": 3
+        },
+        {
+          "resource": "aluminium",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "composites",
+          "amount": 3
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "aerospace_structures",
+      "name": "Aerospace Structures",
+      "building": "civil_advanced_materials",
+      "inputs": [
+        {
+          "resource": "titanium",
+          "amount": 2
+        },
+        {
+          "resource": "alloys",
+          "amount": 2
+        },
+        {
+          "resource": "composites",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "aerospace_structures",
+          "amount": 2
+        }
+      ],
+      "seconds": 20,
+      "requiredTech": ""
+    },
+    {
+      "id": "nuclear_fuel",
+      "name": "Nuclear Fuel",
+      "building": "civil_isotopes",
+      "inputs": [
+        {
+          "resource": "uranium",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "nuclear_fuel",
+          "amount": 1
+        }
+      ],
+      "seconds": 30,
+      "requiredTech": ""
+    },
+    {
+      "id": "superconductors",
+      "name": "Superconductors",
+      "building": "civil_advanced_materials",
+      "inputs": [
+        {
+          "resource": "copper",
+          "amount": 2
+        },
+        {
+          "resource": "rare_earth",
+          "amount": 1
+        },
+        {
+          "resource": "lithium",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "superconductors",
+          "amount": 1
+        }
+      ],
+      "seconds": 30,
+      "requiredTech": ""
+    },
+    {
+      "id": "food",
+      "name": "Food",
+      "building": "civil_hydroponics",
+      "inputs": [
+        {
+          "resource": "water",
+          "amount": 2
+        },
+        {
+          "resource": "carbon",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "food",
+          "amount": 8
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "medicine",
+      "name": "Medicine",
+      "building": "civil_chemistry",
+      "inputs": [
+        {
+          "resource": "carbon",
+          "amount": 2
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "medicine",
+          "amount": 2
+        }
+      ],
+      "seconds": 20,
+      "requiredTech": ""
+    },
+    {
+      "id": "oil_refining",
+      "name": "Oil Refining",
+      "building": "civil_oil_refinery",
+      "inputs": [
+        {
+          "resource": "crude_oil",
+          "amount": 5
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "propellant",
+          "amount": 3
+        },
+        {
+          "resource": "plastics",
+          "amount": 2
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "fertiliser",
+      "name": "Fertiliser",
+      "building": "civil_chemistry",
+      "inputs": [
+        {
+          "resource": "sulfur",
+          "amount": 1
+        },
+        {
+          "resource": "water",
+          "amount": 2
+        },
+        {
+          "resource": "carbon",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "fertiliser",
+          "amount": 4
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "process_grain",
+      "name": "Process Grain",
+      "building": "civil_food_processing",
+      "inputs": [
+        {
+          "resource": "grain",
+          "amount": 3
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "food",
+          "amount": 4
+        }
+      ],
+      "seconds": 5,
+      "requiredTech": ""
+    },
+    {
+      "id": "process_rice",
+      "name": "Process Rice",
+      "building": "civil_food_processing",
+      "inputs": [
+        {
+          "resource": "rice",
+          "amount": 3
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "food",
+          "amount": 4
+        }
+      ],
+      "seconds": 5,
+      "requiredTech": ""
+    },
+    {
+      "id": "process_potatoes",
+      "name": "Process Potatoes",
+      "building": "civil_food_processing",
+      "inputs": [
+        {
+          "resource": "potatoes",
+          "amount": 3
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "food",
+          "amount": 4
+        }
+      ],
+      "seconds": 5,
+      "requiredTech": ""
+    },
+    {
+      "id": "process_vegetables",
+      "name": "Process Vegetables",
+      "building": "civil_food_processing",
+      "inputs": [
+        {
+          "resource": "vegetables",
+          "amount": 3
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "food",
+          "amount": 4
+        }
+      ],
+      "seconds": 5,
+      "requiredTech": ""
+    },
+    {
+      "id": "process_fruit",
+      "name": "Process Fruit",
+      "building": "civil_food_processing",
+      "inputs": [
+        {
+          "resource": "fruit",
+          "amount": 3
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "food",
+          "amount": 4
+        }
+      ],
+      "seconds": 5,
+      "requiredTech": ""
+    },
+    {
+      "id": "seed_oil",
+      "name": "Seed Oil",
+      "building": "civil_oil_refinery",
+      "inputs": [
+        {
+          "resource": "oilseeds",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "propellant",
+          "amount": 2
+        }
+      ],
+      "seconds": 8,
+      "requiredTech": ""
+    }
+  ],
+  "archetypes": [
+    {
+      "id": "temperate",
+      "breathable": true,
+      "temperature": 288,
+      "pressure": 1,
+      "abundances": [
+        {
+          "resource": "iron",
+          "amount": 0.42
+        },
+        {
+          "resource": "copper",
+          "amount": 0.18
+        },
+        {
+          "resource": "silicon",
+          "amount": 0.7
+        },
+        {
+          "resource": "aluminium",
+          "amount": 0.4
+        },
+        {
+          "resource": "carbon",
+          "amount": 0.25
+        },
+        {
+          "resource": "water",
+          "amount": 0.55
+        },
+        {
+          "resource": "sulfur",
+          "amount": 0.14
+        },
+        {
+          "resource": "nickel",
+          "amount": 0.12
+        },
+        {
+          "resource": "chromium",
+          "amount": 0.1
+        },
+        {
+          "resource": "titanium",
+          "amount": 0.1
+        },
+        {
+          "resource": "lithium",
+          "amount": 0.08
+        },
+        {
+          "resource": "uranium",
+          "amount": 0.03
+        },
+        {
+          "resource": "rare_earth",
+          "amount": 0.12
+        },
+        {
+          "resource": "platinum",
+          "amount": 0.015
+        },
+        {
+          "resource": "hydrogen",
+          "amount": 0.25
+        },
+        {
+          "resource": "oxygen",
+          "amount": 0.65
+        },
+        {
+          "resource": "helium_3",
+          "amount": 0.001
+        },
+        {
+          "resource": "crude_oil",
+          "amount": 0.5
+        }
+      ]
+    },
+    {
+      "id": "desert",
+      "breathable": false,
+      "temperature": 340,
+      "pressure": 0.2,
+      "abundances": [
+        {
+          "resource": "iron",
+          "amount": 0.42
+        },
+        {
+          "resource": "copper",
+          "amount": 0.18
+        },
+        {
+          "resource": "silicon",
+          "amount": 0.95
+        },
+        {
+          "resource": "aluminium",
+          "amount": 0.4
+        },
+        {
+          "resource": "carbon",
+          "amount": 0.05
+        },
+        {
+          "resource": "water",
+          "amount": 0.005
+        },
+        {
+          "resource": "sulfur",
+          "amount": 0.14
+        },
+        {
+          "resource": "nickel",
+          "amount": 0.12
+        },
+        {
+          "resource": "chromium",
+          "amount": 0.1
+        },
+        {
+          "resource": "titanium",
+          "amount": 0.1
+        },
+        {
+          "resource": "lithium",
+          "amount": 0.08
+        },
+        {
+          "resource": "uranium",
+          "amount": 0.03
+        },
+        {
+          "resource": "rare_earth",
+          "amount": 0.12
+        },
+        {
+          "resource": "platinum",
+          "amount": 0.015
+        },
+        {
+          "resource": "hydrogen",
+          "amount": 0.01
+        },
+        {
+          "resource": "oxygen",
+          "amount": 0.65
+        },
+        {
+          "resource": "helium_3",
+          "amount": 0.001
+        },
+        {
+          "resource": "crude_oil",
+          "amount": 0.15
+        }
+      ]
+    },
+    {
+      "id": "volcanic",
+      "breathable": false,
+      "temperature": 650,
+      "pressure": 2,
+      "abundances": [
+        {
+          "resource": "iron",
+          "amount": 0.8
+        },
+        {
+          "resource": "copper",
+          "amount": 0.18
+        },
+        {
+          "resource": "silicon",
+          "amount": 0.7
+        },
+        {
+          "resource": "aluminium",
+          "amount": 0.4
+        },
+        {
+          "resource": "carbon",
+          "amount": 0.04
+        },
+        {
+          "resource": "water",
+          "amount": 0.02
+        },
+        {
+          "resource": "sulfur",
+          "amount": 0.9
+        },
+        {
+          "resource": "nickel",
+          "amount": 0.6
+        },
+        {
+          "resource": "chromium",
+          "amount": 0.5
+        },
+        {
+          "resource": "titanium",
+          "amount": 0.75
+        },
+        {
+          "resource": "lithium",
+          "amount": 0.08
+        },
+        {
+          "resource": "uranium",
+          "amount": 0.03
+        },
+        {
+          "resource": "rare_earth",
+          "amount": 0.12
+        },
+        {
+          "resource": "platinum",
+          "amount": 0.015
+        },
+        {
+          "resource": "hydrogen",
+          "amount": 0.25
+        },
+        {
+          "resource": "oxygen",
+          "amount": 0.65
+        },
+        {
+          "resource": "helium_3",
+          "amount": 0.001
+        },
+        {
+          "resource": "crude_oil",
+          "amount": 0.01
+        }
+      ]
+    },
+    {
+      "id": "ice",
+      "breathable": false,
+      "temperature": 120,
+      "pressure": 0.01,
+      "abundances": [
+        {
+          "resource": "iron",
+          "amount": 0.12
+        },
+        {
+          "resource": "copper",
+          "amount": 0.04
+        },
+        {
+          "resource": "silicon",
+          "amount": 0.7
+        },
+        {
+          "resource": "aluminium",
+          "amount": 0.4
+        },
+        {
+          "resource": "carbon",
+          "amount": 0.25
+        },
+        {
+          "resource": "water",
+          "amount": 0.95
+        },
+        {
+          "resource": "sulfur",
+          "amount": 0.14
+        },
+        {
+          "resource": "nickel",
+          "amount": 0.12
+        },
+        {
+          "resource": "chromium",
+          "amount": 0.1
+        },
+        {
+          "resource": "titanium",
+          "amount": 0.1
+        },
+        {
+          "resource": "lithium",
+          "amount": 0.08
+        },
+        {
+          "resource": "uranium",
+          "amount": 0.03
+        },
+        {
+          "resource": "rare_earth",
+          "amount": 0.12
+        },
+        {
+          "resource": "platinum",
+          "amount": 0.015
+        },
+        {
+          "resource": "hydrogen",
+          "amount": 0.8
+        },
+        {
+          "resource": "oxygen",
+          "amount": 0.8
+        },
+        {
+          "resource": "helium_3",
+          "amount": 0.001
+        },
+        {
+          "resource": "crude_oil",
+          "amount": 0.01
+        }
+      ]
+    },
+    {
+      "id": "metal_rich",
+      "breathable": false,
+      "temperature": 220,
+      "pressure": 0,
+      "abundances": [
+        {
+          "resource": "iron",
+          "amount": 0.95
+        },
+        {
+          "resource": "copper",
+          "amount": 0.18
+        },
+        {
+          "resource": "silicon",
+          "amount": 0.7
+        },
+        {
+          "resource": "aluminium",
+          "amount": 0.4
+        },
+        {
+          "resource": "carbon",
+          "amount": 0.015
+        },
+        {
+          "resource": "water",
+          "amount": 0.001
+        },
+        {
+          "resource": "sulfur",
+          "amount": 0.14
+        },
+        {
+          "resource": "nickel",
+          "amount": 0.9
+        },
+        {
+          "resource": "chromium",
+          "amount": 0.1
+        },
+        {
+          "resource": "titanium",
+          "amount": 0.8
+        },
+        {
+          "resource": "lithium",
+          "amount": 0.08
+        },
+        {
+          "resource": "uranium",
+          "amount": 0.03
+        },
+        {
+          "resource": "rare_earth",
+          "amount": 0.12
+        },
+        {
+          "resource": "platinum",
+          "amount": 0.5
+        },
+        {
+          "resource": "hydrogen",
+          "amount": 0.25
+        },
+        {
+          "resource": "oxygen",
+          "amount": 0.65
+        },
+        {
+          "resource": "helium_3",
+          "amount": 0.001
+        },
+        {
+          "resource": "crude_oil",
+          "amount": 0.01
+        }
+      ]
+    },
+    {
+      "id": "volatile_moon",
+      "breathable": false,
+      "temperature": 95,
+      "pressure": 0,
+      "abundances": [
+        {
+          "resource": "iron",
+          "amount": 0.08
+        },
+        {
+          "resource": "copper",
+          "amount": 0.18
+        },
+        {
+          "resource": "silicon",
+          "amount": 0.7
+        },
+        {
+          "resource": "aluminium",
+          "amount": 0.4
+        },
+        {
+          "resource": "carbon",
+          "amount": 0.25
+        },
+        {
+          "resource": "water",
+          "amount": 0.85
+        },
+        {
+          "resource": "sulfur",
+          "amount": 0.14
+        },
+        {
+          "resource": "nickel",
+          "amount": 0.12
+        },
+        {
+          "resource": "chromium",
+          "amount": 0.1
+        },
+        {
+          "resource": "titanium",
+          "amount": 0.1
+        },
+        {
+          "resource": "lithium",
+          "amount": 0.08
+        },
+        {
+          "resource": "uranium",
+          "amount": 0.03
+        },
+        {
+          "resource": "rare_earth",
+          "amount": 0.12
+        },
+        {
+          "resource": "platinum",
+          "amount": 0.015
+        },
+        {
+          "resource": "hydrogen",
+          "amount": 0.95
+        },
+        {
+          "resource": "oxygen",
+          "amount": 0.7
+        },
+        {
+          "resource": "helium_3",
+          "amount": 0.6
+        },
+        {
+          "resource": "crude_oil",
+          "amount": 0.01
+        }
+      ]
+    }
+  ],
+  "buildings": [
+    {
+      "id": "civil_mine_iron",
+      "name": "Iron Extractor",
+      "description": "Iron Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "iron",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_copper",
+      "name": "Copper Extractor",
+      "description": "Copper Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "copper",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_silicon",
+      "name": "Silicon Extractor",
+      "description": "Silicon Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "silicon",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_aluminium",
+      "name": "Aluminium Extractor",
+      "description": "Aluminium Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "aluminium",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_carbon",
+      "name": "Carbon Extractor",
+      "description": "Carbon Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "carbon",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_water",
+      "name": "Water Extractor",
+      "description": "Water Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "water",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_sulfur",
+      "name": "Sulfur Extractor",
+      "description": "Sulfur Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "sulfur",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_nickel",
+      "name": "Nickel Extractor",
+      "description": "Nickel Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "nickel",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_chromium",
+      "name": "Chromium Extractor",
+      "description": "Chromium Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "chromium",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_titanium",
+      "name": "Titanium Extractor",
+      "description": "Titanium Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "titanium",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_lithium",
+      "name": "Lithium Extractor",
+      "description": "Lithium Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "lithium",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_uranium",
+      "name": "Uranium Extractor",
+      "description": "Uranium Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "uranium",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_rare_earth",
+      "name": "Rare Earth Extractor",
+      "description": "Rare Earth Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "rare_earth",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_platinum",
+      "name": "Platinum Extractor",
+      "description": "Platinum Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "platinum",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_hydrogen",
+      "name": "Hydrogen Extractor",
+      "description": "Hydrogen Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "hydrogen",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_oxygen",
+      "name": "Oxygen Extractor",
+      "description": "Oxygen Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "oxygen",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mine_helium_3",
+      "name": "Helium 3 Extractor",
+      "description": "Helium 3 Extractor infrastructure for the interplanetary civilisation economy.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        0
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "helium_3",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_smelter",
+      "name": "Smelter",
+      "description": "Smelter infrastructure for the interplanetary civilisation economy.",
+      "mesh": "factory",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_fabricator",
+      "name": "Construction Fabricator",
+      "description": "Construction Fabricator infrastructure for the interplanetary civilisation economy.",
+      "mesh": "factory",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_electronics",
+      "name": "Electronics Fabricator",
+      "description": "Electronics Fabricator infrastructure for the interplanetary civilisation economy.",
+      "mesh": "lab",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_fuel_refinery",
+      "name": "Fuel Refinery",
+      "description": "Fuel Refinery infrastructure for the interplanetary civilisation economy.",
+      "mesh": "synthetic",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_life_support",
+      "name": "Life Support Factory",
+      "description": "Life Support Factory infrastructure for the interplanetary civilisation economy.",
+      "mesh": "logistics",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_advanced_materials",
+      "name": "Advanced Material Factory",
+      "description": "Advanced Material Factory infrastructure for the interplanetary civilisation economy.",
+      "mesh": "factory",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_composites",
+      "name": "Composite Factory",
+      "description": "Composite Factory infrastructure for the interplanetary civilisation economy.",
+      "mesh": "factory",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_isotopes",
+      "name": "Isotope Separation",
+      "description": "Isotope Separation infrastructure for the interplanetary civilisation economy.",
+      "mesh": "lab",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_hydroponics",
+      "name": "Hydroponics",
+      "description": "Hydroponics infrastructure for the interplanetary civilisation economy.",
+      "mesh": "solar",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_chemistry",
+      "name": "Chemical Refinery",
+      "description": "Chemical Refinery infrastructure for the interplanetary civilisation economy.",
+      "mesh": "synthetic",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_rocket_assembly",
+      "name": "Rocket Assembly",
+      "description": "Rocket Assembly infrastructure for the interplanetary civilisation economy.",
+      "mesh": "factory",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_rocketry",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_launch_pad",
+      "name": "Launch Pad",
+      "description": "Launch Pad infrastructure for the interplanetary civilisation economy.",
+      "mesh": "strategic_lab",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_rocketry",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_mission_control",
+      "name": "Mission Control",
+      "description": "Mission Control infrastructure for the interplanetary civilisation economy.",
+      "mesh": "radar_station",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_tracking",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_tracking",
+      "name": "Tracking Station",
+      "description": "Tracking Station infrastructure for the interplanetary civilisation economy.",
+      "mesh": "radar_station",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_tracking",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_satellite_factory",
+      "name": "Satellite Assembly",
+      "description": "Satellite Assembly infrastructure for the interplanetary civilisation economy.",
+      "mesh": "factory",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_satellites",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_payload_integration",
+      "name": "Payload Integration",
+      "description": "Payload Integration infrastructure for the interplanetary civilisation economy.",
+      "mesh": "factory",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_satellites",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_observatory",
+      "name": "Ground Observatory",
+      "description": "Ground Observatory infrastructure for the interplanetary civilisation economy.",
+      "mesh": "radar_station",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_astronomy",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_radio_telescope",
+      "name": "Radio Telescope",
+      "description": "Radio Telescope infrastructure for the interplanetary civilisation economy.",
+      "mesh": "radar_station",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_astronomy",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_spectroscopy",
+      "name": "Spectroscopy Facility",
+      "description": "Spectroscopy Facility infrastructure for the interplanetary civilisation economy.",
+      "mesh": "lab",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_spectroscopy",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_communications",
+      "name": "Communications Array",
+      "description": "Communications Array infrastructure for the interplanetary civilisation economy.",
+      "mesh": "radar_station",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_communications",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_spaceport",
+      "name": "Spaceport",
+      "description": "Spaceport infrastructure for the interplanetary civilisation economy.",
+      "mesh": "factory",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_logistics",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_warehouse",
+      "name": "Warehouse",
+      "description": "Warehouse infrastructure for the interplanetary civilisation economy.",
+      "mesh": "logistics",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "storage": 5000
+    },
+    {
+      "id": "civil_habitat",
+      "name": "Habitat Fabrication",
+      "description": "Habitat Fabrication infrastructure for the interplanetary civilisation economy.",
+      "mesh": "command",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_colonisation",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_colonial_admin",
+      "name": "Colonial Administration",
+      "description": "Colonial Administration infrastructure for the interplanetary civilisation economy.",
+      "mesh": "command",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_colonisation",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_sigint",
+      "name": "Signals Intelligence Centre",
+      "description": "Signals Intelligence Centre infrastructure for the interplanetary civilisation economy.",
+      "mesh": "radar_station",
+      "category": 7,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "civil_sigint",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_market",
+      "name": "Settlement Market",
+      "description": "Settlement Market connected settlement infrastructure.",
+      "mesh": "logistics",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_oil_well",
+      "name": "Industrial Oil Well",
+      "description": "Industrial Oil Well connected settlement infrastructure.",
+      "mesh": "oil",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        2
+      ],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "crude_oil",
+      "extraction": 4,
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_oil_refinery",
+      "name": "Industrial Oil Refinery",
+      "description": "Industrial Oil Refinery connected settlement infrastructure.",
+      "mesh": "synthetic",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_food_processing",
+      "name": "Food Processing Plant",
+      "description": "Food Processing Plant connected settlement infrastructure.",
+      "mesh": "factory",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02
+    },
+    {
+      "id": "civil_farm_wheat",
+      "name": "Wheat Field",
+      "description": "Wheat Field connected settlement infrastructure.",
+      "mesh": "solar",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.015
+    },
+    {
+      "id": "civil_farm_rice",
+      "name": "Rice Field",
+      "description": "Rice Field connected settlement infrastructure.",
+      "mesh": "solar",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.015
+    },
+    {
+      "id": "civil_farm_potatoes",
+      "name": "Potatoes Field",
+      "description": "Potatoes Field connected settlement infrastructure.",
+      "mesh": "solar",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.015
+    },
+    {
+      "id": "civil_farm_vegetables",
+      "name": "Vegetables Field",
+      "description": "Vegetables Field connected settlement infrastructure.",
+      "mesh": "solar",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.015
+    },
+    {
+      "id": "civil_farm_orchard",
+      "name": "Orchard Field",
+      "description": "Orchard Field connected settlement infrastructure.",
+      "mesh": "solar",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.015
+    },
+    {
+      "id": "civil_farm_flax",
+      "name": "Flax Field",
+      "description": "Flax Field connected settlement infrastructure.",
+      "mesh": "solar",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.015
+    },
+    {
+      "id": "civil_farm_oilseed",
+      "name": "Oilseed Field",
+      "description": "Oilseed Field connected settlement infrastructure.",
+      "mesh": "solar",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.015
+    },
+    {
+      "id": "civil_housing",
+      "name": "Civilian Housing",
+      "description": "Homes for 50 civilians. Requires delivered food, road access and power.",
+      "mesh": "command",
+      "category": 0,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 50,
+      "foodUse": 0.03
+    },
+    {
+      "id": "civil_road",
+      "name": "Road module",
+      "description": "1\u00d71 cargo road. Adjacent modules form corners, junctions and crossings automatically.",
+      "mesh": "wall",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 1
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 1,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 1,
+      "maxLevel": 3,
+      "footprintWidth": 1,
+      "footprintDepth": 1,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "",
+      "extraction": 0,
+      "foodUse": 0.001,
+      "storage": 0
+    }
+  ],
+  "technologies": [
+    {
+      "id": "civil_industry",
+      "name": "Planetary Industrialisation",
+      "description": "Planetary Industrialisation",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_mining",
+      "name": "Advanced Mining",
+      "description": "Advanced Mining",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_industry"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_refining",
+      "name": "Advanced Refining",
+      "description": "Advanced Refining",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_industry"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_rocketry",
+      "name": "Rocket Engines",
+      "description": "Rocket Engines",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_industry"
+      ],
+      "unlockBuildings": [
+        "civil_rocket_assembly",
+        "civil_launch_pad"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_tracking",
+      "name": "Ground Tracking",
+      "description": "Ground Tracking",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_rocketry"
+      ],
+      "unlockBuildings": [
+        "civil_mission_control",
+        "civil_tracking"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_satellites",
+      "name": "Basic Satellites",
+      "description": "Basic Satellites",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_tracking",
+        "civil_refining"
+      ],
+      "unlockBuildings": [
+        "civil_satellite_factory",
+        "civil_payload_integration"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_astronomy",
+      "name": "Ground Astronomy",
+      "description": "Ground Astronomy",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_industry"
+      ],
+      "unlockBuildings": [
+        "civil_observatory",
+        "civil_radio_telescope"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_spectroscopy",
+      "name": "Spectroscopy",
+      "description": "Spectroscopy",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_astronomy",
+        "civil_satellites"
+      ],
+      "unlockBuildings": [
+        "civil_spectroscopy"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_communications",
+      "name": "Deep Space Communication",
+      "description": "Deep Space Communication",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_tracking",
+        "civil_satellites"
+      ],
+      "unlockBuildings": [
+        "civil_communications"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_probes",
+      "name": "Interplanetary Probes",
+      "description": "Interplanetary Probes",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_spectroscopy",
+        "civil_communications"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_navigation",
+      "name": "Advanced Navigation",
+      "description": "Advanced Navigation",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_probes"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_colonisation",
+      "name": "Colony Ships",
+      "description": "Colony Ships",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_navigation",
+        "civil_mining"
+      ],
+      "unlockBuildings": [
+        "civil_habitat",
+        "civil_colonial_admin"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_logistics",
+      "name": "Interplanetary Logistics",
+      "description": "Interplanetary Logistics",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_colonisation"
+      ],
+      "unlockBuildings": [
+        "civil_spaceport"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_orbital_construction",
+      "name": "Orbital Construction",
+      "description": "Orbital Construction",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_logistics"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_shipyards",
+      "name": "Orbital Shipyards",
+      "description": "Orbital Shipyards",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_orbital_construction"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_drives",
+      "name": "Advanced Drives",
+      "description": "Advanced Drives",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_shipyards"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_automation",
+      "name": "Automated Colonies",
+      "description": "Automated Colonies",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_logistics"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_asteroids",
+      "name": "Asteroid Mining",
+      "description": "Asteroid Mining",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_mining",
+        "civil_navigation"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_sigint",
+      "name": "Orbital Signals Intelligence",
+      "description": "Orbital Signals Intelligence",
+      "branch": "Civilisation",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 80,
+        "research": 50
+      },
+      "time": 30,
+      "prerequisites": [
+        "civil_communications",
+        "civil_spectroscopy"
+      ],
+      "unlockBuildings": [
+        "civil_sigint"
+      ],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    }
+  ],
+  "crops": [
+    {
+      "id": "wheat",
+      "name": "Wheat",
+      "growthSeconds": 120,
+      "waterPerSecond": 0.08,
+      "temperature": 288,
+      "tolerance": 35,
+      "seedCost": 1,
+      "soilUse": 0.05,
+      "harvest": [
+        {
+          "resource": "grain",
+          "amount": 40
+        },
+        {
+          "resource": "seeds",
+          "amount": 2
+        }
+      ],
+      "colour": {
+        "r": 0.55,
+        "g": 0.65,
+        "b": 0.15,
+        "a": 1
+      }
+    },
+    {
+      "id": "rice",
+      "name": "Rice",
+      "growthSeconds": 180,
+      "waterPerSecond": 0.25,
+      "temperature": 288,
+      "tolerance": 35,
+      "seedCost": 1,
+      "soilUse": 0.05,
+      "harvest": [
+        {
+          "resource": "rice",
+          "amount": 60
+        },
+        {
+          "resource": "seeds",
+          "amount": 2
+        }
+      ],
+      "colour": {
+        "r": 0.25,
+        "g": 0.65,
+        "b": 0.15,
+        "a": 1
+      }
+    },
+    {
+      "id": "potatoes",
+      "name": "Potatoes",
+      "growthSeconds": 150,
+      "waterPerSecond": 0.1,
+      "temperature": 288,
+      "tolerance": 35,
+      "seedCost": 1,
+      "soilUse": 0.05,
+      "harvest": [
+        {
+          "resource": "potatoes",
+          "amount": 55
+        },
+        {
+          "resource": "seeds",
+          "amount": 2
+        }
+      ],
+      "colour": {
+        "r": 0.3,
+        "g": 0.55,
+        "b": 0.2,
+        "a": 1
+      }
+    },
+    {
+      "id": "vegetables",
+      "name": "Vegetables",
+      "growthSeconds": 100,
+      "waterPerSecond": 0.15,
+      "temperature": 288,
+      "tolerance": 35,
+      "seedCost": 1,
+      "soilUse": 0.05,
+      "harvest": [
+        {
+          "resource": "vegetables",
+          "amount": 32
+        },
+        {
+          "resource": "seeds",
+          "amount": 2
+        }
+      ],
+      "colour": {
+        "r": 0.2,
+        "g": 0.65,
+        "b": 0.3,
+        "a": 1
+      }
+    },
+    {
+      "id": "orchard",
+      "name": "Orchard",
+      "growthSeconds": 240,
+      "waterPerSecond": 0.12,
+      "temperature": 288,
+      "tolerance": 35,
+      "seedCost": 1,
+      "soilUse": 0.05,
+      "harvest": [
+        {
+          "resource": "fruit",
+          "amount": 75
+        },
+        {
+          "resource": "seeds",
+          "amount": 2
+        }
+      ],
+      "colour": {
+        "r": 0.15,
+        "g": 0.45,
+        "b": 0.12,
+        "a": 1
+      }
+    },
+    {
+      "id": "flax",
+      "name": "Flax",
+      "growthSeconds": 140,
+      "waterPerSecond": 0.07,
+      "temperature": 288,
+      "tolerance": 35,
+      "seedCost": 1,
+      "soilUse": 0.05,
+      "harvest": [
+        {
+          "resource": "fibre",
+          "amount": 35
+        },
+        {
+          "resource": "seeds",
+          "amount": 2
+        }
+      ],
+      "colour": {
+        "r": 0.35,
+        "g": 0.55,
+        "b": 0.6,
+        "a": 1
+      }
+    },
+    {
+      "id": "oilseed",
+      "name": "Oilseed",
+      "growthSeconds": 150,
+      "waterPerSecond": 0.09,
+      "temperature": 288,
+      "tolerance": 35,
+      "seedCost": 1,
+      "soilUse": 0.05,
+      "harvest": [
+        {
+          "resource": "oilseeds",
+          "amount": 45
+        },
+        {
+          "resource": "seeds",
+          "amount": 2
+        }
+      ],
+      "colour": {
+        "r": 0.7,
+        "g": 0.65,
+        "b": 0.15,
+        "a": 1
+      }
+    }
+  ]
+}

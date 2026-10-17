@@ -6,9 +6,10 @@ Shader "MassiveArmy/Ghost" {
  #pragma vertex Vert
  #pragma fragment Frag
  #include "UnityCG.cginc"
+ #include "PlanetStructureGrid.hlsl"
  float4 _Tint;
  struct V{float4 p:SV_POSITION;float3 world:TEXCOORD0;};
- V Vert(float4 p:POSITION){V o;o.p=UnityObjectToClipPos(p);o.world=mul(unity_ObjectToWorld,p).xyz;return o;}
+ V Vert(float4 p:POSITION){p.xyz=PlanetStructurePosition(p.xyz);V o;o.p=UnityObjectToClipPos(p);o.world=mul(unity_ObjectToWorld,p).xyz;return o;}
  float4 Frag(V i):SV_Target{return float4(_Tint.rgb*(1+step(.85,frac(i.world.y*.4))),.35);}
  ENDHLSL
  }}

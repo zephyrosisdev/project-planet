@@ -1,0 +1,1449 @@
+We need to substantially expand the existing Unity space/RTS project into a deeper 3D planetary and interplanetary civilisation simulation.
+
+This project already has an RTS layer based around spherical 3D planets, large numbers of units, GPU-based surface pathfinding, placeable buildings, resources, technology progression, AI factions, and a first-person mode where the player can move around physically, enter vehicles and ships, and directly control them.
+
+Do not replace working existing systems unnecessarily. Inspect the existing architecture first and integrate with what is already there. Reuse existing unit, building, faction, resource, technology, UI, pathfinding, first-person, vehicle and ship systems wherever practical. Refactor shared functionality only where doing so significantly improves the architecture.
+
+The main goal of this implementation is to introduce a complete interplanetary civilisation layer where both AI factions and human players can discover planets, analyse their resources, launch satellites and telescopes, establish colonies, create trade routes, supply remote colonies, exploit resources that are scarce on the homeworld, and eventually build self-sufficient multi-planetary civilisations.
+
+The AI must use the same underlying gameplay systems as the player wherever practical. Do not simply teleport resources, magically create colonies, instantly discover planets or give the AI hidden information. The AI should construct infrastructure, manufacture spacecraft, launch missions, discover celestial bodies, establish colonies and operate logistics using the same strategic systems available to the player.
+
+The architecture must explicitly separate large-scale strategic simulation from expensive local physical simulation.
+
+Objects such as satellites, telescopes, freighters, colony ships and interplanetary missions should have persistent simulation-state representations even when they are nowhere near a player or active camera. They should not require active GameObjects, Rigidbody physics, rendering or per-frame MonoBehaviour updates simply to exist.
+
+When an object becomes locally relevant, for example because a player approaches it, enters it, observes it closely, fights near it or manually takes control of it, it should be capable of being materialised into the full physical Unity representation. When it becomes irrelevant again it should be able to return to strategic simulation.
+
+Design this cleanly around data-driven runtime state rather than thousands of permanently active Unity GameObjects.
+
+Implement or extend a celestial-body architecture.
+
+Create a common representation for stars, planets, moons, asteroids and potentially artificial orbital bodies.
+
+A CelestialBody or equivalent should contain at minimum:
+
+Unique ID.
+Display name.
+Body type.
+Radius.
+Mass.
+Surface gravity.
+Rotation period/rate.
+Orbital parameters.
+Parent body.
+Atmospheric data.
+Temperature/environment data.
+Habitability characteristics.
+Underlying elemental/resource composition.
+Known colonies.
+Orbital assets.
+Surface installations.
+Discovery state should NOT be stored globally because discovery is faction-specific.
+
+Use double precision for large-scale astronomical state wherever required. Do not attempt to represent an entire solar system directly in normal Unity float world coordinates.
+
+Maintain a hierarchy approximately equivalent to:
+
+Universe/star-system coordinates.
+Celestial-body coordinates.
+Planet-local coordinates.
+Local floating-origin Unity coordinates.
+
+Only locally relevant objects should be converted into ordinary Unity coordinates.
+
+Each planet must have an underlying resource composition.
+
+Resources should not simply be independently/randomly spawned surface nodes with no relation to the world's geology. Generate a planet-wide abundance profile and use that to influence its surface deposits.
+
+Support resources along the lines of:
+
+Iron.
+Copper.
+Silicon.
+Aluminium.
+Carbon.
+Water.
+Sulfur.
+Nickel.
+Chromium.
+Titanium.
+Lithium.
+Uranium.
+Rare-earth elements.
+Platinum-group metals.
+Hydrogen.
+Oxygen.
+Helium-3 where appropriate.
+
+The implementation should remain data driven so more resources can easily be added.
+
+Different planet archetypes should produce meaningfully different concentrations.
+
+Examples:
+
+Earth-like planets have reasonably broad access to common materials.
+Desert worlds may have abundant silicon but poor water availability.
+Volcanic worlds may have excellent metal deposits.
+Ice worlds should have large water/volatile resources.
+Metal-rich bodies may contain exceptional iron, nickel, titanium or platinum deposits.
+Gas giants and some moons may provide rare gases or unusual strategic materials.
+
+Starting planets must not be capable of producing an unwinnable or soft-locked start due to missing basic resources.
+
+Divide resources conceptually into bootstrap resources and strategic resources.
+
+Bootstrap materials must always exist in sufficient quantities to reach early spaceflight, although some may have poor extraction efficiency.
+
+Strategic resources should be allowed to be very scarce or entirely missing from a homeworld.
+
+This scarcity is one of the primary motivations for interplanetary expansion.
+
+Introduce manufactured materials in addition to mined elements.
+
+For example:
+
+Steel.
+Advanced alloys.
+Electronics.
+Machine parts.
+Construction materials.
+Composite materials.
+Rocket propellant.
+Nuclear fuel.
+Superconductors.
+Life-support supplies.
+
+Allow production chains such as:
+
+Iron + carbon -> steel.
+
+Copper + silicon + rare-earth elements -> advanced electronics.
+
+Refined fuel components -> rocket propellant.
+
+Titanium + processed materials -> aerospace structures.
+
+Do not hardcode the system around those exact recipes; make production chains data driven.
+
+Expand the infrastructure/building tree.
+
+Add or provide architecture for buildings in categories including:
+
+Extraction:
+Open-pit mine.
+Deep mine.
+Automated mine.
+Rare-earth mine.
+Uranium mine.
+Water extractor.
+Gas extraction facility.
+Geothermal extraction.
+Eventually asteroid mining.
+
+Processing:
+Ore refinery.
+Smelter.
+Chemical refinery.
+Fuel refinery.
+Isotope separation.
+Rare-earth processing.
+Advanced-material factory.
+Electronics fabricator.
+Composite-material factory.
+
+Storage/logistics:
+Warehouse.
+Bulk-material storage.
+Fuel depot.
+Distribution centre.
+Cargo terminal.
+Spaceport.
+Orbital cargo terminal if orbital infrastructure exists.
+
+Space programme:
+Rocket assembly building.
+Launch pad.
+Mission control.
+Tracking station.
+Telemetry array.
+Satellite assembly building.
+Payload integration building.
+
+Astronomy:
+Ground observatory.
+Large optical observatory.
+Radio telescope.
+Orbital telescope.
+Deep-space telescope.
+Spectroscopy/research facility.
+
+Colonisation:
+Colonial administration centre.
+Prefab construction facility.
+Life-support factory.
+Colonial supply depot.
+Landing complex.
+Colony spaceport.
+Habitat fabrication.
+
+Intelligence:
+Communications array.
+Orbital surveillance centre.
+Signals intelligence centre.
+Reconnaissance satellite control.
+Deep-space sensor array.
+
+Integrate these into the existing building system rather than creating an entirely separate building framework.
+
+Create a technology progression which naturally moves the civilisation from planetary RTS gameplay into orbital and interplanetary gameplay.
+
+A rough progression can be:
+
+Planetary industrialisation.
+Advanced mining.
+Advanced refining.
+Rocket engines.
+Launch facilities.
+Ground tracking.
+Basic satellites.
+Ground astronomy.
+Orbital satellites.
+Orbital telescopes.
+Spectroscopy.
+Deep-space communication.
+Interplanetary probes.
+Advanced navigation.
+Large spacecraft.
+Colony ships.
+Interplanetary logistics.
+Orbital construction.
+Orbital shipyards.
+Advanced drives.
+Automated colonies.
+Asteroid mining.
+Advanced reconnaissance and SIGINT.
+
+Make the technologies data driven and hook into the existing technology-tree system.
+
+Implement astronomy and planet discovery as an actual gameplay system.
+
+At the beginning of the game, a faction should not automatically know every planet and every resource composition in the solar system.
+
+The actual simulation state of the universe must be separate from each faction's knowledge of the universe.
+
+Create something equivalent to:
+
+UniverseState
+
+and separately:
+
+FactionKnowledgeBase / FactionIntelState.
+
+The UniverseState contains the true properties of celestial bodies.
+
+Each faction's knowledge system contains its current estimates.
+
+A faction may:
+
+Not know a planet exists.
+Know that an unidentified body exists.
+Know approximate orbit.
+Know approximate size/mass.
+Know atmosphere.
+Have rough spectroscopy.
+Know probable resource composition.
+Have confirmed resource composition.
+Have detailed surface survey information.
+
+Knowledge should carry confidence/accuracy where appropriate.
+
+For example the real planet may have:
+
+Iron abundance 0.82.
+Titanium abundance 0.71.
+Uranium abundance 0.22.
+
+One faction may only know:
+
+Iron: probably high.
+Titanium: unknown.
+Uranium: unknown.
+
+Another faction may know all three accurately.
+
+A third faction may not know the planet exists.
+
+Implement ground and orbital telescope gameplay.
+
+Telescopes should perform observations over time.
+
+An unidentified celestial object could begin with information such as:
+
+Unknown object.
+Approximate direction.
+Approximate distance.
+No known atmosphere.
+No known resources.
+
+Further observations increase orbital confidence and reveal properties.
+
+Spectroscopic observations should provide approximate resource or atmospheric information rather than immediately returning perfect data.
+
+A probe or close-range survey should be required for highly accurate information.
+
+Create telescope observation tasks and queues.
+
+A telescope should be assignable to:
+
+Survey an area of the sky.
+Refine the orbit of a discovered body.
+Perform spectroscopy.
+Observe a known target.
+Search for moons.
+Potentially monitor enemy orbital activity later.
+
+Add an AstronomyDirector for AI factions.
+
+The AI astronomy system should ask questions including:
+
+Do we know enough potentially useful planets?
+Are we short of a strategic resource?
+Do currently known planets solve that shortage?
+Do we need more telescope capability?
+What should our telescope observe next?
+Would a better telescope unlock useful information?
+Should we build another telescope?
+Should we launch an orbital telescope?
+
+The AI must construct telescope infrastructure and launch orbital telescopes where required.
+
+Orbital telescopes must not simply appear in orbit.
+
+The AI/player should need, depending on technology level:
+
+Satellite/telescope manufacturing.
+Rocket manufacturing.
+Fuel.
+Payload integration.
+Launch pad.
+Mission control/tracking.
+A launch mission.
+
+Implement an orbital-launch mission system.
+
+Do not use machine learning for basic rocket guidance. Use deterministic navigation/autopilot logic.
+
+Create systems along the lines of:
+
+SpaceMissionPlanner.
+TrajectoryPlanner.
+RocketAutopilot.
+
+A launch mission should include:
+
+Payload.
+Launch location.
+Target celestial body if applicable.
+Desired orbital altitude.
+Desired inclination.
+Launch time/window.
+Vehicle.
+Required delta-v/fuel.
+Mission phases.
+
+For a basic orbital telescope launch, support a mission sequence roughly equivalent to:
+
+Prelaunch.
+Ignition.
+Vertical ascent.
+Pitch manoeuvre.
+Gravity turn.
+Main-engine cutoff.
+Coast.
+Circularisation burn.
+Stable orbit confirmation.
+Payload deployment.
+
+When a player is physically present and observing the launch, it should be possible for the mission to use the full local physical representation and visible rocket.
+
+When no player is nearby, the mission may be simulated using strategic state/events rather than expensive physics, provided it follows the same planned trajectory and rules.
+
+Do not use random success/failure as a replacement for gameplay unless failures are deliberately part of the design. Prefer deterministic systems based on vehicle capability, fuel, trajectory feasibility and damage.
+
+Introduce an analytical orbital representation.
+
+Store orbit information using an appropriate orbital-elements representation, for example:
+
+Central body.
+Semi-major axis.
+Eccentricity.
+Inclination.
+Longitude of ascending node.
+Argument of periapsis.
+Epoch/mean anomaly or equivalent.
+
+Use analytical orbital propagation where possible.
+
+Do not Rigidbody-simulate thousands of satellites simply to keep them moving around planets.
+
+Orbital assets should be capable of calculating their position from simulation time.
+
+Add support for trajectory/transfer missions between planets.
+
+Initially a simplified transfer system is acceptable, including Hohmann-like transfer calculations.
+
+Architect it so more advanced Lambert transfer solving can be added later.
+
+Interplanetary mission planning should consider:
+
+Delta-v.
+Fuel.
+Departure window.
+Travel time.
+Cargo capacity.
+Urgency.
+
+Different mission types may choose different trade-offs.
+
+For example:
+
+Cargo ships generally favour efficient transfers.
+Military vessels may favour faster transfers at higher fuel cost.
+Emergency colony resupply may prioritise time.
+Survey probes might favour fuel efficiency.
+
+Add robotic probes before requiring crewed colonisation.
+
+Support mission payloads such as:
+
+Orbiter.
+Survey probe.
+Lander.
+Resource survey package.
+Atmospheric probe.
+
+These should improve faction knowledge of a celestial body.
+
+Create a FactionExpansionDirector.
+
+It must evaluate known celestial bodies and determine whether expansion is worthwhile.
+
+Planet scoring should consider factors including:
+
+Resources the faction currently needs.
+Resources predicted to become scarce.
+Strategic geographic/orbital position.
+Available surface area.
+Habitability.
+Scientific value.
+Distance.
+Travel time.
+Mission delta-v.
+Colony establishment cost.
+Expected economic return.
+Military risk.
+Enemy presence.
+Existing friendly infrastructure.
+
+A simplified conceptual score could be:
+
+PlanetValue =
+ResourceNeedValue
++ StrategicValue
++ HabitabilityValue
++ SurfaceAreaValue
++ ScienceValue
+- DistanceCost
+- TravelCost
+- ColonyCost
+- ThreatCost.
+
+Do not hardcode the exact formula if a utility/consideration AI framework already exists; integrate with the existing AI architecture.
+
+Colonisation should use specialised expedition teams instead of generic abstract colonists.
+
+Support team or payload concepts including:
+
+Survey team:
+Geologists.
+Scientists.
+Survey equipment.
+Recon drones.
+
+Engineering team:
+Construction engineers.
+Robotics.
+Power equipment.
+Prefab construction systems.
+
+Mining team:
+Mining specialists.
+Mining equipment.
+Processing equipment.
+
+Logistics team:
+Storage equipment.
+Cargo-handling systems.
+Transport vehicles.
+Fuel equipment.
+
+Science team:
+Research equipment and specialists.
+
+Security force:
+Infantry.
+Defensive vehicles.
+Anti-air systems.
+Security equipment.
+
+These do not necessarily need to simulate every individual specialist as a character unless the existing unit architecture makes that desirable. They can be represented as expedition capabilities/cargo during strategic travel and materialised into actual units when on a locally simulated planet.
+
+Colony vessels should carry actual infrastructure/cargo rather than merely containing a boolean called "can colonise".
+
+A colony expedition may contain for example:
+
+Command module.
+Power reactor.
+Habitat modules.
+Water processing system.
+Storage facility.
+Construction fabricator.
+Mining vehicles.
+Cargo vehicles.
+Construction drones.
+Engineering team.
+Survey team.
+Security unit.
+Food.
+Medical supplies.
+Machine parts.
+Life-support supplies.
+Fuel.
+
+Use data-driven colony manifests.
+
+Create explicit colony lifecycle stages.
+
+Examples:
+
+Expedition proposed.
+Equipment being constructed.
+Mission assembly.
+Awaiting launch.
+Departed.
+Interplanetary transit.
+Planetary arrival.
+Orbit insertion if applicable.
+Landing.
+Initial outpost.
+Dependent colony.
+Industrial colony.
+Self-sufficient colony.
+Developed planetary settlement.
+
+The AI's behaviour should change based on colony state.
+
+Create a colony bootstrap/build-priority system.
+
+An early colony should prioritise critical infrastructure approximately in the following order:
+
+Landing beacon/control.
+Emergency power.
+Habitation.
+Life support.
+Storage.
+Communications.
+Construction/fabrication.
+Water extraction if available.
+Basic resource extraction.
+Refining.
+Fuel production.
+Permanent power.
+Local logistics.
+Spaceport.
+Specialist industry.
+
+The exact ordering must adapt to planet conditions.
+
+For example:
+
+A planet with no breathable atmosphere requires life support before ordinary industry.
+
+A planet with insufficient water must rely on imported water or water extraction infrastructure.
+
+A resource-extraction outpost may prioritise mining rapidly while remaining dependent on imported food.
+
+Do not force every colony to become identical.
+
+Create a colony self-sufficiency model.
+
+Track how dependent a colony is on external imports.
+
+At low self-sufficiency, the colony may depend on imports of:
+
+Food.
+Medicine.
+Machine parts.
+Electronics.
+Fuel.
+Construction materials.
+Life-support consumables.
+
+As local production grows, dependence should decrease.
+
+A mature colony should eventually be able to construct spacecraft and establish its own colonies.
+
+This is important because expansion should eventually form a network such as:
+
+Homeworld -> Colony A -> Colony B -> Colony C
+
+rather than requiring all missions to launch from the original capital forever.
+
+Implement proper interplanetary logistics and trade routes.
+
+Create a persistent TradeRoute representation.
+
+A trade route should contain information including:
+
+Unique ID.
+Owning faction.
+Origin.
+Destination.
+Cargo rules.
+Assigned spacecraft.
+Transport capacity.
+Frequency/schedule.
+Priority.
+Expected travel time.
+Risk.
+Route state.
+Minimum destination stock rules.
+Minimum source reserve stock.
+Current throughput.
+Known/suspected visibility per enemy faction.
+
+Trade routes should be capable of transporting multiple resources.
+
+For example:
+
+Earth -> Mars:
+Food.
+Electronics.
+Machine parts.
+
+Mars -> Earth:
+Titanium.
+Uranium.
+
+Do not require symmetrical cargo.
+
+Create a FactionLogisticsDirector.
+
+It must evaluate:
+
+Current production.
+Current consumption.
+Stockpiles.
+Projected future stockpiles.
+Transport capacity.
+Existing routes.
+Colony dependencies.
+Travel times.
+Route safety.
+Available ships.
+
+The logistics AI should be predictive.
+
+For example:
+
+If a colony has 1,200 food.
+Consumes 100/day.
+Therefore has 12 days remaining.
+And shipping takes 8 days.
+
+The AI should recognise that resupply must leave before the colony reaches zero.
+
+Do not wait until shortages occur before acting.
+
+The logistics system should detect deficits, find faction-controlled locations with surplus, calculate transport cost/time, reserve cargo, allocate spacecraft and create/modify routes.
+
+The AI should create interplanetary trade routes automatically where beneficial.
+
+If no suitable freighter capacity exists, it should be capable of requesting additional transport spacecraft from the production/construction system.
+
+Represent distant interplanetary ships efficiently.
+
+A distant freighter can primarily be represented by strategic data such as:
+
+Ship ID.
+Route.
+Cargo.
+Departure time.
+Expected arrival.
+Current transfer trajectory.
+Fuel.
+Faction.
+Damage/condition.
+Mission state.
+
+It does not need active real-time physics unless locally relevant.
+
+If the player approaches it, boards it, fights it or specifically focuses on it, materialise the physical vessel.
+
+The player must be able to take control of ships participating in the strategic simulation.
+
+The flow should support:
+
+Select ship in RTS/system map.
+Enter first-person mode if appropriate.
+Physically enter or spawn aboard ship according to existing game rules.
+Walk through ship interior.
+Enter cockpit/control station.
+Take control.
+Disable/override strategic autopilot while player is manually flying.
+Allow the player to perform manoeuvres.
+When control is relinquished, allow the ship's autopilot/strategic mission to resume if still possible.
+
+Maintain continuity of fuel, cargo, damage, crew/mission state and trajectory between strategic and physical representations.
+
+Do not treat the first-person ship as a completely separate copy.
+
+Integrate this architecture with the existing GPU planetary pathfinding.
+
+Each planet should have its own PlanetNavigationContext or equivalent containing its existing surface navigation/pathfinding data.
+
+Units should be associated with a specific planet/navigation context.
+
+Do not attempt to make the GPU surface pathfinding solve interplanetary travel.
+
+When units board a spacecraft, convert/store them appropriately as spacecraft passengers/cargo/manifest entries.
+
+When they land, restore/materialise them into the target planet's navigation context.
+
+Preserve unit identity where possible.
+
+Create a hierarchical faction AI.
+
+Add/refactor into specialised strategic directors approximately equivalent to:
+
+FactionStrategicDirector.
+EconomyDirector.
+ConstructionDirector.
+ResearchDirector.
+AstronomyDirector.
+ExpansionDirector.
+LogisticsDirector.
+MilitaryDirector.
+IntelligenceDirector.
+SpaceMissionDirector.
+
+These directors should collaborate through goals/requests rather than containing huge monolithic behaviour scripts.
+
+Example complete autonomous behaviour:
+
+Faction detects titanium production will become insufficient.
+EconomyDirector determines local production cannot solve it.
+FactionKnowledgeBase is searched for known titanium sources.
+No adequate known world exists.
+AstronomyDirector requests better observations.
+ConstructionDirector builds a telescope if required.
+Construction/space systems construct launch vehicle and telescope payload.
+SpaceMissionDirector creates launch.
+Rocket launches.
+Telescope reaches orbit.
+AstronomyDirector begins observations.
+A new planet is discovered.
+Spectroscopy suggests high titanium.
+ExpansionDirector requests closer survey.
+SpaceMissionDirector launches a robotic survey probe.
+Probe confirms titanium deposits.
+ExpansionDirector evaluates colony value.
+Faction approves colony mission.
+ConstructionDirector manufactures colony infrastructure.
+Colony vessel and support ships are constructed.
+Mission waits for an appropriate transfer opportunity.
+Colony expedition launches.
+It travels to target.
+It lands.
+Colony bootstrap logic constructs initial infrastructure.
+LogisticsDirector detects imported food/machine-part requirements.
+LogisticsDirector establishes supply route.
+Colony builds mines/refineries.
+Titanium production begins.
+LogisticsDirector creates export route from colony to industrial worlds.
+The colony gradually becomes self-sufficient.
+Eventually the colony is capable of launching further expansion missions.
+
+This entire chain should be achievable by AI without special cheats.
+
+Use this autonomous chain as one of the primary acceptance tests for the implementation.
+
+Implement intelligence and fog-of-war correctly.
+
+Create a strict distinction between:
+
+True game/universe state.
+
+and:
+
+Information known by a particular faction.
+
+Observer/simulation/debug mode may read the true UniverseState.
+
+A normal faction player must only read its own intelligence state unless an existing gameplay rule deliberately grants more information.
+
+A player must not automatically see:
+
+Enemy trade routes.
+Enemy colony inventory.
+Enemy production.
+Enemy ship cargo.
+Enemy satellites.
+Enemy launches.
+Enemy orbital assets.
+Enemy planetary resource data discovered only by the enemy.
+
+unless their faction has legitimately detected or learned that information.
+
+Implement an observer/spectator AI-simulation mode.
+
+This mode is intended for testing AI behaviour and balance.
+
+In observer mode show:
+
+Every planet.
+Every faction.
+Every colony.
+Every resource stockpile where useful.
+Every trade route.
+All spacecraft.
+All orbital assets.
+All telescope targets.
+All AI strategic goals.
+All known/true resource abundance.
+Current AI decision reasoning/debug information.
+
+This should allow us to run AI-vs-AI simulations without fog of war and see how civilisations expand.
+
+Add a detailed AI debug overlay.
+
+For example:
+
+Faction Blue
+
+Current strategic priority:
+Secure titanium supply.
+
+Reason:
+Stockpile = X.
+Consumption = Y.
+Predicted depletion = Z.
+
+Actions:
+Telescope observation complete.
+Planet candidate detected.
+Survey probe launched.
+Colony expedition under construction.
+Three freighters ordered.
+
+Expose enough reasoning that AI mistakes can be understood rather than appearing random.
+
+Implement communication and signals intelligence.
+
+Create a SignalEmitter component/data model for assets such as:
+
+Communication stations.
+Trade beacons.
+Ships.
+Satellites.
+Military radar.
+Colony transmitters.
+Launch tracking systems.
+
+Possible properties:
+
+Transmission power.
+Frequency/band.
+Directionality.
+Encryption level.
+Signature.
+Emission mode.
+
+Create SensorAsset / SignalSensor representations with properties such as:
+
+Sensitivity.
+Signal-processing technology.
+Frequency coverage.
+Decryption level.
+Orbital coverage.
+Sensor range/quality.
+
+Signal detection should consider:
+
+Signal strength.
+Distance.
+Sensor quality.
+Directionality.
+Line of sight where relevant.
+Background noise/interference.
+Encryption.
+Faction technology.
+
+Higher-technology surveillance systems should be capable of detecting lower-technology transmitters from greater ranges.
+
+This directly supports the requirement that an advanced faction with orbital surveillance may detect primitive enemy trade infrastructure.
+
+Intelligence quality should have levels.
+
+Possible progression:
+
+No knowledge.
+Possible signal.
+Probable ship traffic.
+Known origin/destination.
+Known ship type.
+Known route.
+Known route frequency.
+Known approximate cargo.
+Intercepted exact manifest.
+
+For example, weak intelligence might display:
+
+Unknown transmission detected.
+Probable cargo traffic.
+Origin approximately Planet X.
+Destination approximately Planet Y.
+Confidence 63%.
+
+High-end intelligence might reveal:
+
+Freighter identifier.
+Titanium ore.
+Approximate/precise cargo mass.
+Departure time.
+Expected arrival.
+
+Add a communication/intelligence technology progression such as:
+
+Basic radio.
+Directional communication.
+Encrypted communication.
+Frequency hopping.
+Laser communication.
+Advanced low-observability communication.
+
+And:
+
+Radio detection.
+Signal analysis.
+Orbital SIGINT.
+Advanced decryption.
+Deep-space surveillance.
+
+Use existing technology architecture.
+
+Add orbital reconnaissance.
+
+Reconnaissance satellites should have actual orbital positions/coverage.
+
+Surface detection should depend on passes/coverage rather than permanently granting magical global vision.
+
+Allow UI to show things such as:
+
+Next reconnaissance pass.
+Current orbital coverage.
+Estimated revisit time.
+
+Eventually multiple satellites should be capable of creating near-continuous coverage.
+
+Architect anti-satellite warfare so it can be added later without rewriting the orbital system.
+
+Implement strategic/system-map UI.
+
+Add or extend a star-system view displaying:
+
+Star.
+Planets.
+Moons if appropriate.
+Known orbital assets.
+Colonies.
+Ships/fleets.
+Trade routes.
+Transfer trajectories.
+Known/suspected enemy activity.
+
+Add filters approximately equivalent to:
+
+Colonies.
+Fleets.
+Trade routes.
+Resource flows.
+Military assets.
+Signals.
+Satellites.
+Sensor coverage.
+Telescope observations.
+
+Trade routes should be visually represented by lines/arcs with direction indicators.
+
+The visual styling should distinguish:
+
+Own route.
+Allied known route.
+Suspected enemy route.
+Confirmed enemy route.
+
+Information displayed for enemy routes must respect intelligence state.
+
+Add a resource overlay.
+
+Selecting a resource such as titanium should show known abundance across discovered planets.
+
+For example:
+
+Earth: low.
+Mars: medium.
+Planet X: very high.
+Planet Y: unknown.
+
+Unknown values must remain unknown unless the faction has information.
+
+Add telescope UI.
+
+Show:
+
+Available telescopes.
+Current targets.
+Observation task.
+Observation progress.
+Expected information gained.
+Idle telescopes.
+Discovered objects.
+Confidence levels.
+
+Observer mode may show telescope activity for all factions.
+
+Add colony UI.
+
+Display useful information including:
+
+Population/settlement size if population exists.
+Colony development stage.
+Self-sufficiency.
+Power balance.
+Water balance.
+Food balance.
+Key imports.
+Key exports.
+Local resource production.
+Stockpiles.
+Active trade routes.
+Ships assigned to supply.
+Time until next delivery.
+Predicted shortages.
+
+Add trade-route management UI.
+
+Show:
+
+Origin.
+Destination.
+Cargo policy.
+Assigned spacecraft.
+Throughput.
+Travel time.
+Next departure.
+Next arrival.
+Known danger/risk.
+Resource deficits.
+Resource surplus.
+
+The player should be able to create routes manually, but AI-controlled factions should be able to create equivalent routes automatically.
+
+Simulation performance is a major requirement.
+
+Use different simulation frequencies for different systems rather than running everything every frame.
+
+A rough target model:
+
+Local first-person physics:
+normal FixedUpdate/high frequency.
+
+Nearby combat:
+normal tactical update frequency.
+
+Large RTS tactical logic:
+lower fixed simulation frequency where appropriate.
+
+Economy:
+low-frequency simulation ticks.
+
+Logistics:
+approximately one or a few ticks per simulated second, or event-driven.
+
+Faction strategy:
+much lower frequency, potentially once every several simulated seconds depending on game speed.
+
+Orbital movement:
+analytical/time based.
+
+Interplanetary travel:
+analytical/event driven.
+
+Avoid GameObject-per-strategic-entity designs where they are unnecessary.
+
+Use pooled/local entities where required.
+
+Ensure accelerated AI simulation can operate at substantially increased game speed without requiring visual rendering or high-frequency physical simulation.
+
+The observer AI simulation should therefore be able to progress much faster than realtime.
+
+Provide data structures/events so strategic systems can advance from simulation time rather than Time.deltaTime assumptions scattered throughout gameplay code.
+
+Do not create gigantic all-purpose managers if smaller services/systems are appropriate.
+
+Prefer clean responsibilities and explicit interfaces.
+
+Important architectural classes/data concepts to consider include, but are not limited to:
+
+CelestialBody.
+PlanetState.
+PlanetResourceProfile.
+OrbitalState.
+OrbitalObject.
+FactionKnowledgeBase.
+FactionIntelState.
+ObservationTask.
+TelescopeState.
+SpaceMission.
+LaunchMission.
+InterplanetaryTransfer.
+TrajectoryPlanner.
+RocketAutopilot.
+ColonyState.
+ColonyManifest.
+ColonyBootstrapPlanner.
+TradeRoute.
+CargoManifest.
+LogisticsNetwork.
+SignalEmitter.
+SensorAsset.
+IntelRecord.
+FactionStrategicDirector.
+AstronomyDirector.
+ExpansionDirector.
+LogisticsDirector.
+SpaceMissionDirector.
+
+Use equivalent names if the existing project conventions suggest better ones.
+
+All important configuration should use ScriptableObjects or the existing equivalent data-oriented configuration architecture where appropriate.
+
+Avoid hardcoded magic numbers.
+
+Use serialisable settings for:
+
+Resource definitions.
+Planet-generation distributions.
+Production recipes.
+Buildings.
+Technology unlocks.
+Telescope performance.
+Observation duration.
+Sensor capability.
+Communication technology.
+Ship cargo capacity.
+Ship delta-v/performance.
+Colony requirements.
+Self-sufficiency thresholds.
+AI scoring weights.
+Logistics safety margins.
+Mission-planning weights.
+
+Add debugging tools to the Unity Editor/runtime where useful.
+
+Examples:
+
+Display true vs faction-known planet information.
+Display resource abundance.
+Display orbit paths.
+Display transfer trajectories.
+Display telescope observation cones/targets.
+Display satellite coverage.
+Display logistics routes.
+Display ship strategic state.
+Display faction expansion scores.
+Display signal ranges.
+Display detected/undetected signals.
+Display AI utility scores.
+Display colony dependency calculations.
+
+Build the feature incrementally.
+
+Use the following implementation stages and keep the project compiling and playable after each meaningful stage.
+
+PHASE 1 – UNIVERSE FOUNDATION
+
+Implement/refactor:
+
+CelestialBody.
+PlanetState.
+Stable IDs.
+Star-system representation.
+Planet resource profiles.
+Faction-specific knowledge records.
+Double-precision astronomical positions.
+Planet-local coordinate contexts.
+
+Integrate existing spherical planets into this system.
+
+PHASE 2 – RESOURCE AND ECONOMY EXPANSION
+
+Implement:
+
+Additional elemental resources.
+Manufactured resources.
+Planet-wide abundance.
+Resource-deposit generation influenced by abundance.
+Mining.
+Processing.
+Production recipes.
+Stockpiles.
+Consumption.
+
+Ensure one planet can operate a full economy before moving on.
+
+PHASE 3 – SPACE INFRASTRUCTURE
+
+Implement buildings such as:
+
+Rocket assembly.
+Launch pad.
+Mission control.
+Tracking station.
+Satellite factory.
+Payload integration.
+
+Allow the player to build a basic rocket and satellite.
+
+PHASE 4 – ORBITAL SIMULATION
+
+Implement:
+
+OrbitalState.
+Orbital propagation.
+Trajectory planning.
+Launch autopilot.
+Circular orbit insertion.
+Payload deployment.
+
+Support both strategic and physical representations.
+
+PHASE 5 – TELESCOPES AND DISCOVERY
+
+Implement:
+
+Ground/orbital telescopes.
+Observation tasks.
+Planet discovery.
+Orbital estimates.
+Spectroscopy.
+Faction-specific knowledge progression.
+
+PHASE 6 – AI ASTRONOMY
+
+Implement AstronomyDirector.
+
+AI must be capable of:
+
+Recognising insufficient astronomical information.
+Building required telescope infrastructure.
+Manufacturing telescope/rocket.
+Launching it.
+Assigning observations.
+Discovering worlds.
+Improving planetary knowledge.
+
+PHASE 7 – PROBES
+
+Implement:
+
+Orbiters.
+Landers.
+Survey probes.
+
+Use them to improve resource/environment knowledge.
+
+PHASE 8 – COLONISATION
+
+Implement:
+
+Specialised expedition teams.
+Colony manifests.
+Colony ships.
+Arrival/landing.
+Colony state machine.
+Bootstrap construction.
+Dependent colonies.
+
+PHASE 9 – INTERPLANETARY LOGISTICS
+
+Implement:
+
+TradeRoute.
+Freighters.
+Cargo manifests.
+Resource deficit forecasting.
+Route scheduling.
+Strategic transit.
+
+PHASE 10 – AI LOGISTICS
+
+Implement LogisticsDirector.
+
+AI must be capable of:
+
+Forecasting shortages.
+Finding supply.
+Reserving resources.
+Allocating ships.
+Building ships if necessary.
+Creating routes.
+Maintaining colonies.
+
+PHASE 11 – AI EXPANSION
+
+Implement ExpansionDirector.
+
+Complete autonomous chain:
+
+Need resource.
+Search known planets.
+Acquire more observations if needed.
+Survey candidate.
+Evaluate.
+Prepare colony.
+Launch colony.
+Establish outpost.
+Supply outpost.
+Develop industry.
+Export strategic resource.
+Become self-sufficient.
+
+PHASE 12 – INTELLIGENCE/SIGINT
+
+Implement:
+
+SignalEmitter.
+Sensors.
+Detection.
+Encryption.
+Faction intel records.
+Satellite reconnaissance.
+Trade-route detection.
+
+PHASE 13 – STRATEGIC UI
+
+Implement:
+
+System map.
+Planet knowledge panels.
+Resource overlays.
+Trade-route visualisation.
+Sensor coverage.
+Satellite coverage.
+Telescope status.
+Intel confidence.
+
+PHASE 14 – OBSERVER MODE
+
+Implement an omniscient AI simulation/debug mode showing:
+
+Every faction.
+All routes.
+All resources.
+All missions.
+All colonies.
+AI reasoning.
+True universe state.
+
+PHASE 15 – FIRST-PERSON SHIP INTEGRATION
+
+Ensure strategic ships can materialise into the current physical ship system and support:
+
+Boarding.
+Cockpit control.
+Manual piloting.
+Cargo continuity.
+Fuel continuity.
+Damage continuity.
+Autopilot resumption.
+Return to strategic simulation.
+
+Do not implement the entire feature as a pile of disconnected prototypes.
+
+At every phase integrate the systems with the actual game.
+
+Where there is already an existing equivalent implementation, extend it rather than creating a duplicate.
+
+Maintain save/load compatibility where possible. All persistent strategic state must eventually be serialisable so the state of discovered planets, telescope observations, orbital objects, colonies, trade routes and missions can survive saving/loading.
+
+The main end-to-end acceptance test is this:
+
+Start an AI faction with only its home planet.
+
+Allow it to develop without scripting the individual actions.
+
+The AI should eventually industrialise sufficiently to determine that a strategically important resource such as titanium is becoming scarce.
+
+It should determine that local production is inadequate.
+
+It should search its existing astronomical knowledge.
+
+If no suitable known planet exists, it should build appropriate astronomical infrastructure.
+
+It should manufacture and launch an orbital telescope if necessary.
+
+The rocket should perform a proper launch and enter stable orbit.
+
+The telescope should perform observations.
+
+The AI should discover another planet.
+
+It should gather sufficient spectroscopy to suspect that the planet contains substantial titanium.
+
+It should launch a survey probe.
+
+The survey should confirm useful deposits.
+
+The AI should evaluate the planet as a colonisation candidate.
+
+It should manufacture the required colony infrastructure and transport.
+
+It should launch a colony expedition during an appropriate transfer opportunity.
+
+The expedition should travel to the planet and establish an outpost.
+
+The outpost should initially depend upon imported supplies.
+
+The AI logistics system should predict those supply requirements before shortages occur.
+
+It should create and operate trade routes from the established industrial worlds to the colony.
+
+The colony should construct mining and processing infrastructure.
+
+It should begin producing titanium.
+
+The AI should create an export route that returns titanium to the faction's main industrial economy.
+
+The colony should gradually increase its self-sufficiency.
+
+Eventually the colony should be capable of functioning as another strategic expansion hub.
+
+If we run the game in omniscient observer mode, all of those decisions, routes, missions, shortages, resource flows, orbits and AI goals should be visible.
+
+If we play as one of the factions instead, enemy information must remain hidden unless legitimately discovered by our reconnaissance/intelligence systems.
+
+Throughout this implementation prioritise scalability, deterministic strategic simulation, clean integration with the current project, good debugging visibility, and avoiding unnecessary per-frame/GameObject overhead.
+
+Most importantly, treat the planetary RTS, orbital simulation, interplanetary economy and first-person gameplay as different representations of the SAME persistent game world rather than separate game modes.

@@ -18,7 +18,7 @@
       "radius": 18,
       "health": 9000,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 180,
       "maxLevel": 5,
       "production": [],
@@ -31,7 +31,8 @@
       "researchRate": 2,
       "footprintWidth": 5,
       "footprintDepth": 5,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "outpost",
@@ -63,7 +64,8 @@
       "buildRadius": 150,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "barracks",
@@ -98,7 +100,8 @@
       ],
       "footprintWidth": 3,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "light_depot",
@@ -133,7 +136,8 @@
       ],
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "factory",
@@ -174,7 +178,8 @@
       ],
       "footprintWidth": 4,
       "footprintDepth": 4,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "ordnance",
@@ -209,7 +214,8 @@
       ],
       "footprintWidth": 4,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "helipad",
@@ -244,7 +250,8 @@
       ],
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "airbase",
@@ -280,7 +287,8 @@
       ],
       "footprintWidth": 6,
       "footprintDepth": 4,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "naval_yard",
@@ -321,7 +329,8 @@
       "terrain": 2,
       "footprintWidth": 5,
       "footprintDepth": 4,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "lab",
@@ -353,7 +362,8 @@
       "researchRate": 6,
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "advanced_lab",
@@ -385,7 +395,8 @@
       "researchRate": 12,
       "footprintWidth": 4,
       "footprintDepth": 4,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "strategic_lab",
@@ -417,7 +428,8 @@
       "researchRate": 22,
       "footprintWidth": 5,
       "footprintDepth": 4,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "logistics",
@@ -450,7 +462,8 @@
       ],
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "repair_depot",
@@ -483,7 +496,8 @@
       ],
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "field_command",
@@ -518,7 +532,8 @@
       "detection": 280,
       "footprintWidth": 3,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "radar_station",
@@ -550,7 +565,8 @@
       "detection": 330,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "phased_radar",
@@ -582,7 +598,8 @@
       "detection": 500,
       "footprintWidth": 3,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "horizon_radar",
@@ -614,7 +631,8 @@
       "detection": 850,
       "footprintWidth": 4,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "counter_radar",
@@ -646,7 +664,8 @@
       "detection": 400,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "mine",
@@ -683,7 +702,8 @@
       "extraction": 14,
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "oil",
@@ -718,7 +738,8 @@
       "extraction": 10,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "gas",
@@ -753,7 +774,8 @@
       "extraction": 12,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "rare",
@@ -788,7 +810,8 @@
       "extraction": 5,
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "isotope",
@@ -823,7 +846,8 @@
       "extraction": 2,
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "synthetic",
@@ -856,7 +880,8 @@
       "fuelUse": -1,
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "material_storage",
@@ -888,7 +913,8 @@
       "storage": 5000,
       "footprintWidth": 3,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "fuel_storage",
@@ -920,7 +946,8 @@
       "storage": 4000,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "rare_storage",
@@ -952,7 +979,8 @@
       "storage": 2500,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "isotope_storage",
@@ -984,7 +1012,8 @@
       "storage": 1000,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "wind",
@@ -1004,7 +1033,7 @@
       "radius": 7,
       "health": 2400,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1016,7 +1045,8 @@
       "generation": 90,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "solar",
@@ -1036,7 +1066,7 @@
       "radius": 14,
       "health": 2400,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1048,7 +1078,8 @@
       "generation": 140,
       "footprintWidth": 4,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "gas_turbine",
@@ -1068,7 +1099,7 @@
       "radius": 10,
       "health": 2400,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1081,7 +1112,8 @@
       "fuelUse": 3,
       "footprintWidth": 3,
       "footprintDepth": 2,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "reactor",
@@ -1101,7 +1133,7 @@
       "radius": 16,
       "health": 2400,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1113,7 +1145,8 @@
       "generation": 1200,
       "footprintWidth": 4,
       "footprintDepth": 4,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "fusion",
@@ -1133,7 +1166,7 @@
       "radius": 20,
       "health": 2400,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1145,7 +1178,8 @@
       "generation": 3500,
       "footprintWidth": 5,
       "footprintDepth": 5,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "exotic",
@@ -1165,7 +1199,7 @@
       "radius": 23,
       "health": 2400,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1177,7 +1211,8 @@
       "generation": 10000,
       "footprintWidth": 6,
       "footprintDepth": 6,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "battery",
@@ -1197,7 +1232,7 @@
       "radius": 8,
       "health": 2400,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1209,7 +1244,8 @@
       "battery": 3000,
       "footprintWidth": 2,
       "footprintDepth": 1,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "wall",
@@ -1229,7 +1265,7 @@
       "radius": 3,
       "health": 3000,
       "armour": 40,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1240,7 +1276,8 @@
       ],
       "footprintWidth": 1,
       "footprintDepth": 1,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "gate",
@@ -1260,7 +1297,7 @@
       "radius": 7,
       "health": 2800,
       "armour": 20,
-      "consumption": 0,
+      "consumption": 1,
       "vision": 105,
       "maxLevel": 3,
       "production": [],
@@ -1271,7 +1308,8 @@
       ],
       "footprintWidth": 3,
       "footprintDepth": 1,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "autocannon",
@@ -1306,7 +1344,8 @@
       "reload": 0.4,
       "footprintWidth": 1,
       "footprintDepth": 1,
-      "explosionRadius": 1.5
+      "explosionRadius": 1.5,
+      "foodUse": 0.02
     },
     {
       "id": "at_turret",
@@ -1341,7 +1380,8 @@
       "reload": 2,
       "footprintWidth": 1,
       "footprintDepth": 1,
-      "explosionRadius": 4
+      "explosionRadius": 4,
+      "foodUse": 0.02
     },
     {
       "id": "aa_turret",
@@ -1376,7 +1416,8 @@
       "reload": 0.6,
       "footprintWidth": 1,
       "footprintDepth": 1,
-      "explosionRadius": 2
+      "explosionRadius": 2,
+      "foodUse": 0.02
     },
     {
       "id": "sam",
@@ -1411,7 +1452,8 @@
       "reload": 2.5,
       "footprintWidth": 2,
       "footprintDepth": 1,
-      "explosionRadius": 6
+      "explosionRadius": 6,
+      "foodUse": 0.02
     },
     {
       "id": "advanced_sam",
@@ -1446,7 +1488,8 @@
       "reload": 2.5,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 8
+      "explosionRadius": 8,
+      "foodUse": 0.02
     },
     {
       "id": "point_defence",
@@ -1481,7 +1524,8 @@
       "reload": 0.2,
       "footprintWidth": 1,
       "footprintDepth": 1,
-      "explosionRadius": 1
+      "explosionRadius": 1,
+      "foodUse": 0.02
     },
     {
       "id": "artillery_battery",
@@ -1516,7 +1560,8 @@
       "reload": 5,
       "footprintWidth": 3,
       "footprintDepth": 2,
-      "explosionRadius": 22
+      "explosionRadius": 22,
+      "foodUse": 0.02
     },
     {
       "id": "missile_defence",
@@ -1551,7 +1596,8 @@
       "reload": 2,
       "footprintWidth": 2,
       "footprintDepth": 2,
-      "explosionRadius": 12
+      "explosionRadius": 12,
+      "foodUse": 0.02
     },
     {
       "id": "laser",
@@ -1586,7 +1632,8 @@
       "reload": 0.8,
       "footprintWidth": 1,
       "footprintDepth": 1,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "shield",
@@ -1618,7 +1665,8 @@
       "shield": 180,
       "footprintWidth": 3,
       "footprintDepth": 3,
-      "explosionRadius": 0
+      "explosionRadius": 0,
+      "foodUse": 0.02
     },
     {
       "id": "silo",
@@ -1652,7 +1700,8 @@
       "reload": 40,
       "footprintWidth": 4,
       "footprintDepth": 4,
-      "explosionRadius": 130
+      "explosionRadius": 130,
+      "foodUse": 0.02
     }
   ],
   "units": [

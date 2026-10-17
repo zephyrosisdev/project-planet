@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11d60e8d17984b8ab1100851ba279bd6, type: 3}
+  m_Name: DefaultCivilisation
+  m_EditorClassIdentifier:
+  enabledInGame: 1
+  economyTickSeconds: 1
+  strategyTickSeconds: 5
+  maximumCatchupTicks: 8
+  bootstrapAbundanceFloor: 0.12
+  homeStrategicAbundance: 0.005
+  depositCapacity: 40000
+  geologicalMinimumEfficiency: 0.15
+  geologicalDepositsPerFaction: 96
+  observationSeconds: 60
+  spectroscopySeconds: 120
+  probeSurveySeconds: 180
+  launchPreparationSeconds: 30
+  launchAscentSeconds: 120
+  logisticsReserveSeconds: 120
+  shortageForecastSeconds: 600
+  expansionResourceWeight: 10
+  expansionHabitabilityWeight: 2
+  expansionDistanceWeight: 1
+  aiConstructionReserve: 600
+  aiLogisticsFuelReserve: 30
+  aiMinimumMaterialMines: 2
+  aiMaximumMaterialMines: 4
+  autoExtendSettlementRoads: 1
+  roadExtensionsPerTick: 1
+  roadTileSize: 8
+  roadTileCost: 1
+  roadMaximumStepHeight: 3
+  roadSearchBudget: 4096
+  maximumRoadTiles: 32768
+  maximumCargoVehicles: 64
+  groundCargoSpeed: 12
+  airCargoSpeed: 55
+  cargoCapacity: 80
+  cargoHandlingSeconds: 3
+  inputBufferBatches: 3
+  outputBufferBatches: 2
+  cargoVehicleSeconds: 30
+  cargoVehicleMaterialCost: 120
+  airCargoVehicleMaterialCost: 350
+  groundFuelPerMetre: 0.0001
+  airFuelPerMetre: 0.001
+  farmRainEfficiency: 0.5
+  soilRecoveryPerSecond: 0.0002
+  startingPopulation: 24
+  populationFoodPerSecond: 0.002
+  populationGrowthSeconds: 120
+  buildingInputReserveSeconds: 120

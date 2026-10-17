@@ -20,31 +20,44 @@ namespace MassiveArmy.Planetary
                 if(clear)return;
             }throw new InvalidOperationException("No safe land for the second faction's complete starter base");
         }
-        void SeedEnemyNodes(){var kinds=new[]{NodeKind.Metal,NodeKind.Oil,NodeKind.RareEarth,NodeKind.Uranium};for(int i=0;i<4;i++){var d=TeamOffset(1,new Vector2((i-1.5f)*65,115));if(surface.SampleHeight(d)<fixture.definition.oceanHeight)continue;Nodes.Add(new ResourceNode{id=Nodes.Count,kind=kinds[i],resource=(ResourceKind)i,position=CubeSphere.Encode(d),capacity=10000,remaining=10000,rateMultiplier=1,quality=1});}}
-        internal bool ConstructForTeam(string id,int team,Vector3 direction){var d=Catalog.Buildings[id];var valid=Validate(d,direction,0,true,team);if(!valid.valid||!fixture.IsFootprintClear(direction,FootprintRadius(d))||!Factions[team].wallet.Spend(d.cost))return false;var b=Create(d,direction,0,false,team);b.node=valid.node;if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
+        // Four reserves of each original RTS resource, in addition to the elemental deposits.
+        void SeedResourceNodes(int team){var kinds=new[]{NodeKind.Metal,NodeKind.Oil,NodeKind.RareEarth,NodeKind.Uranium};
+            for(int reserve=0;reserve<4;reserve++)for(int i=0;i<4;i++){
+                for(int attempt=0;attempt<48;attempt++){float angle=(reserve*4+i)*2.3999632f+attempt*.61f;float range=reserve==0?155+attempt*2:reserve==1?160+attempt*2:360+reserve*170+attempt*4;
+                    var d=TeamOffset(team,reserve==0&&attempt==0?new Vector2((i-1.5f)*65,115):new Vector2(Mathf.Cos(angle)*range,Mathf.Sin(angle)*range)+(reserve==1?new Vector2(-65,-55):Vector2.zero));
+                    if(surface.SampleHeight(d)<fixture.definition.oceanHeight)continue;bool clear=true;foreach(var node in Nodes)if(Distance(d,CubeSphere.Decode(node.position))<40){clear=false;break;}if(!clear)continue;
+                    Nodes.Add(new ResourceNode{id=Nodes.Count,kind=kinds[i],resource=(ResourceKind)i,position=CubeSphere.Encode(d),capacity=20000,remaining=20000,rateMultiplier=1,quality=1});break;
+                }
+            }
+        }
+        internal bool HasProductiveBuilding(string id,int team){foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.definition.id==id&&(b.node<0||Nodes[b.node].remaining>0))return true;return false;}
+        internal bool ConstructForTeam(string id,int team,Vector3 direction){var d=Catalog.Buildings[id];direction=SnapBuilding(d,direction,0);var valid=Validate(d,direction,0,true,team);if(!valid.valid||!fixture.IsFootprintClear(direction,FootprintRadius(d))||!Factions[team].wallet.Spend(d.cost))return false;var b=Create(d,direction,0,false,team);b.node=valid.node;if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
         bool BuildAI(string id,int team,int cycle){var d=Catalog.Buildings[id];var f=Factions[team];if(!f.wallet.CanAfford(d.cost)||f.tier<d.tier||!f.HasTech(d.requiredTech))return false;
-            if(d.terrain==TerrainRule.Node){foreach(var node in Nodes.Where(n=>n.claimedBy<0&&n.remaining>0&&Array.IndexOf(d.nodes,n.kind)>=0).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position))))if(ConstructForTeam(id,team,CubeSphere.Decode(node.position)))return true;return false;}
+            if(d.terrain==TerrainRule.Node){foreach(var node in Nodes.Where(n=>n.claimedBy<0&&n.remaining>0&&Array.IndexOf(d.nodes,n.kind)>=0&&string.Equals(n.elementId??"",d.extractedResource??"",StringComparison.Ordinal)).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position))))if(ConstructForTeam(id,team,CubeSphere.Decode(node.position)))return true;return false;}
             var anchors=Buildings.Where(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.buildRadius>0).ToArray();if(anchors.Length==0)return false;
             for(int i=0;i<24;i++){var b=anchors[(i+cycle)%anchors.Length];var up=CubeSphere.Decode(b.position);var east=Vector3.Cross(Vector3.up,up).normalized;float angle=(i+cycle*7)*2.3999632f,range=65+(i/8)*45;var p=(up+(east*Mathf.Cos(angle)+Vector3.Cross(up,east)*Mathf.Sin(angle))*range/fixture.definition.radius).normalized;if(ConstructForTeam(id,team,p))return true;}return false;
         }
         void ThinkPlanetAI(float dt){if(!fixture.StrategyEnabled||fixture.sessionMode==PlanetGameMode.Swarm)return;strategyTime+=dt;
-            for(int team=0;team<2;team++){if(team==0&&fixture.sessionMode!=PlanetGameMode.AiTest||strategyTime<nextThink[team])continue;nextThink[team]=strategyTime+4;int cycle=++AIDecisions[team];var f=Factions[team];var owned=Buildings.Where(b=>b.team==team&&!b.removed).ToArray();var command=owned.FirstOrDefault(b=>b.definition.id=="command");if(command==null){AIActivity[team]="Command lost";continue;}bool Has(string id)=>owned.Any(b=>b.definition.id==id);
-                foreach(var b in owned)if(b.Complete&&b.health<b.MaxHealth*.9f)b.repairing=true;
+            for(int team=0;team<2;team++){if(team==0&&fixture.sessionMode!=PlanetGameMode.AiTest||strategyTime<nextThink[team])continue;nextThink[team]=strategyTime+4;int cycle=++AIDecisions[team];var f=Factions[team];var owned=Buildings.Where(b=>b.team==team&&!b.removed).ToArray();var command=owned.FirstOrDefault(b=>b.definition.id=="command");if(command==null){AIActivity[team]="Command lost";continue;}bool Has(string id)=>HasProductiveBuilding(id,team);
+                foreach(var b in owned)if(b.Complete&&b.health<b.MaxHealth*.9f)b.repairing=AiCanSpend(team,new ResourceCost{materials=1});
                 bool built=false;AIActivity[team]="Developing economy and production";
-                if(!Has("mine"))built=BuildAI("mine",team,cycle);
-                if(!built&&f.generation+owned.Where(b=>!b.Complete).Sum(b=>b.definition.generation)<f.demand+35)built=BuildAI("wind",team,cycle);
-                if(!built)foreach(string id in new[]{"lab","autocannon","oil","rare","factory","at_turret","aa_turret","advanced_lab","strategic_lab"})if(!Has(id)&&BuildAI(id,team,cycle)){built=true;AIActivity[team]="Constructing "+Catalog.Buildings[id].name;break;}
-                foreach(var lab in owned.Where(b=>b.Complete&&b.powered&&b.queue.Count==0&&b.definition.category==BuildingCategory.Research)){
-                    var tech=Catalog.technologies.OrderBy(t=>t.tier).FirstOrDefault(t=>t.requiredBuilding==lab.definition.id&&t.requiredBuildingLevel<=lab.level&&!f.HasTech(t.id)&&!f.researching.Contains(t.id)&&t.prerequisites.All(f.HasTech)&&f.wallet.CanAfford(t.cost));if(tech!=null)Research(lab,tech.id);
-                    else if(lab.level<Math.Min(3,f.tier)&&!lab.Upgrading)Upgrade(lab);
+                if(Civilisation==null&&!Has("mine"))built=BuildAI("mine",team,cycle);
+                bool economyReady=AiEconomyReady(team);
+                if(!built&&Civilisation==null&&f.generation+owned.Where(b=>!b.Complete).Sum(b=>b.definition.generation)<f.demand+35)built=BuildAI("wind",team,cycle);
+                if(!built&&economyReady)foreach(string id in new[]{"lab","autocannon","oil","rare","factory","at_turret","aa_turret","advanced_lab","strategic_lab"})if(!Has(id)&&AiCanSpend(team,Catalog.Buildings[id].cost)&&BuildAI(id,team,cycle)){built=true;AIActivity[team]="Constructing "+Catalog.Buildings[id].name;break;}
+                if(economyReady)foreach(var lab in owned.Where(b=>b.Complete&&b.powered&&b.queue.Count==0&&b.definition.category==BuildingCategory.Research)){
+                    var tech=Catalog.technologies.OrderBy(t=>t.tier).FirstOrDefault(t=>t.requiredBuilding==lab.definition.id&&t.requiredBuildingLevel<=lab.level&&!f.HasTech(t.id)&&!f.researching.Contains(t.id)&&t.prerequisites.All(f.HasTech)&&AiCanSpend(team,t.cost));if(tech!=null)Research(lab,tech.id);
+                    else if(lab.level<Math.Min(3,f.tier)&&!lab.Upgrading&&AiCanSpend(team,lab.definition.cost*(.65f*lab.level)))Upgrade(lab);
                 }
-                if(!command.Upgrading&&command.level<5&&f.wallet.Stock.materials>command.definition.cost.materials*.65f*command.level+450)Upgrade(command);
-                foreach(var producer in owned.Where(b=>b.Complete&&b.powered&&b.queue.Count<2&&b.definition.production.Length>0)){
-                    var choices=producer.definition.production.Where(id=>f.HasTech(Catalog.Units[id].requiredTech)&&Catalog.Units[id].producerLevel<=producer.level&&f.wallet.CanAfford(Catalog.Units[id].cost)).ToArray();if(choices.Length>0&&f.wallet.Stock.materials>250)QueueUnit(producer,choices[(cycle+team)%choices.Length]);
+                if(economyReady&&AiCanSpend(team,command.definition.cost*(.65f*command.level))&&!command.Upgrading&&command.level<5&&f.wallet.Stock.materials>command.definition.cost.materials*.65f*command.level+450)Upgrade(command);
+                if(economyReady)foreach(var producer in owned.Where(b=>b.Complete&&b.powered&&b.queue.Count<2&&b.definition.production.Length>0)){
+                    var choices=producer.definition.production.Where(id=>f.HasTech(Catalog.Units[id].requiredTech)&&Catalog.Units[id].producerLevel<=producer.level&&AiCanSpend(team,Catalog.Units[id].cost)).ToArray();if(choices.Length>0&&f.wallet.Stock.materials>250)QueueUnit(producer,choices[(cycle+team)%choices.Length]);
                 }
                 // Continue claiming reachable deposits; expand construction radius with normal outposts.
-                if(!built&&cycle%3==0){var node=Nodes.Where(n=>n.claimedBy<0&&n.remaining>0).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position))).FirstOrDefault();if(node!=null){var target=CubeSphere.Decode(node.position);var closest=owned.Where(b=>b.Complete&&b.definition.buildRadius>0).OrderBy(b=>Distance(CubeSphere.Decode(b.position),target)).FirstOrDefault();if(closest!=null&&Distance(CubeSphere.Decode(closest.position),target)>closest.definition.buildRadius){var start=CubeSphere.Decode(closest.position);float distance=Distance(start,target);var p=Vector3.Slerp(start,target,Mathf.Min(.7f,(closest.definition.buildRadius-40)/Mathf.Max(1,distance)));ConstructForTeam("outpost",team,p);}}}
+                if(Civilisation==null&&!built&&cycle%3==0){var node=Nodes.Where(n=>n.claimedBy<0&&n.remaining>0&&!owned.Any(b=>b.Complete&&b.definition.buildRadius>0&&Distance(CubeSphere.Decode(b.position),CubeSphere.Decode(n.position))<=b.definition.buildRadius)).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position))).FirstOrDefault();if(node!=null){var target=CubeSphere.Decode(node.position);var closest=owned.Where(b=>b.Complete&&b.definition.buildRadius>0).OrderBy(b=>Distance(CubeSphere.Decode(b.position),target)).FirstOrDefault();if(closest!=null&&Distance(CubeSphere.Decode(closest.position),target)>closest.definition.buildRadius){var start=CubeSphere.Decode(closest.position);float distance=Distance(start,target);var p=Vector3.Slerp(start,target,Mathf.Min(.7f,(closest.definition.buildRadius-40)/Mathf.Max(1,distance)));ConstructForTeam("outpost",team,p);}}}
             }
         }
     }
 }
+
+

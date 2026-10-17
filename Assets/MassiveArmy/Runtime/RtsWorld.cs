@@ -7,6 +7,7 @@ namespace MassiveArmy
     public sealed class RtsBuilding
     {
         public int index,team,level=1,node=-1,rallyUnit=-1,rotation,wallConnections=-1;
+        public long persistentId;
         public BuildingDefinition definition;
         public Vector2 position,rally;
         public float health,construction,upgradeProgress,upgradeTime;
@@ -23,6 +24,7 @@ namespace MassiveArmy
         public bool Upgrading => upgradeTime>0;
         public float UpgradeFraction => upgradeTime>0?upgradeProgress/upgradeTime:0;
         public float Efficiency=1;
+        public float FoodEfficiency=1;
     }
     public sealed class RtsFaction
     {
