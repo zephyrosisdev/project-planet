@@ -61,6 +61,7 @@ namespace MassiveArmy.Planetary
             var settings=civilisation.Settings;double distance=CubeSphere.ArcDistance(local.Roads.Port(warehouse),local.Roads.Port(producer),local.World.definition.radius);
             return Math.Max(settings.buildingInputReserveSeconds,3*(distance*1.5/(aerial?settings.airCargoSpeed:settings.groundCargoSpeed)+settings.cargoHandlingSeconds));
         }
+        double RetailTarget(ColonyState colony,RtsBuilding b,double horizon)=>Math.Max(civilisation.Settings.cargoCapacity*.25,Math.Min(colony.population,100*b.level)*b.definition.retailPerResident*horizon)+(b.definition.retailResource=="food"?FoodTarget(b.definition.foodUse*b.level,horizon):0);
         double FoodTarget(double upkeep,double horizon)=>Math.Max(upkeep*horizon,civilisation.Settings.cargoCapacity*.25);
         double InputTarget(MaterialQuantity input,IndustryRecipe recipe,RtsBuilding producer,double horizon)=>Math.Max(civilisation.Settings.cargoCapacity*.25,Math.Max(input.amount*civilisation.Settings.inputBufferBatches,input.amount/recipe.seconds*producer.level*horizon));
         // Reserve idle vehicles for the earliest food shortage across the whole settlement before exports.
@@ -81,6 +82,7 @@ namespace MassiveArmy.Planetary
         // Replenish every consumer before taking optional exports from earlier installations.
         bool DeliverInputs(PlanetRtsBase local,ColonyState colony,CargoVehicleState vehicle,SurfaceInstallation warehouse,RtsBuilding home){
             foreach(var item in colony.installations){if(item.id==warehouse.id)continue;var producer=Building(local,item.id);if(producer==null||!producer.Complete)continue;
+                if(!string.IsNullOrEmpty(producer.definition.retailResource)){string resource=producer.definition.retailResource;double target=RetailTarget(colony,producer,SupplyHorizon(local,home,producer,vehicle.aerial)),stock=item.inventory.Get(resource);if(stock<target*.5&&warehouse.inventory.Get(resource)>.01&&!Busy(colony,item.id,resource)&&Start(local,vehicle,home,producer,resource,Math.Min(target-stock,warehouse.inventory.Get(resource)),false,colony))return true;}
                 // Inputs are replenished before exporting output, using finite warehouse stock and reserved vehicle capacity.
                 IndustryRecipe recipe=null;foreach(var candidate in civilisation.Catalogue.recipes)if(candidate.id==item.recipe&&candidate.building==item.definition){recipe=candidate;break;}
                 if(recipe!=null)foreach(var input in recipe.inputs){double target=InputTarget(input,recipe,producer,SupplyHorizon(local,home,producer,vehicle.aerial)),shortage=target-item.inventory.Get(input.resource);if(item.inventory.Get(input.resource)<target*.5&&shortage>.01&&warehouse.inventory.Get(input.resource)>.01&&!Busy(colony,item.id,input.resource)&&Start(local,vehicle,home,producer,input.resource,Math.Min(shortage,warehouse.inventory.Get(input.resource)),false,colony))return true;}
@@ -120,6 +122,7 @@ namespace MassiveArmy.Planetary
                 IndustryRecipe recipe=null;foreach(var candidate in civilisation.Catalogue.recipes)if(candidate.id==item.recipe&&candidate.building==item.definition){recipe=candidate;break;}
                 foreach(var resource in civilisation.Catalogue.resources){double surplus=item.inventory.Get(resource.id);if(recipe!=null){foreach(var input in recipe.inputs)if(input.resource==resource.id)surplus-=InputTarget(input,recipe,producer,SupplyHorizon(local,home,producer,vehicle.aerial));}if(item.definition.StartsWith("civil_farm_")&&(resource.id=="water"||resource.id=="seeds"||resource.id=="fertiliser"))continue;
                     if(resource.id=="food")surplus-=FoodTarget(upkeep,SupplyHorizon(local,home,producer,vehicle.aerial));
+                    if(resource.id==producer.definition.retailResource)surplus=Math.Min(surplus,item.inventory.Get(resource.id)-RetailTarget(colony,producer,SupplyHorizon(local,home,producer,vehicle.aerial)));
                     double minimumLoad=warehouse.inventory.Get(resource.id)<1?.1:civilisation.Settings.cargoCapacity*.25;
                     if(surplus>minimumLoad&&!Busy(colony,item.id,resource.id)&&warehouse.inventory.Capacity(resource.id)-warehouse.inventory.Get(resource.id)>.1&&Start(local,vehicle,home,producer,resource.id,Math.Min(surplus,warehouse.inventory.Capacity(resource.id)-warehouse.inventory.Get(resource.id)),true,colony)){exportCursors[colony.id]=(at+1)%colony.installations.Count;return;}
                 }

@@ -72,7 +72,8 @@ namespace MassiveArmy.Planetary
         }
         void LandingLine(Double3 a,Double3 b,Double3 anchor){var x=(a-anchor).Float;var y=(b-anchor).Float;landingLines[landingLineCount++]=new Vector4(x.x,x.y,x.z,1);landingLines[landingLineCount++]=new Vector4(y.x,y.y,y.z,1);}
         int landingVertices;
-        public void RenderLanding(){landingVertices=0;if(!active)return;RefreshLandingPreview();if(Landed||autoTakeoff&&AutoFlightActive||!ShowLandingPreview)return;landingLineCount=0;var start=pose.position;var previous=start;
+        public bool LandingPreviewVisible=>active&&FlightAssistEnabled&&LandingAvailable&&!Landed&&!AutoFlightActive&&ShowLandingPreview;
+        public void RenderLanding(){landingVertices=0;if(!active||!FlightAssistEnabled||!ShowLandingPreview)return;RefreshLandingPreview();if(!LandingPreviewVisible)return;landingLineCount=0;var start=pose.position;var previous=start;
             for(int i=1;i<=16;i++){var point=AutoFlightActive?AutoPoint(Mathf.Lerp(AutoFlightProgress,1,i/16f)):LandingCurve(start,LandingPosition,i/16f);LandingLine(previous,point,start);previous=point;}
             // A full-size landing footprint and hull outline show the orientation the landing transition will adopt.
             Double3 Point(float x,float y,float z)=>LandingPosition+Double3.Rotate(LandingRotation,new Double3(x,y,z));

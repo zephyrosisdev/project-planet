@@ -22,7 +22,7 @@ namespace MassiveArmy.Planetary
                         foreach(var existing in Nodes)if(Distance(direction,CubeSphere.Decode(existing.position))<40){clear=false;break;}if(!clear)continue;
                         double richness=profile.LocalAbundance(element.id,direction,fixture.definition.terrainSeed);
                         float capacity=(float)(civilisation.Settings.depositCapacity*Math.Max(.1,richness));
-                        Nodes.Add(new ResourceNode{id=Nodes.Count,kind=element.id=="crude_oil"?NodeKind.Oil:NodeKind.Metal,resource=ResourceKind.Materials,elementId=element.id,position=CubeSphere.Encode(direction),capacity=capacity,remaining=capacity,quality=(float)richness,rateMultiplier=(float)Math.Max(civilisation.Settings.geologicalMinimumEfficiency,richness*2)});
+                        Nodes.Add(new ResourceNode{id=Nodes.Count,kind=element.id=="crude_oil"?NodeKind.Oil:element.id=="methane"?NodeKind.Gas:NodeKind.Metal,resource=ResourceKind.Materials,elementId=element.id,position=CubeSphere.Encode(direction),capacity=capacity,remaining=capacity,quality=(float)richness,rateMultiplier=(float)Math.Max(civilisation.Settings.geologicalMinimumEfficiency,richness*2)});
                         // A dry centre alone does not guarantee a usable extractor footprint or entrance.
                         bool accessible=reserve!=0||Buildings.Exists(b=>b.team==team&&b.Complete&&b.definition.buildRadius>0&&Distance(CubeSphere.Decode(b.position),direction)<b.definition.buildRadius-8);
                         if(extractor!=null&&(!accessible||!Validate(extractor,direction,0,false,team).valid)){Nodes.RemoveAt(Nodes.Count-1);continue;}

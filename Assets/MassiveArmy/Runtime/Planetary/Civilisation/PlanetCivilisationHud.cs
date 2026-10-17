@@ -43,6 +43,7 @@ namespace MassiveArmy.Planetary
                 Label(civilisationContent,colony.name.ToUpperInvariant()+(dormant?" · DORMANT SNAPSHOT":""),"heading");
                 Label(civilisationContent,$"POPULATION {colony.population} / {colony.housingCapacity} housing · EMPLOYED {colony.employed}/{colony.workforce} · OPEN JOBS {Math.Max(0,colony.workerDemand-colony.employed)} · PLANNED JOBS {colony.plannedWorkerDemand}","body").name="resource-population";
                 Label(civilisationContent,$"FOOD delivered {colony.foodSupplied:0.000}/s / demand {colony.foodDemand:0.000}/s · POWER {colony.powerGeneration:0.0}/{colony.powerDemand:0.0}","body");
+                Label(civilisationContent,$"SHOPS · Food {colony.retailFoodCoverage:P0} · Drinks {colony.retailDrinksCoverage:P0} · Medical supplies {colony.retailMedicineCoverage:P0} of residents served","body");
                 string growth=colony.population>=colony.housingCapacity?"Build more housing":colony.foodBalance<-.000001?"Food deliveries insufficient":colony.powerBalance<0?"More power required":$"Population growing · next resident in {Math.Max(0,simulation.Settings.populationGrowthSeconds-colony.growthProgress):0}s";
                 Label(civilisationContent,growth+" · Workers prioritize food, water and extraction. Factories slow or stop without staff.","muted");
                 var header=ResourceRow(civilisationContent,"RESOURCE","WAREHOUSE","LOCAL","IN TRANSIT","TOTAL");header.AddToClassList("subheading");

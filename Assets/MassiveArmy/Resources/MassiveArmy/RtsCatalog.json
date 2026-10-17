@@ -33,7 +33,8 @@
       "footprintDepth": 5,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 0
     },
     {
       "id": "outpost",
@@ -67,7 +68,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 0
     },
     {
       "id": "barracks",
@@ -104,7 +106,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "light_depot",
@@ -141,7 +144,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "factory",
@@ -184,7 +188,8 @@
       "footprintDepth": 4,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "ordnance",
@@ -221,7 +226,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "helipad",
@@ -258,7 +264,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "airbase",
@@ -296,7 +303,8 @@
       "footprintDepth": 4,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "naval_yard",
@@ -339,7 +347,8 @@
       "footprintDepth": 4,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "lab",
@@ -373,7 +382,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 3
     },
     {
       "id": "advanced_lab",
@@ -407,7 +417,8 @@
       "footprintDepth": 4,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 3
     },
     {
       "id": "strategic_lab",
@@ -441,7 +452,8 @@
       "footprintDepth": 4,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 3
     },
     {
       "id": "logistics",
@@ -476,7 +488,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "repair_depot",
@@ -511,7 +524,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "field_command",
@@ -548,7 +562,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 7
     },
     {
       "id": "radar_station",
@@ -582,7 +597,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "phased_radar",
@@ -616,7 +632,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "horizon_radar",
@@ -650,7 +667,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "counter_radar",
@@ -684,7 +702,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "mine",
@@ -723,7 +742,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 6
     },
     {
       "id": "oil",
@@ -760,7 +780,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 6
     },
     {
       "id": "gas",
@@ -797,7 +818,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 6
     },
     {
       "id": "rare",
@@ -834,7 +856,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 6
     },
     {
       "id": "isotope",
@@ -871,7 +894,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 6
     },
     {
       "id": "synthetic",
@@ -906,7 +930,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 3
     },
     {
       "id": "material_storage",
@@ -940,7 +965,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "fuel_storage",
@@ -974,7 +1000,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "rare_storage",
@@ -1008,7 +1035,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "isotope_storage",
@@ -1042,7 +1070,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "wind",
@@ -1076,7 +1105,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "solar",
@@ -1110,7 +1140,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "gas_turbine",
@@ -1145,7 +1176,8 @@
       "footprintDepth": 2,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "reactor",
@@ -1179,7 +1211,8 @@
       "footprintDepth": 4,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "fusion",
@@ -1213,7 +1246,8 @@
       "footprintDepth": 5,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "exotic",
@@ -1247,7 +1281,8 @@
       "footprintDepth": 6,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 5
     },
     {
       "id": "battery",
@@ -1281,7 +1316,8 @@
       "footprintDepth": 1,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "wall",
@@ -1314,7 +1350,8 @@
       "footprintDepth": 1,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "gate",
@@ -1347,7 +1384,8 @@
       "footprintDepth": 1,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "autocannon",
@@ -1384,7 +1422,8 @@
       "footprintDepth": 1,
       "explosionRadius": 1.5,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "at_turret",
@@ -1421,7 +1460,8 @@
       "footprintDepth": 1,
       "explosionRadius": 4,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "aa_turret",
@@ -1458,7 +1498,8 @@
       "footprintDepth": 1,
       "explosionRadius": 2,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "sam",
@@ -1495,7 +1536,8 @@
       "footprintDepth": 1,
       "explosionRadius": 6,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "advanced_sam",
@@ -1532,7 +1574,8 @@
       "footprintDepth": 2,
       "explosionRadius": 8,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "point_defence",
@@ -1569,7 +1612,8 @@
       "footprintDepth": 1,
       "explosionRadius": 1,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "artillery_battery",
@@ -1606,7 +1650,8 @@
       "footprintDepth": 2,
       "explosionRadius": 22,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "missile_defence",
@@ -1643,7 +1688,8 @@
       "footprintDepth": 2,
       "explosionRadius": 12,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "laser",
@@ -1680,7 +1726,8 @@
       "footprintDepth": 1,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     },
     {
       "id": "shield",
@@ -1714,7 +1761,8 @@
       "footprintDepth": 3,
       "explosionRadius": 0,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "silo",
@@ -1750,7 +1798,8 @@
       "footprintDepth": 4,
       "explosionRadius": 130,
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 7
     }
   ],
   "units": [

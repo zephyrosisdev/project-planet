@@ -46,6 +46,7 @@ namespace MassiveArmy.Planetary
     public enum ColonyStage {InitialOutpost,Dependent,Industrial,SelfSufficient,Developed}
     [Serializable] public sealed class ColonyState {
         public long id;public int faction;public string body,name;public ColonyStage stage;public double selfSufficiency,powerBalance,waterBalance,foodBalance;
+        public double retailFoodCoverage,retailDrinksCoverage,retailMedicineCoverage;
         public int workforce,employed,workerDemand,plannedWorkerDemand;
         public int population,housingCapacity,housedPopulation;public double growthProgress,foodDemand,foodSupplied,powerGeneration,powerDemand;
         public ResourceInventory inventory=new ResourceInventory();public List<SurfaceInstallation> installations=new List<SurfaceInstallation>();

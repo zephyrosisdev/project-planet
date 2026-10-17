@@ -31,9 +31,10 @@ namespace MassiveArmy.Planetary
             }
         }
         internal bool HasProductiveBuilding(string id,int team){foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.definition.id==id&&(b.node<0||Nodes[b.node].remaining>0))return true;return false;}
-        internal bool ConstructForTeam(string id,int team,Vector3 direction){var d=Catalog.Buildings[id];direction=SnapBuilding(d,direction,0);var valid=Validate(d,direction,0,true,team);if(!valid.valid||!fixture.IsFootprintClear(direction,FootprintRadius(d))||!Factions[team].wallet.Spend(d.cost))return false;var b=Create(d,direction,0,false,team);b.node=valid.node;if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
+        internal bool ConstructForTeam(string id,int team,Vector3 direction){var d=Catalog.Buildings[id];return ConstructOriented(d,team,direction,Civilisation==null?0:EntranceRotation(d,direction,team));}
         bool BuildAI(string id,int team,int cycle){var d=Catalog.Buildings[id];var f=Factions[team];if(!f.wallet.CanAfford(d.cost)||f.tier<d.tier||!f.HasTech(d.requiredTech))return false;
             if(d.terrain==TerrainRule.Node){foreach(var node in Nodes.Where(n=>n.claimedBy<0&&n.remaining>0&&Array.IndexOf(d.nodes,n.kind)>=0&&string.Equals(n.elementId??"",d.extractedResource??"",StringComparison.Ordinal)).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position))))if(ConstructForTeam(id,team,CubeSphere.Decode(node.position)))return true;return false;}
+            if(Civilisation!=null)return BuildDistrict(d,team);
             var anchors=Buildings.Where(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.buildRadius>0).ToArray();if(anchors.Length==0)return false;
             for(int i=0;i<24;i++){var b=anchors[(i+cycle)%anchors.Length];var up=CubeSphere.Decode(b.position);var east=Vector3.Cross(Vector3.up,up).normalized;float angle=(i+cycle*7)*2.3999632f,range=65+(i/8)*45;var p=(up+(east*Mathf.Cos(angle)+Vector3.Cross(up,east)*Mathf.Sin(angle))*range/fixture.definition.radius).normalized;if(ConstructForTeam(id,team,p))return true;}return false;
         }

@@ -429,6 +429,36 @@
       "capacity": 20000,
       "mass": 1,
       "startingStock": 0
+    },
+    {
+      "id": "methane",
+      "name": "Methane",
+      "element": true,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "beef",
+      "name": "Beef",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "drinks",
+      "name": "Drinks",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
     }
   ],
   "recipes": [
@@ -949,6 +979,98 @@
       ],
       "seconds": 8,
       "requiredTech": ""
+    },
+    {
+      "id": "beef_and_methane",
+      "name": "Beef and Captured Methane",
+      "building": "civil_beef_shed",
+      "inputs": [
+        {
+          "resource": "grain",
+          "amount": 4
+        },
+        {
+          "resource": "water",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "beef",
+          "amount": 6
+        },
+        {
+          "resource": "methane",
+          "amount": 1
+        }
+      ],
+      "seconds": 30,
+      "requiredTech": ""
+    },
+    {
+      "id": "process_beef",
+      "name": "Process Beef",
+      "building": "civil_butcher",
+      "inputs": [
+        {
+          "resource": "beef",
+          "amount": 3
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "food",
+          "amount": 6
+        }
+      ],
+      "seconds": 5,
+      "requiredTech": ""
+    },
+    {
+      "id": "bottle_drinks",
+      "name": "Bottle Drinking Water",
+      "building": "civil_drinks_plant",
+      "inputs": [
+        {
+          "resource": "water",
+          "amount": 3
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "drinks",
+          "amount": 4
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
+    },
+    {
+      "id": "methane_propellant",
+      "name": "Methane Propellant",
+      "building": "civil_fuel_refinery",
+      "inputs": [
+        {
+          "resource": "methane",
+          "amount": 2
+        },
+        {
+          "resource": "oxygen",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "propellant",
+          "amount": 5
+        }
+      ],
+      "seconds": 10,
+      "requiredTech": ""
     }
   ],
   "archetypes": [
@@ -1029,6 +1151,10 @@
         {
           "resource": "crude_oil",
           "amount": 0.5
+        },
+        {
+          "resource": "methane",
+          "amount": 0.2
         }
       ]
     },
@@ -1109,6 +1235,10 @@
         {
           "resource": "crude_oil",
           "amount": 0.15
+        },
+        {
+          "resource": "methane",
+          "amount": 0.08
         }
       ]
     },
@@ -1189,6 +1319,10 @@
         {
           "resource": "crude_oil",
           "amount": 0.01
+        },
+        {
+          "resource": "methane",
+          "amount": 0.08
         }
       ]
     },
@@ -1269,6 +1403,10 @@
         {
           "resource": "crude_oil",
           "amount": 0.01
+        },
+        {
+          "resource": "methane",
+          "amount": 0.45
         }
       ]
     },
@@ -1349,6 +1487,10 @@
         {
           "resource": "crude_oil",
           "amount": 0.01
+        },
+        {
+          "resource": "methane",
+          "amount": 0.08
         }
       ]
     },
@@ -1429,6 +1571,10 @@
         {
           "resource": "crude_oil",
           "amount": 0.01
+        },
+        {
+          "resource": "methane",
+          "amount": 0.45
         }
       ]
     }
@@ -1462,7 +1608,8 @@
       "extractedResource": "iron",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_copper",
@@ -1492,7 +1639,8 @@
       "extractedResource": "copper",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_silicon",
@@ -1522,7 +1670,8 @@
       "extractedResource": "silicon",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_aluminium",
@@ -1552,7 +1701,8 @@
       "extractedResource": "aluminium",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_carbon",
@@ -1582,7 +1732,8 @@
       "extractedResource": "carbon",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_water",
@@ -1612,7 +1763,8 @@
       "extractedResource": "water",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_sulfur",
@@ -1642,7 +1794,8 @@
       "extractedResource": "sulfur",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_nickel",
@@ -1672,7 +1825,8 @@
       "extractedResource": "nickel",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_chromium",
@@ -1702,7 +1856,8 @@
       "extractedResource": "chromium",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_titanium",
@@ -1732,7 +1887,8 @@
       "extractedResource": "titanium",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_lithium",
@@ -1762,7 +1918,8 @@
       "extractedResource": "lithium",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_uranium",
@@ -1792,7 +1949,8 @@
       "extractedResource": "uranium",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_rare_earth",
@@ -1822,7 +1980,8 @@
       "extractedResource": "rare_earth",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_platinum",
@@ -1852,7 +2011,8 @@
       "extractedResource": "platinum",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_hydrogen",
@@ -1882,7 +2042,8 @@
       "extractedResource": "hydrogen",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_oxygen",
@@ -1912,7 +2073,8 @@
       "extractedResource": "oxygen",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_mine_helium_3",
@@ -1942,7 +2104,8 @@
       "extractedResource": "helium_3",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_smelter",
@@ -1968,7 +2131,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_fabricator",
@@ -1994,7 +2158,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_electronics",
@@ -2020,7 +2185,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_fuel_refinery",
@@ -2046,7 +2212,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_life_support",
@@ -2072,7 +2239,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_advanced_materials",
@@ -2098,7 +2266,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_composites",
@@ -2124,7 +2293,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_isotopes",
@@ -2150,7 +2320,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_hydroponics",
@@ -2176,7 +2347,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_chemistry",
@@ -2202,7 +2374,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_rocket_assembly",
@@ -2228,7 +2401,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_launch_pad",
@@ -2254,7 +2428,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_mission_control",
@@ -2280,7 +2455,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_tracking",
@@ -2306,7 +2482,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_satellite_factory",
@@ -2332,7 +2509,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_payload_integration",
@@ -2358,7 +2536,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_observatory",
@@ -2384,7 +2563,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_radio_telescope",
@@ -2410,7 +2590,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_spectroscopy",
@@ -2436,7 +2617,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_communications",
@@ -2462,7 +2644,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_spaceport",
@@ -2488,7 +2671,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_warehouse",
@@ -2515,7 +2699,8 @@
       "upgrades": [],
       "foodUse": 0.02,
       "storage": 5000,
-      "workers": 0
+      "workers": 0,
+      "district": 3
     },
     {
       "id": "civil_habitat",
@@ -2541,7 +2726,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_colonial_admin",
@@ -2567,7 +2753,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 0
     },
     {
       "id": "civil_sigint",
@@ -2593,7 +2780,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_market",
@@ -2619,7 +2807,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 0
+      "workers": 0,
+      "district": 2
     },
     {
       "id": "civil_oil_well",
@@ -2649,7 +2838,8 @@
       "extractedResource": "crude_oil",
       "extraction": 4,
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 6
     },
     {
       "id": "civil_oil_refinery",
@@ -2675,7 +2865,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3
+      "workers": 3,
+      "district": 3
     },
     {
       "id": "civil_food_processing",
@@ -2701,7 +2892,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 2
+      "workers": 2,
+      "district": 3
     },
     {
       "id": "civil_farm_wheat",
@@ -2727,7 +2919,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.015,
-      "workers": 2
+      "workers": 2,
+      "district": 4
     },
     {
       "id": "civil_farm_rice",
@@ -2753,7 +2946,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.015,
-      "workers": 2
+      "workers": 2,
+      "district": 4
     },
     {
       "id": "civil_farm_potatoes",
@@ -2779,7 +2973,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.015,
-      "workers": 2
+      "workers": 2,
+      "district": 4
     },
     {
       "id": "civil_farm_vegetables",
@@ -2805,7 +3000,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.015,
-      "workers": 2
+      "workers": 2,
+      "district": 4
     },
     {
       "id": "civil_farm_orchard",
@@ -2831,7 +3027,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.015,
-      "workers": 2
+      "workers": 2,
+      "district": 4
     },
     {
       "id": "civil_farm_flax",
@@ -2857,7 +3054,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.015,
-      "workers": 2
+      "workers": 2,
+      "district": 4
     },
     {
       "id": "civil_farm_oilseed",
@@ -2883,7 +3081,8 @@
       "production": [],
       "upgrades": [],
       "foodUse": 0.015,
-      "workers": 2
+      "workers": 2,
+      "district": 4
     },
     {
       "id": "civil_housing",
@@ -2910,7 +3109,8 @@
       "upgrades": [],
       "housingCapacity": 50,
       "foodUse": 0.03,
-      "workers": 0
+      "workers": 0,
+      "district": 1
     },
     {
       "id": "civil_road",
@@ -2939,7 +3139,207 @@
       "extraction": 0,
       "foodUse": 0.001,
       "storage": 0,
-      "workers": 0
+      "workers": 0,
+      "district": 3
+    },
+    {
+      "id": "civil_mine_methane",
+      "name": "Methane Gas Extractor",
+      "description": "Methane Gas Extractor; requires delivered supplies, workers and power.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 1,
+      "nodes": [
+        3
+      ],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 12,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "extractedResource": "methane",
+      "extraction": 4,
+      "foodUse": 0.02,
+      "workers": 3,
+      "district": 6
+    },
+    {
+      "id": "civil_beef_shed",
+      "name": "Sealed Beef Farm Shed",
+      "description": "Air-tight livestock shed. Feed grain and water to produce beef and capture a small methane by-product; no atmospheric release.",
+      "mesh": "factory",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 6,
+      "maxLevel": 3,
+      "footprintWidth": 3,
+      "footprintDepth": 3,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "workers": 3,
+      "district": 4
+    },
+    {
+      "id": "civil_butcher",
+      "name": "Beef Processing Plant",
+      "description": "Beef Processing Plant; requires delivered supplies, workers and power.",
+      "mesh": "factory",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "workers": 2,
+      "district": 3
+    },
+    {
+      "id": "civil_drinks_plant",
+      "name": "Drinking Water Bottling Plant",
+      "description": "Drinking Water Bottling Plant; requires delivered supplies, workers and power.",
+      "mesh": "factory",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "workers": 2,
+      "district": 3
+    },
+    {
+      "id": "civil_food_shop",
+      "name": "Food Shop",
+      "description": "Food Shop; requires delivered supplies, workers and power.",
+      "mesh": "logistics",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "workers": 2,
+      "retailResource": "food",
+      "retailPerResident": 0.001,
+      "district": 2
+    },
+    {
+      "id": "civil_drinks_shop",
+      "name": "Drinks Shop",
+      "description": "Drinks Shop; requires delivered supplies, workers and power.",
+      "mesh": "logistics",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "workers": 2,
+      "retailResource": "drinks",
+      "retailPerResident": 0.002,
+      "district": 2
+    },
+    {
+      "id": "civil_pharmacy",
+      "name": "Pharmacy",
+      "description": "Pharmacy; requires delivered supplies, workers and power.",
+      "mesh": "logistics",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "workers": 2,
+      "retailResource": "medicine",
+      "retailPerResident": 0.0001,
+      "district": 2
     }
   ],
   "technologies": [

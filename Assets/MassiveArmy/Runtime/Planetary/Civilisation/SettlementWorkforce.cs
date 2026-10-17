@@ -3,7 +3,7 @@ namespace MassiveArmy.Planetary {
     public sealed partial class CivilisationRuntime {
         // Settlement workforce uses aggregate civilians only. No worker GameObjects or army readbacks.
         internal static int WorkerPriority(BuildingDefinition d){
-            if(d.extractedResource=="water"||d.id.StartsWith("civil_farm_")||d.id=="civil_food_processing"||d.id=="civil_hydroponics")return 0;
+            if(d.extractedResource=="water"||d.id.StartsWith("civil_farm_")||d.id=="civil_food_processing"||d.id=="civil_hydroponics"||d.id=="civil_beef_shed"||d.id=="civil_butcher")return 0;
             if(d.extraction>0)return 1;
             if(d.id.StartsWith("civil_"))return 2;
             return 3;

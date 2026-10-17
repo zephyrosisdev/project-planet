@@ -110,6 +110,7 @@ namespace MassiveArmy.Planetary
                     if(building.definition.id.StartsWith("civil_farm_")&&efficiency>0)GrowCrop(installation,State.Planet(colony.body),step*efficiency);
                 }
                 for(int i=colony.installations.Count-1;i>=0;i--){bool alive=false;foreach(var b in local.Buildings)if(b.persistentId==colony.installations[i].id&&!b.removed){alive=true;break;}if(!alive){State.Planet(colony.body).surfaceInstallations.Remove(colony.installations[i].id);colony.installations.RemoveAt(i);}}
+                ServeRetail(local,colony,step);
                 colony.inventory.CaptureWallet();
                 Logistics.Tick(local,colony,step);
                 if(unhoused>0){double demand=unhoused*Settings.populationFoodPerSecond,food=Math.Min(colony.inventory.Get("food"),demand*step);colony.inventory.Spend("food",food);colony.foodDemand+=demand;colony.foodSupplied+=step>0?food/step:demand;}

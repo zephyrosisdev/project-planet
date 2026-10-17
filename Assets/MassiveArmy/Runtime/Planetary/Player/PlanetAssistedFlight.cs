@@ -7,7 +7,7 @@ namespace MassiveArmy.Planetary
         public bool FlightAssistEnabled {get;private set;}=true;
         double heldClearance=88;bool wasTerrainFlight;
         public double GroundClearance=>pose.position.Magnitude-world.definition.radius-Math.Max(surface.SampleHeight(Direction),world.definition.oceanHeight);
-        public void SetFlightAssistance(bool enabled){if(AutoFlightActive)return;FlightAssistEnabled=enabled;if(enabled){RotationLocked=false;heldClearance=Math.Max(60,GroundClearance);wasTerrainFlight=GroundClearance<6000;}nextOrbitRefresh=0;}
+        public void SetFlightAssistance(bool enabled){if(AutoFlightActive)return;FlightAssistEnabled=enabled;nextLandingRefresh=0;if(enabled){RotationLocked=false;heldClearance=Math.Max(60,GroundClearance);wasTerrainFlight=GroundClearance<6000;}nextOrbitRefresh=0;}
         void IntegrateAssisted(float dt,Vector3 thrust,Vector3 turn,bool brake,bool boost){
             var p=pose.position;var up=p.Float.normalized;bool lowFlight=GroundClearance<6000;if(lowFlight&&!wasTerrainFlight)heldClearance=Math.Max(60,GroundClearance);wasTerrainFlight=lowFlight;
             angularVelocity=Vector3.MoveTowards(angularVelocity,turn*35,90*dt);pose.rotation=(pose.rotation*Quaternion.Euler(angularVelocity*dt)).normalized;

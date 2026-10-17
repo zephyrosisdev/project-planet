@@ -81,7 +81,7 @@ namespace MassiveArmy.Planetary
             if(fixture.sessionMode==PlanetGameMode.AiTest){construction.SetEnabled(false);front.Q("commands").SetEnabled(false);front.Q("quick-actions").SetEnabled(false);}
 
             MakeMap();context=front.Q("context");Refresh();
-            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
+            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
 
         }
 
@@ -177,7 +177,7 @@ namespace MassiveArmy.Planetary
 
             context.Clear();queueStatus=null;var building=world.Selected;if(building==null){Label(context,"SELECT A BUILDING","heading");return;}
 
-            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");
+            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(world.Civilisation!=null)Label(context,"DISTRICT · "+building.definition.district,"muted");
 
             var portrait=new Image{image=art?.Find("building",building.definition.id)?.portrait,scaleMode=ScaleMode.ScaleToFit};portrait.AddToClassList("portrait-large");context.Add(portrait);
 

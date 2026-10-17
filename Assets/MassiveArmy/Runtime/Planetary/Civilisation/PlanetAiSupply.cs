@@ -29,12 +29,13 @@ namespace MassiveArmy.Planetary {
         IndustryRecipe AiRecipe(RtsBuilding building){var installation=Settlements?[building.team]?.installations.Find(i=>i.id==building.persistentId);IndustryRecipe fallback=null;
             foreach(var recipe in Civilisation.Catalogue.recipes)if(recipe.building==building.definition.id){if(recipe.id==installation?.recipe)return recipe;if(fallback==null)fallback=recipe;}return fallback;}
         double AiInputDemand(string resource,int team){double demand=resource=="food"?(Settlements?[team]?.population??0)*Civilisation.Settings.populationFoodPerSecond:0;
-            foreach(var b in Buildings)if(b.team==team&&!b.removed){if(resource=="food")demand+=b.definition.foodUse*b.level;var recipe=AiRecipe(b);if(recipe!=null)foreach(var input in recipe.inputs)if(input.resource==resource)demand+=input.amount/recipe.seconds*b.level;
+            foreach(var b in Buildings)if(b.team==team&&!b.removed){if(resource=="food")demand+=b.definition.foodUse*b.level;if(b.definition.retailResource==resource)demand+=Math.Min(Settlements?[team]?.population??0,100*b.level)*b.definition.retailPerResident;var recipe=AiRecipe(b);if(recipe!=null)foreach(var input in recipe.inputs)if(input.resource==resource)demand+=input.amount/recipe.seconds*b.level;
                 if(resource=="water"&&b.definition.id.StartsWith("civil_farm_"))foreach(var crop in Civilisation.Catalogue.crops)if("civil_farm_"+crop.id==b.definition.id)demand+=crop.waterPerSecond*b.level;}
             return demand;
         }
         internal bool AiSupplyShort(string id,int team){int count=ProductiveCount(id,team);if(count==0)return true;if(count>=4)return false;
             var d=Catalog.Buildings[id];var colony=Settlements?[team];if(colony==null)return false;
+            if(!string.IsNullOrEmpty(d.retailResource)){int capacity=0;foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.definition.id==id)capacity+=100*b.level;return capacity<colony.population;}
             if(id=="civil_fabricator")return count<2&&Factions[team].wallet.Stock.materials<Civilisation.Settings.aiConstructionReserve*2;
             if(d.terrain==TerrainRule.Node&&!string.IsNullOrEmpty(d.extractedResource)){double rate=0;foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.definition.id==id&&b.node>=0&&Nodes[b.node].remaining>0)rate+=d.extraction*Nodes[b.node].rateMultiplier*b.level;
                 double demand=AiInputDemand(d.extractedResource,team);return rate<demand*1.25&&colony.inventory.Get(d.extractedResource)<Math.Max(10,demand*Civilisation.Settings.logisticsReserveSeconds);}
