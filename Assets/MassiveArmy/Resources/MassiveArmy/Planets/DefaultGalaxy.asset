@@ -26,6 +26,11 @@ MonoBehaviour:
   skyRefreshSeconds: 10
   skyTravelThreshold: 100000
   resolvedStarDistance: 100000000
+  backgroundStars: 30000
+  backgroundStarBrightness: 0.65
+  nebulae: 1
+  nebulaBrightness: 0.8
+  nebulaRefreshSeconds: 30
   terrainPreviewBudget: 8
   predictionBudgetMs: 0.75
   predictionHorizon: 1800

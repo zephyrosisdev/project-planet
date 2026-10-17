@@ -75,7 +75,23 @@ namespace MassiveArmy.Planetary
             Check(world.View.transform.position.magnitude<1e-6,"Moving-body flight keeps the camera at render origin");
             hudTarget=new RenderTexture(1440,900,0,RenderTextureFormat.ARGB32);hudTarget.Create();ship.SetPilotRenderTarget(hudTarget);captureHud=true;for(int i=0;i<8;i++)yield return null;Capture("binary-stars",false);ship.SetPilotRenderTarget(null);captureHud=false;
             var sky=runtime.SkyForValidation;int refreshes=sky.RefreshCount;Check(sky.StarCount==report.stars+1,"Sky renderer represents the generated stars and black hole exactly once");
+            var backdrop=sky.BackdropForValidation;
+            Check(backdrop.StarCount==30000,"Thirty thousand decorative stars do not expand the gravity or travel catalogue");
+            Check(backdrop.Ready&&backdrop.BakeCount>0,"Progressive volumetric nebula cache completes successfully");
+            Check(backdrop.TextureBytes==2097152,"Two nebula caches use a bounded 2 MiB of GPU texels");
+            galaxy.Settings.backgroundStars=0;galaxy.Settings.nebulaBrightness=0;yield return null;Capture("sky-control",false);
+            galaxy.Settings.backgroundStars=30000;yield return null;Capture("sky-stars",false);
+            galaxy.Settings.nebulaBrightness=.8f;yield return null;Capture("sky-nebula",false);
+            Check(PixelDifference("sky-control","sky-stars")>500,"Additional stars produce visible pixels in the actual HDRP camera render");
+            Check(PixelDifference("sky-stars","sky-nebula")>5000,"Cached nebula clouds produce an extended visible sky overlay");
+            galaxy.Settings.backgroundStars=100000;galaxy.Settings.nebulaBrightness=0;yield return null;Capture("sky-100000-stars",false);
+            Check(backdrop.StarCount==100000&&PixelDifference("sky-stars","sky-100000-stars")>1000,"The 100,000-star setting produces additional rendered stars without expanding the celestial catalogue");
+            galaxy.Settings.backgroundStars=30000;galaxy.Settings.nebulaBrightness=.8f;yield return null;
+            int bakes=backdrop.BakeCount;
             for(int i=0;i<30;i++)yield return null;
+            Check(backdrop.BakeCount==bakes,"Stationary observers reuse the volumetric nebula cache");
+            Check(!backdrop.NeedsBake(world.ObserverPosition.Add(new Double3(1e9,0,0)),Time.realtimeSinceStartupAsDouble),"Nebula travel refresh obeys its minimum interval");
+            Check(backdrop.NeedsBake(world.ObserverPosition.Add(new Double3(1e9,0,0)),Time.realtimeSinceStartupAsDouble+61),"Substantial travel schedules a new galaxy-space cloud integration");
             Check(sky.RefreshCount==refreshes,"A stationary observer does not rebuild the distant star catalogue every frame");
             Check(!sky.NeedsRefresh(world.ObserverPosition.Add(new Double3(1e8,0,0)),Time.realtimeSinceStartupAsDouble),"Large travel still obeys the sky refresh minimum interval");
             Check(sky.NeedsRefresh(world.ObserverPosition.Add(new Double3(1e8,0,0)),Time.realtimeSinceStartupAsDouble+61),"Travel and time trigger a distant sky refresh");
@@ -96,6 +112,11 @@ namespace MassiveArmy.Planetary
             Check(next.View.transform.position.magnitude<1e-6,"Camera remains at render origin after interstellar handoff");
             Capture("new-system",true);
             Check(report.runtimeErrors==0,"Galaxy flight, sky, predictions, previews and cross-system activation emit no runtime errors");
+        }
+        int PixelDifference(string first,string second){
+            var a=new Texture2D(2,2);var b=new Texture2D(2,2);a.LoadImage(File.ReadAllBytes(Path.Combine(output,first+".png")));b.LoadImage(File.ReadAllBytes(Path.Combine(output,second+".png")));
+            var x=a.GetPixels32();var y=b.GetPixels32();int changed=0;for(int i=0;i<x.Length;i++)if(Math.Abs(x[i].r-y[i].r)+Math.Abs(x[i].g-y[i].g)+Math.Abs(x[i].b-y[i].b)>6)changed++;
+            Destroy(a);Destroy(b);return changed;
         }
         void Capture(string name,bool any){var active=world.SystemRuntime.ActiveWorld;
             if(target==null){target=new RenderTexture(1440,900,24,RenderTextureFormat.ARGBHalf);target.Create();}

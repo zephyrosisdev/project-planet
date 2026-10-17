@@ -15,6 +15,13 @@ namespace MassiveArmy.Planetary
         [Min(1)] public float skyRefreshSeconds=10;
         [Min(1000)] public float skyTravelThreshold=100000;
         [Min(1000000)] public float resolvedStarDistance=100000000;
+        [Header("Background sky (visual only; travel catalogue above)")]
+        [Range(0,100000)] public int backgroundStars=30000;
+        [Range(0,2)] public float backgroundStarBrightness=.65f;
+        public bool nebulae=true;
+        [Range(0,2)] public float nebulaBrightness=.8f;
+        [Tooltip("Cached 3D cloud integration; rebuilt only after substantial travel and a minimum interval.")]
+        [Min(10)] public float nebulaRefreshSeconds=30;
         [Range(2,16)] public int terrainPreviewBudget=8;
         [Range(.2f,2)] public float predictionBudgetMs=.75f;
         [Range(60,7200)] public float predictionHorizon=1800;

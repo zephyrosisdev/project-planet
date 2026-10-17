@@ -8,16 +8,20 @@ namespace MassiveArmy.Planetary
     {
         struct Star {public Vector4 position,colour,properties;}
         readonly GalaxyModel galaxy;readonly int[] nodes;readonly Star[] records;readonly GraphicsBuffer buffer;readonly Material material;
+        readonly GalaxyBackdrop backdrop;
         UniversePosition anchor;double lastRefresh=-1e9;bool initialized;int count;
         public int RefreshCount {get;private set;}
         public int StarCount=>count;
+        internal GalaxyBackdrop BackdropForValidation=>backdrop;
         public GalaxySkyRenderer(GalaxyModel galaxy){
             this.galaxy=galaxy;int total=0;foreach(var body in galaxy.Nodes)if(body.kind==CelestialKind.Star||body.kind==CelestialKind.BlackHole)total++;
             nodes=new int[total];records=new Star[total];for(int i=0;i<galaxy.Nodes.Length;i++)if(galaxy.Nodes[i].kind==CelestialKind.Star||galaxy.Nodes[i].kind==CelestialKind.BlackHole)nodes[count++]=i;
             buffer=new GraphicsBuffer(GraphicsBuffer.Target.Structured,total,48);material=new Material(Resources.Load<Shader>("MassiveArmy/GalaxySky"));material.SetBuffer("_GalaxyStars",buffer);
+            backdrop=new GalaxyBackdrop(galaxy);
         }
         internal bool NeedsRefresh(UniversePosition observer,double clock)=>!initialized||clock-lastRefresh>=Math.Max(1,galaxy.Settings.skyRefreshSeconds)&&((observer.RelativeTo(anchor).Magnitude>=galaxy.Settings.skyTravelThreshold)||clock-lastRefresh>=60);
         internal void Update(Camera view,UniversePosition observer,PlanetDefinition foreground){
+            backdrop.Update(view,observer);
             double clock=Time.realtimeSinceStartupAsDouble;bool refresh=NeedsRefresh(observer,clock);
             if(refresh){anchor=observer;lastRefresh=clock;initialized=true;RefreshCount++;
                 for(int i=0;i<count;i++){var body=galaxy.Nodes[nodes[i]];var d=galaxy.Origin.Add(galaxy.Current[nodes[i]].position).RelativeTo(anchor).Float;
@@ -39,7 +43,7 @@ namespace MassiveArmy.Planetary
             material.SetVector("_GalaxyScreen",new Vector4(view.pixelWidth,view.pixelHeight,Mathf.Tan(view.fieldOfView*Mathf.Deg2Rad*.5f),0));
             var foregroundOffset=foreground.position.RelativeTo(observer).Float;material.SetVector("_GalaxyForeground",new Vector4(foregroundOffset.x,foregroundOffset.y,foregroundOffset.z,foreground.radius+Mathf.Max(foreground.ReliefBound,foreground.oceanHeight)));
         }
-        public void Draw(CommandBuffer cmd){if(initialized)cmd.DrawProcedural(Matrix4x4.identity,material,0,MeshTopology.Triangles,6,count);}
-        public void Dispose(){buffer.Dispose();ArmyLifetime.Destroy(material);}
+        public void Draw(CommandBuffer cmd){if(initialized){backdrop.Draw(cmd);cmd.DrawProcedural(Matrix4x4.identity,material,0,MeshTopology.Triangles,6,count);}}
+        public void Dispose(){backdrop.Dispose();buffer.Dispose();ArmyLifetime.Destroy(material);}
     }
 }

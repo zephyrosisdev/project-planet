@@ -1,0 +1,24 @@
+#pragma kernel Bake
+RWTexture2D<float4> _Clouds;
+float3 _Observer;int _Seed,_StartRow;
+float Hash(float3 p){p=frac(p*.1031);p+=dot(p,p.yzx+33.33);return frac((p.x+p.y)*p.z);}
+float Noise(float3 p){float3 i=floor(p),f=frac(p);f=f*f*(3-2*f);return lerp(lerp(lerp(Hash(i),Hash(i+float3(1,0,0)),f.x),lerp(Hash(i+float3(0,1,0)),Hash(i+float3(1,1,0)),f.x),f.y),lerp(lerp(Hash(i+float3(0,0,1)),Hash(i+float3(1,0,1)),f.x),lerp(Hash(i+float3(0,1,1)),Hash(i+1),f.x),f.y),f.z);}
+[numthreads(8,8,1)]void Bake(uint3 id:SV_DispatchThreadID){
+ uint2 pixel=uint2(id.x,id.y+_StartRow);float2 uv=(pixel+.5)/float2(512,256);
+ float longitude=uv.x*6.2831853,latitude=(uv.y-.5)*3.14159265;
+ float3 ray=float3(cos(latitude)*cos(longitude),sin(latitude),cos(latitude)*sin(longitude));
+ float3 light=0;float transmission=1;float3 seed=float3(_Seed%997,_Seed%313,_Seed%127)*.013;
+ // Integrate a bounded galaxy-space density field. Camera rotation only samples the resulting cache.
+ for(int step=0;step<16;step++){
+  float3 p=_Observer+ray*((step+.5)*.14),q=p*5+seed;
+  float warp=Noise(q*1.7);float broad=Noise(q+warp*2);
+  float detail=Noise(q*3.1+warp)+.35*Noise(q*9.3);
+  float disc=exp(-abs(p.y)*7)*saturate((1.5-length(p.xz))*2);
+  float density=saturate((broad-.37)*2)*saturate((detail-.38)*1.6)*disc;
+  float dust=saturate((Noise(q*4.7)-.48)*3)*density;
+  float opacity=1-exp(-density*.24);
+  float3 colour=lerp(float3(.11,.22,.45),float3(.5,.10,.26),saturate(broad*1.8-.35));
+  light+=transmission*opacity*colour*(1-dust*.85);transmission*=exp(-density*.30-dust*.5);
+ }
+ _Clouds[pixel]=float4(light,1-transmission);
+}
