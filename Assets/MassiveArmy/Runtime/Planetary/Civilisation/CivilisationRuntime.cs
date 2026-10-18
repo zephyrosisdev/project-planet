@@ -4,7 +4,7 @@ using System.IO;
 using UnityEngine;
 namespace MassiveArmy.Planetary
 {
-    /// <summary>Session-owned strategic data. No per-unit records, physics objects or distant MonoBehaviours.</summary>
+    /// <summary>Session-owned strategic data. No CPU army poses, per-person physics objects or distant MonoBehaviours.</summary>
     public sealed partial class CivilisationRuntime {
         sealed class LocalColony {public PlanetRtsBase local;public ColonyState[] colonies;}
         public readonly CivilisationCatalogue Catalogue;public readonly CivilisationSettings Settings;
@@ -55,8 +55,9 @@ namespace MassiveArmy.Planetary
             for(int team=0;team<2;team++){
                 var colony=binding.colonies[team];if(colony==null)continue;RtsBuilding warehouse=null;foreach(var b in local.Buildings)if(b.team==team&&b.definition.id=="civil_warehouse"){warehouse=b;break;}
                 if(warehouse!=null&&colony.cargoVehicles.Count==0)colony.cargoVehicles.Add(new CargoVehicleState{id=State.AllocateId(),warehouse=warehouse.persistentId});
+                if(IsHome(planetId)&&seedRoads&&warehouse!=null)local.SeedResidentialStreet(team);
                 if(IsHome(planetId)&&seedRoads&&warehouse!=null)foreach(var b in local.Buildings)if(b.team==team&&b!=warehouse)local.Roads.Connect(b,warehouse,out _,true);
-                if(seedRoads)foreach(var item in colony.installations){if(ReferenceEquals(item.inventory,colony.inventory))continue;double food=0;var definition=local.Catalog.Buildings[item.definition];food=definition.foodUse*Settings.buildingInputReserveSeconds;if(definition.housingCapacity>0)food+=Settings.startingPopulation*Settings.populationFoodPerSecond*Settings.buildingInputReserveSeconds;food=Math.Min(food,colony.inventory.Get("food"));colony.inventory.Spend("food",food);item.inventory.Deposit("food",food);}
+                if(seedRoads)foreach(var item in colony.installations){if(ReferenceEquals(item.inventory,colony.inventory))continue;double food=0;var definition=local.Catalog.Buildings[item.definition];food=definition.foodUse*Settings.buildingInputReserveSeconds;if(definition.housingCapacity>0)food+=Settings.startingPopulation*Settings.populationFoodPerSecond*Settings.buildingInputReserveSeconds;food=Math.Min(Math.Max(food,Settings.cargoCapacity*.25),colony.inventory.Get("food"));colony.inventory.Spend("food",food);item.inventory.Deposit("food",food);}
             }Revision++;
         }
         public void Advance(double elapsed){
@@ -82,6 +83,8 @@ namespace MassiveArmy.Planetary
             var local=binding.local;
             for(int team=0;team<2;team++){
                 var colony=binding.colonies[team];if(colony==null)continue;var faction=State.Faction(team);foreach(var tech in local.Factions[team].technologies)if(!faction.technologies.Contains(tech))faction.technologies.Add(tech);
+                foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&b.persistentId==0)b.persistentId=State.AllocateId();
+                EnsureResidents(colony);BindHouseholds(local,colony);
                 AllocateWorkers(local,colony,team);
                 local.RefreshSettlementPower(team);
                 colony.powerBalance=local.Factions[team].generation-local.Factions[team].demand;
@@ -95,27 +98,33 @@ namespace MassiveArmy.Planetary
                     if(building.definition.id=="civil_warehouse"&&!primaryWarehouse){installation.inventory=colony.inventory;primaryWarehouse=true;}
                     installation.position=building.position;installation.health=building.health;installation.construction=building.construction;installation.level=building.level;installation.paused=building.paused;installation.powered=building.powered;installation.workersAssigned=building.WorkersAssigned;installation.workersRequired=building.definition.workers*building.level;
                     if(!building.Complete||building.paused||!building.powered)continue;
-                    int residents=Math.Min(unhoused,building.definition.housingCapacity*building.level);unhoused-=residents;
+                    int residents=0;if(building.definition.housingCapacity>0)foreach(var household in colony.households)if(household.home==building.persistentId)residents+=household.members.Count;residents=Math.Min(unhoused,residents);unhoused-=residents;
                     double demand=building.definition.foodUse*building.level+residents*Settings.populationFoodPerSecond;colony.foodDemand+=demand;
                     double needed=demand*step,available=Math.Min(needed,installation.inventory.Get("food"));if(available>0)installation.inventory.Spend("food",available);
                     building.FoodEfficiency=needed>0?(float)(available/needed):1;colony.foodSupplied+=step>0?available/step:demand;
                     double efficiency=local.Factions[team].efficiency*building.FoodEfficiency*building.WorkforceEfficiency*building.level;
                     building.Efficiency=(float)(efficiency/building.level);
                     if(building.definition.housingCapacity>0){colony.housingCapacity+=building.definition.housingCapacity*building.level;colony.housedPopulation+=residents;}
+                    if(building.definition.id=="civil_gathering_camp")GatherSupplies(local,installation,building,step*efficiency);
                     if(building.node>=0){var node=local.Nodes[building.node];string resource=node.elementId;if(string.IsNullOrEmpty(resource))foreach(var definition in Catalogue.resources)if(definition.legacy==(int)node.resource){resource=definition.id;break;}
                         double extracted=Math.Min(node.remaining,building.definition.extraction*node.rateMultiplier*efficiency*step);node.remaining-=(float)installation.inventory.Deposit(resource,extracted);
                     }
                     if(string.IsNullOrEmpty(installation.recipe)){foreach(var recipe in Catalogue.recipes)if(recipe.building==building.definition.id){installation.recipe=recipe.id;break;}}
+                    if(faction.autonomous&&building.definition.id=="civil_fabricator"){
+                        bool Usable(IndustryRecipe candidate){foreach(var input in candidate.inputs)if(installation.inventory.Get(input.resource)+colony.inventory.Get(input.resource)<input.amount)return false;return true;}
+                        var current=Array.Find(Catalogue.recipes,r=>r.id==installation.recipe);if(current!=null&&!Usable(current))foreach(var alternative in Catalogue.recipes)if(alternative.building==building.definition.id&&(alternative.id=="salvage_construction"||alternative.id=="timber_construction")&&Usable(alternative)){installation.recipe=alternative.id;break;}
+                    }
                     foreach(var recipe in Catalogue.recipes)if(recipe.id==installation.recipe&&recipe.building==building.definition.id&&(string.IsNullOrEmpty(recipe.requiredTech)||faction.technologies.Contains(recipe.requiredTech)))installation.inventory.RunRecipe(recipe,step,efficiency);
                     if(building.definition.id.StartsWith("civil_farm_")&&efficiency>0)GrowCrop(installation,State.Planet(colony.body),step*efficiency);
                 }
                 for(int i=colony.installations.Count-1;i>=0;i--){bool alive=false;foreach(var b in local.Buildings)if(b.persistentId==colony.installations[i].id&&!b.removed){alive=true;break;}if(!alive){State.Planet(colony.body).surfaceInstallations.Remove(colony.installations[i].id);colony.installations.RemoveAt(i);}}
                 ServeRetail(local,colony,step);
+                TickSociety(local,colony,step);
                 colony.inventory.CaptureWallet();
                 Logistics.Tick(local,colony,step);
                 if(unhoused>0){double demand=unhoused*Settings.populationFoodPerSecond,food=Math.Min(colony.inventory.Get("food"),demand*step);colony.inventory.Spend("food",food);colony.foodDemand+=demand;colony.foodSupplied+=step>0?food/step:demand;}
                 colony.foodBalance=colony.foodSupplied-colony.foodDemand;
-                if(colony.housedPopulation>=colony.population&&colony.housingCapacity>colony.population&&colony.foodBalance>=-1e-6&&colony.powerBalance>=0){colony.growthProgress+=step;double interval=Math.Max(1,Settings.populationGrowthSeconds);int arrivals=Math.Min(colony.housingCapacity-colony.population,(int)Math.Min(int.MaxValue,colony.growthProgress/interval));colony.population+=arrivals;colony.growthProgress-=arrivals*interval;}
+                if(colony.housedPopulation>=colony.population&&colony.housingCapacity>colony.population&&colony.foodBalance>=-1e-6&&colony.powerBalance>=0){colony.growthProgress+=step;double interval=Math.Max(1,Settings.populationGrowthSeconds);int arrivals=Math.Min(colony.housingCapacity-colony.population,(int)Math.Min(int.MaxValue,colony.growthProgress/interval));colony.population+=arrivals;colony.growthProgress-=arrivals*interval;EnsureResidents(colony);BindHouseholds(local,colony);}
             }
         }
         void GrowCrop(SurfaceInstallation installation,PlanetState planet,double step){

@@ -7,14 +7,15 @@ namespace MassiveArmy.Planetary
 {
     /// <summary>Batched land-use decals and shared RTS cargo meshes; no GameObject per road, crop or truck.</summary>
     public sealed class SettlementRenderer:IDisposable {
-        readonly PlanetDevelopment world;readonly PlanetSurface surface;readonly Material land,cargo,district;
-        readonly SettlementCargoNavigation navigation;Mesh mesh;IEnumerator rebuild;Mesh pending;Mesh districtMesh,pendingDistrict;
+        readonly PlanetDevelopment world;readonly PlanetSurface surface;readonly Material land,cargo,district,citizenMaterial;
+        readonly SettlementCargoNavigation navigation;readonly SettlementCitizens citizens;Mesh mesh;IEnumerator rebuild;Mesh pending;Mesh districtMesh,pendingDistrict;
         int roadRevision=-1,fieldSignature=-1,terrainRevision=-1,cargoCount;double nextFields;
         public SettlementRenderer(PlanetDevelopment world,PlanetCatalogRenderer catalogue){
             this.world=world;surface=new PlanetSurface(world.definition);land=new Material(Resources.Load<Shader>("MassiveArmy/SettlementLandUse"));cargo=new Material(Resources.Load<Shader>("MassiveArmy/SettlementCargo"));
             district=new Material(land);district.SetFloat("_DistrictOverlay",1);
             var library=Resources.Load<TerrainSurfaceLibrary>("MassiveArmy/TerrainArt/SurfaceLibrary");land.SetTexture("_SurfaceAlbedo",library.albedo);land.SetTexture("_SurfaceData",library.surfaceData);district.SetTexture("_SurfaceAlbedo",library.albedo);district.SetTexture("_SurfaceData",library.surfaceData);catalogue.BindArt(cargo);
             navigation=new SettlementCargoNavigation(world);world.Base.CargoNavigation=navigation;
+            citizenMaterial=new Material(Resources.Load<Shader>("MassiveArmy/SettlementCitizens"));catalogue.BindArt(citizenMaterial);citizens=new SettlementCitizens(world);world.Base.Citizens=citizens;
         }
         internal bool ReadyForValidation=>mesh!=null&&(!world.Base.DistrictOverlay||districtMesh!=null)&&rebuild==null&&roadRevision==world.Base.Roads.Revision&&terrainRevision==world.definition.Edits.Revision;
         public void Update(){
@@ -26,6 +27,7 @@ namespace MassiveArmy.Planetary
                 int terrain=world.definition.Edits.Revision;if(roadRevision!=local.Roads.Revision||fieldSignature!=signature||terrainRevision!=terrain){roadRevision=local.Roads.Revision;fieldSignature=signature;terrainRevision=terrain;rebuild=BuildMesh();}
             }
             if(!world.Paused&&!civilisation.CatchingUp(world.definition.bodyId))navigation.Step(Time.deltaTime);
+            citizens.Step(Time.deltaTime);
             cargoCount=navigation.Poses==null?0:navigation.Count;
             if(cargoCount>0)cargo.SetBuffer("_CargoPoses",navigation.Poses);
         }
@@ -64,9 +66,10 @@ namespace MassiveArmy.Planetary
             var vp=GL.GetGPUProjectionMatrix(world.View.projectionMatrix,true)*world.View.worldToCameraMatrix;
             land.SetMatrix("_SettlementVP",vp);land.SetVector("_SettlementCenter",world.PlanetRenderCentre);land.SetVector("_SettlementCamera",world.View.transform.position);if(mesh!=null)commands.DrawMesh(mesh,Matrix4x4.identity,land);
             if(world.Base.DistrictOverlay&&districtMesh!=null){district.SetMatrix("_SettlementVP",vp);district.SetVector("_SettlementCenter",world.PlanetRenderCentre);commands.DrawMesh(districtMesh,Matrix4x4.identity,district);}
+            if(citizens.Poses!=null&&citizens.Count>0){citizenMaterial.SetBuffer("_CargoPoses",citizens.Poses);citizenMaterial.SetBuffer("_CitizenVisible",citizens.Visible);citizenMaterial.SetVector("_SettlementCenter",world.PlanetRenderCentre);citizenMaterial.SetMatrix("_SettlementVP",vp);citizenMaterial.SetVector("_SettlementCamera",world.View.transform.position);commands.DrawProceduralIndirect(Matrix4x4.identity,citizenMaterial,0,MeshTopology.Triangles,citizens.DrawArguments,0);}
             cargo.SetVector("_SettlementCenter",world.PlanetRenderCentre);cargo.SetMatrix("_SettlementVP",vp);cargo.SetVector("_SettlementCamera",world.View.transform.position);if(cargoCount>0)commands.DrawProcedural(Matrix4x4.identity,cargo,0,MeshTopology.Triangles,ArtUnitRenderer.NearTriangles*3,cargoCount);
         }
-        public void Dispose(){navigation.Dispose();ArmyLifetime.Destroy(mesh);ArmyLifetime.Destroy(pending);ArmyLifetime.Destroy(land);ArmyLifetime.Destroy(cargo);ArmyLifetime.Destroy(district);ArmyLifetime.Destroy(districtMesh);ArmyLifetime.Destroy(pendingDistrict);}
+        public void Dispose(){citizens.Dispose();ArmyLifetime.Destroy(citizenMaterial);navigation.Dispose();ArmyLifetime.Destroy(mesh);ArmyLifetime.Destroy(pending);ArmyLifetime.Destroy(land);ArmyLifetime.Destroy(cargo);ArmyLifetime.Destroy(district);ArmyLifetime.Destroy(districtMesh);ArmyLifetime.Destroy(pendingDistrict);}
     }
 }
 

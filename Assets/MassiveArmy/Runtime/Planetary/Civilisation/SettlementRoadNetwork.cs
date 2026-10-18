@@ -11,6 +11,7 @@ namespace MassiveArmy.Planetary
     public sealed class SettlementRoadNetwork {
         readonly PlanetDevelopment world;readonly PlanetRtsBase local;readonly List<RoadTile> saved;readonly Dictionary<long,int> tiles=new Dictionary<long,int>();
         readonly int resolution;readonly List<(RtsBuilding building,PlanetConstructionGrid.Footprint area)> occupied=new List<(RtsBuilding,PlanetConstructionGrid.Footprint)>();public int Revision {get;private set;}
+        readonly HashSet<long> closedGateCells=new HashSet<long>();
         readonly Dictionary<long,int> indices=new Dictionary<long,int>();int[] components=Array.Empty<int>();
         internal struct GpuNode {public Vector4 position;public int west,east,south,north;}
         internal GpuNode[] Nodes {get;private set;}=Array.Empty<GpuNode>();
@@ -26,7 +27,7 @@ namespace MassiveArmy.Planetary
         public void RefreshBuildings(){RefreshFootprints();if(saved.Count>0){Revision++;RebuildGraph();}}
         bool Allowed(PlanetNavCoordinate cell,int faction,PlanetSurface surface){
             if(tiles.TryGetValue(Key(cell),out int owner))return owner==faction;var direction=Direction(cell);double height=surface.SampleHeight(direction);if(height<world.definition.oceanHeight+.1)return false;
-            foreach(var entry in occupied)if(entry.area.Contains(cell))return false;return true;
+            foreach(var entry in occupied)if(entry.area.Contains(cell)&&!(entry.building.definition.id=="gate"&&PlanetRtsBase.GatePassage(entry.area,cell)))return false;return true;
         }
         public bool Place(Vector3 start,Vector3 finish,int faction,out string reason,bool starter=false){
             var surface=new PlanetSurface(world.definition);var a=Cell(start);var b=Cell(finish);var path=Search(a,b,faction,surface);
@@ -55,9 +56,11 @@ namespace MassiveArmy.Planetary
         // CPU component labels describe infrastructure connectivity; live cargo paths are searched only by SettlementRoad.compute.
         public bool Connected(RtsBuilding from,RtsBuilding to){int a=Node(Port(from)),b=Node(Port(to));return from.team==to.team&&a>=0&&b>=0&&saved[a].faction==from.team&&saved[b].faction==from.team&&components[a]==components[b];}
         internal int Node(Vector3 direction)=>indices.TryGetValue(Key(Cell(direction)),out int value)?value:-1;
+        bool GateBlocked(PlanetNavCoordinate cell)=>closedGateCells.Count>0&&closedGateCells.Contains(Key(cell));
         void RebuildGraph(){
+            closedGateCells.Clear();foreach(var entry in occupied)if(entry.building.definition.id=="gate"&&entry.building.Complete&&!entry.building.gateOpen)for(int y=0;y<entry.area.depth;y++)for(int x=0;x<entry.area.width;x++)closedGateCells.Add(Key(new PlanetNavCoordinate(world.definition.bodyId,entry.area.face,entry.area.x+x,entry.area.y+y)));
             indices.Clear();for(int i=0;i<saved.Count;i++)indices[Key(saved[i].cell)]=i;Nodes=new GpuNode[saved.Count];components=new int[saved.Count];Array.Fill(components,-1);
-            for(int i=0;i<saved.Count;i++){var tile=saved[i];int[] neighbours={-1,-1,-1,-1};tile.connections=0;for(int edge=0;edge<4;edge++)if(indices.TryGetValue(Key(Neighbour(tile.cell,edge,resolution)),out int other)&&saved[other].faction==tile.faction){neighbours[edge]=other;tile.connections|=1<<edge;}Vector3 p=Direction(tile.cell)*(world.definition.radius+tile.height+1);Nodes[i]=new GpuNode{position=new Vector4(p.x,p.y,p.z,tile.faction),west=neighbours[0],east=neighbours[1],south=neighbours[2],north=neighbours[3]};}
+            for(int i=0;i<saved.Count;i++){var tile=saved[i];int[] neighbours={-1,-1,-1,-1};tile.connections=0;for(int edge=0;edge<4;edge++)if(indices.TryGetValue(Key(Neighbour(tile.cell,edge,resolution)),out int other)&&saved[other].faction==tile.faction&&!GateBlocked(tile.cell)&&!GateBlocked(saved[other].cell)){neighbours[edge]=other;tile.connections|=1<<edge;}Vector3 p=Direction(tile.cell)*(world.definition.radius+tile.height+1);Nodes[i]=new GpuNode{position=new Vector4(p.x,p.y,p.z,tile.faction),west=neighbours[0],east=neighbours[1],south=neighbours[2],north=neighbours[3]};}
             // Entrances add a visible road arm, never a traversable node inside a building.
             foreach(var entry in occupied){var port=local.Grid.Port(entry.area);if(!indices.TryGetValue(Key(port),out int node)||saved[node].faction!=entry.building.team)continue;long door=Key(local.Grid.Door(entry.area));for(int edge=0;edge<4;edge++)if(Key(Neighbour(port,edge,resolution))==door)saved[node].connections|=1<<edge;}
             var pending=new Queue<int>();for(int i=0;i<saved.Count;i++){if(components[i]>=0)continue;components[i]=i;pending.Enqueue(i);while(pending.Count>0){int node=pending.Dequeue();var n=Nodes[node];Visit(n.west,i);Visit(n.east,i);Visit(n.south,i);Visit(n.north,i);}}

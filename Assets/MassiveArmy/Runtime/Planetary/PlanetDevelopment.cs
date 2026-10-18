@@ -174,7 +174,7 @@ namespace MassiveArmy.Planetary
 
             int cells=navigation.CellCount;int generate=movement.FindKernel("GenerateCosts");movement.Dispatch(generate,(cells+127)/128,1,1);
 
-            var footprints=new Vector4[buildings.Count];for(int i=0;i<buildings.Count;i++){var b=buildings[i];var d=CubeSphere.Decode(b.position);footprints[i]=new Vector4(d.x,d.y,d.z,b.removed?0:Mathf.Sqrt(b.definition.footprintWidth*b.definition.footprintWidth+b.definition.footprintDepth*b.definition.footprintDepth)*4+2);}
+            var footprints=new Vector4[buildings.Count];for(int i=0;i<buildings.Count;i++){var b=buildings[i];var d=CubeSphere.Decode(b.position);footprints[i]=new Vector4(d.x,d.y,d.z,b.removed||b.definition.id=="gate"&&b.gateOpen?0:Mathf.Sqrt(b.definition.footprintWidth*b.definition.footprintWidth+b.definition.footprintDepth*b.definition.footprintDepth)*4+2);}
 
             buildingFootprints.SetData(footprints);int stamp=movement.FindKernel("StampBuildings");movement.SetBuffer(stamp,"_PlanetBuildings",buildingFootprints);movement.SetBuffer(stamp,"_PlanetCosts",costs);movement.SetInt("_PlanetBuildingCount",buildings.Count);movement.Dispatch(stamp,(cells+127)/128,1,1);navigation.SetRegionalBuildings(buildingFootprints,buildings.Count);navigation.Regional?.Bind(movement,moveKernel);if(asynchronous)navigation.InvalidateAsync();else navigation.Invalidate();
 
@@ -199,7 +199,7 @@ namespace MassiveArmy.Planetary
             if(System.Array.IndexOf(launchArgs,"-planet-deform-terrain")>=0)deformTerrainOnNuke=true;
             if(System.Array.IndexOf(launchArgs,"-planet-no-deform-terrain")>=0)deformTerrainOnNuke=false;
 
-            StrategyEnabled=true;foreach(var arg in launchArgs)if((arg.EndsWith("-validation")&&arg!="-planet-gameplay-validation"&&arg!="-planet-menu-validation"&&arg!="-planet-ship-validation"&&arg!="-planet-landing-validation"&&arg!="-planet-hq-terrain-validation"&&arg!="-planet-system-validation"&&arg!="-galaxy-validation"&&arg!="-civilisation-validation"&&arg!="-planet-economy-ai-validation")||arg=="-planet-benchmark"||arg=="-planet-fixture")StrategyEnabled=false;
+            StrategyEnabled=true;foreach(var arg in launchArgs)if((arg.EndsWith("-validation")&&arg!="-planet-gameplay-validation"&&arg!="-planet-menu-validation"&&arg!="-planet-ship-validation"&&arg!="-planet-landing-validation"&&arg!="-planet-hq-terrain-validation"&&arg!="-planet-system-validation"&&arg!="-galaxy-validation"&&arg!="-civilisation-validation"&&arg!="-planet-economy-ai-validation"&&arg!="-planet-household-validation")||arg=="-planet-benchmark"||arg=="-planet-fixture")StrategyEnabled=false;
 
             if(System.Array.IndexOf(launchArgs,"-planet-fixture")>=0||System.Array.IndexOf(launchArgs,"-planet-benchmark")>=0||System.Array.IndexOf(launchArgs,"-planet-smoke")>=0)configuredRadius=0;
 

@@ -26,7 +26,7 @@ namespace MassiveArmy
         public float Efficiency=1;
         public float FoodEfficiency=1;
         public float WorkforceEfficiency=1;
-        public int WorkersAssigned;
+        public int WorkersAssigned,constructionWorkers;
     }
     public sealed class RtsFaction
     {

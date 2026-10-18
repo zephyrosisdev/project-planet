@@ -1,7 +1,7 @@
 using System;
 namespace MassiveArmy.Planetary {
     public sealed partial class CivilisationRuntime {
-        // Settlement workforce uses aggregate civilians only. No worker GameObjects or army readbacks.
+        // Strategic biographies assign job slots; live civilian and army movement stay on GPU.
         internal static int WorkerPriority(BuildingDefinition d){
             if(d.extractedResource=="water"||d.id.StartsWith("civil_farm_")||d.id=="civil_food_processing"||d.id=="civil_hydroponics"||d.id=="civil_beef_shed"||d.id=="civil_butcher")return 0;
             if(d.extraction>0)return 1;
@@ -9,14 +9,16 @@ namespace MassiveArmy.Planetary {
             return 3;
         }
         internal static void AllocateWorkers(PlanetRtsBase local,ColonyState colony,int team){
-            colony.workforce=Math.Max(0,colony.population);colony.employed=colony.workerDemand=colony.plannedWorkerDemand=0;
+            int adults=0;foreach(var person in colony.residents)if(person.alive&&person.age>=18&&person.age<75)adults++;
+            colony.workforce=Math.Max(0,Math.Min(colony.population,colony.residents.Count==0?colony.population:adults));colony.employed=colony.workerDemand=colony.plannedWorkerDemand=0;
             foreach(var b in local.Buildings){if(b.team!=team||b.removed)continue;
                 b.WorkersAssigned=0;b.WorkforceEfficiency=b.definition.workers==0?1:0;
                 if(b.paused||!b.powered||b.node>=0&&local.Nodes[b.node].remaining<=0)continue;
                 int required=b.definition.workers*b.level;colony.plannedWorkerDemand+=required;
                 if(b.Complete)colony.workerDemand+=required;
             }
-            int remaining=colony.workforce;
+            int projects=0;foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&!b.paused&&b.powered&&(!b.Complete||b.repairing&&b.health<b.MaxHealth))projects++;
+            colony.workerDemand+=projects*2;int remaining=Math.Max(0,colony.workforce-(projects>0?2:0));
             // Share shortages fairly within a priority; food/water and extraction survive expansion.
             for(int priority=0;priority<4;priority++){
                 int demand=0;foreach(var b in local.Buildings)if(Available(local,b,team,priority))demand+=b.definition.workers*b.level;
@@ -28,6 +30,7 @@ namespace MassiveArmy.Planetary {
                     budget-=assigned;left-=required;remaining-=assigned;colony.employed+=assigned;
                 }
             }
+            MatchResidentJobs(local,colony);
         }
         static bool Available(PlanetRtsBase local,RtsBuilding b,int team,int priority)=>b.team==team&&b.Complete&&!b.paused&&b.powered&&b.definition.workers>0&&(b.node<0||local.Nodes[b.node].remaining>0)&&WorkerPriority(b.definition)==priority;
         public static void ResourceTotals(ColonyState colony,string resource,out double stored,out double local,out double transit){

@@ -5,7 +5,7 @@
 // same-owner road edges exist in this graph; terrain/army navigation is never sampled.
 struct Node {float4 position;int4 neighbours;};
 struct Job {float4 start,goal;uint version,startNode,goalNode,flags;float4 parameters;};
-struct Work {uint version,head,tail,node;uint next,phase,arrived,pad;float progress,distance;float2 unused;};
+struct Work {uint version,head,tail,node;uint next,phase,arrived,pad;float progress,distance;uint searchEpoch,topology;};
 struct Summary {uint version,arrived;float distance;uint status;};
 struct Pose {float4 position,right,up,forward,properties;};
 StructuredBuffer<Node> _RoadNodes;
@@ -15,7 +15,7 @@ RWStructuredBuffer<uint> _RoadSeen,_RoadParents,_RoadQueue;
 RWStructuredBuffer<float> _RoadDistances;
 RWStructuredBuffer<Summary> _RoadSummary;
 RWStructuredBuffer<Pose> _CargoPoses;
-uint _RoadCount,_RoadStride,_CargoCount;
+uint _RoadCount,_RoadStride,_CargoCount,_RoadRevision;
 float _CargoDelta;
 StructuredBuffer<uint> _PreviousSeen,_PreviousParents,_PreviousQueue;
 StructuredBuffer<float> _PreviousDistances;
@@ -35,13 +35,18 @@ void Navigate(uint slot:SV_DispatchThreadID){
  if(slot>=_CargoCount)return;
  Job job=_RoadJobs[slot];Work w=_RoadWork[slot];uint baseIndex=slot*_RoadStride;
  if(w.version!=job.version){
-  w=(Work)0;w.version=job.version;w.node=job.startNode;
+  uint previousEpoch=w.searchEpoch;w=(Work)0;w.version=job.version;w.searchEpoch=previousEpoch+1;w.topology=_RoadRevision;w.node=job.startNode;
   if((job.flags&4)!=0){w.phase=2;w.arrived=1;}
   else if((job.flags&2)!=0)w.phase=1;
   else if(job.startNode>=_RoadCount||job.goalNode>=_RoadCount)w.phase=3;
   else if((uint)_RoadNodes[job.startNode].position.w!=(uint)job.parameters.y||(uint)_RoadNodes[job.goalNode].position.w!=(uint)job.parameters.y)w.phase=3;
-  else {uint goal=baseIndex+job.goalNode;_RoadSeen[goal]=job.version;_RoadParents[goal]=job.goalNode;_RoadDistances[goal]=0;_RoadQueue[baseIndex]=job.goalNode;w.tail=1;}
+  else {uint goal=baseIndex+job.goalNode;_RoadSeen[goal]=w.searchEpoch;_RoadParents[goal]=job.goalNode;_RoadDistances[goal]=0;_RoadQueue[baseIndex]=job.goalNode;w.tail=1;}
  }
+ // Completed/moving missions keep their GPU position across topology changes. Failed
+ // or pending searches retry from their unmoved start with a fresh per-slot epoch.
+ if(w.topology!=_RoadRevision){w.topology=_RoadRevision;if((job.flags&6)==0&&(w.phase==0||w.phase==3)&&job.startNode<_RoadCount&&job.goalNode<_RoadCount){
+  w.searchEpoch++;w.head=0;w.tail=1;w.phase=0;w.arrived=0;uint goal=baseIndex+job.goalNode;_RoadSeen[goal]=w.searchEpoch;_RoadParents[goal]=job.goalNode;_RoadDistances[goal]=0;_RoadQueue[baseIndex]=job.goalNode;
+ }}
  if(w.phase==0){
   for(uint budget=0;budget<128&&w.head<w.tail;budget++){
    uint node=_RoadQueue[baseIndex+w.head++];
@@ -49,8 +54,8 @@ void Navigate(uint slot:SV_DispatchThreadID){
    Node road=_RoadNodes[node];
    for(uint edge=0;edge<4;edge++){
     int adjacent=road.neighbours[edge];if(adjacent<0)continue;uint index=baseIndex+(uint)adjacent;
-    if(_RoadSeen[index]==job.version)continue;
-    _RoadSeen[index]=job.version;_RoadParents[index]=node;
+    if(_RoadSeen[index]==w.searchEpoch)continue;
+    _RoadSeen[index]=w.searchEpoch;_RoadParents[index]=node;
     _RoadDistances[index]=_RoadDistances[baseIndex+node]+length(_RoadNodes[adjacent].position.xyz-road.position.xyz);
     _RoadQueue[baseIndex+w.tail++]=(uint)adjacent;
    }
@@ -70,6 +75,7 @@ void Navigate(uint slot:SV_DispatchThreadID){
   float remaining=_CargoDelta*job.parameters.x;
   for(uint hop=0;hop<64&&w.phase==1;hop++){
    if(w.node==job.goalNode){w.phase=2;w.arrived=1;break;}
+   if(w.next>=_RoadCount||!any(_RoadNodes[w.node].neighbours==(int)w.next))break;
    float edgeLength=max(.001,length(_RoadNodes[w.next].position.xyz-_RoadNodes[w.node].position.xyz));
    float travel=min(remaining,max(0,edgeLength-w.progress));w.progress+=travel;remaining-=travel;
    if(w.progress<edgeLength)break;

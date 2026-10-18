@@ -81,7 +81,7 @@ namespace MassiveArmy.Planetary
             if(fixture.sessionMode==PlanetGameMode.AiTest){construction.SetEnabled(false);front.Q("commands").SetEnabled(false);front.Q("quick-actions").SetEnabled(false);}
 
             MakeMap();context=front.Q("context");Refresh();
-            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
+            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"RESIDENTS",OpenResidents,"residents-open");Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
 
         }
 
@@ -177,7 +177,7 @@ namespace MassiveArmy.Planetary
 
             context.Clear();queueStatus=null;var building=world.Selected;if(building==null){Label(context,"SELECT A BUILDING","heading");return;}
 
-            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(world.Civilisation!=null)Label(context,"DISTRICT · "+building.definition.district,"muted");
+            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(world.Civilisation!=null){Label(context,"DISTRICT · "+building.definition.district,"muted");HouseholdContext(context,building);}
 
             var portrait=new Image{image=art?.Find("building",building.definition.id)?.portrait,scaleMode=ScaleMode.ScaleToFit};portrait.AddToClassList("portrait-large");context.Add(portrait);
 
@@ -190,6 +190,7 @@ namespace MassiveArmy.Planetary
 
             row=new VisualElement();row.AddToClassList("row");context.Add(row);Button(row,building.powered?"POWER DOWN":"POWER UP",()=>{building.powered=!building.powered;world.NotifyChanged();});Button(row,"SELL 45%",()=>world.Sell(building));if(building.Upgrading)Button(context,"CANCEL UPGRADE",()=>world.CancelUpgrade(building));
 
+            if(building.definition.id=="gate")Button(context,building.gateOpen?"CLOSE GATE":"OPEN GATE",()=>world.SetGate(building,!building.gateOpen),"gate-toggle");
             if(building.definition.id=="silo")Button(context,"LAUNCH NUKE · 100F / 25I",()=>{fixture.NuclearTargetArmed=true;world.Notice="Click a target within silo range · right-click cancels";},"planet-launch-nuke");
 
             var scroll=new ScrollView();scroll.style.flexGrow=1;context.Add(scroll);

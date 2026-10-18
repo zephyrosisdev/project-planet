@@ -22,6 +22,11 @@ namespace MassiveArmy.Planetary {
         }
         bool BuildDistrict(BuildingDefinition d,int team){
             var candidates=new List<(Vector3 point,int rotation,float score)>();
+            if(d.housingCapacity>0||!string.IsNullOrEmpty(d.retailResource))AddStreetCandidates(d,team,candidates);
+            if(d.id.StartsWith("civil_farm_"))foreach(var field in Buildings){if(field.team!=team||field.removed||field.definition.id!=d.id)continue;var a=Area(field);
+                for(int sign=-1;sign<=1;sign+=2){int dx=(a.rotation&1)==0?sign*a.width:0,dy=(a.rotation&1)!=0?sign*a.depth:0;var p=Grid.Point(a.face,a.x+a.width*.5+dx,a.y+a.depth*.5+dy);
+                    if(GridClear(Grid.Area(d,p,a.rotation),out _))candidates.Add((p,a.rotation,-100000+Distance(p,EntranceAnchor(team,p))));}
+            }
             foreach(var anchorBuilding in Buildings){if(anchorBuilding.team!=team||anchorBuilding.removed||!anchorBuilding.Complete||anchorBuilding.definition.buildRadius<=0)continue;
                 var origin=Area(anchorBuilding);var offset=SettlementDistricts.Offset(d.district);var centre=Grid.Point(origin.face,origin.x+origin.width*.5+offset.x,origin.y+origin.depth*.5+offset.y);
                 int stride=Math.Max(d.footprintWidth,d.footprintDepth)+2;
@@ -36,7 +41,38 @@ namespace MassiveArmy.Planetary {
             for(int i=0;i<budget;i++){var c=candidates[i];if(ConstructOriented(d,team,c.point,c.rotation))return true;}
             return false;
         }
+        readonly List<(Vector3 point,int rotation,float score)> previewStreetCandidates=new List<(Vector3,int,float)>();
+        void AlignResidentialPreview(BuildingDefinition d,ref Vector3 point,ref int rotation){
+            rotation=EntranceRotation(d,point,0);if(d.housingCapacity<=0&&string.IsNullOrEmpty(d.retailResource))return;
+            previewStreetCandidates.Clear();AddStreetCandidates(d,0,previewStreetCandidates);float closest=12;
+            Vector3 selected=point;foreach(var candidate in previewStreetCandidates){float distance=Distance(point,candidate.point);if(distance<closest){closest=distance;selected=candidate.point;rotation=candidate.rotation;}}point=selected;
+        }
+        void AddStreetCandidates(BuildingDefinition d,int team,List<(Vector3 point,int rotation,float score)> candidates){
+            // Derive frontage from saved building footprints, so street growth survives revisiting a planet.
+            foreach(var home in Buildings){if(home.team!=team||home.removed||home.definition.housingCapacity<=0)continue;
+                var a=Area(home);bool horizontal=(a.rotation&1)==0;
+                for(int side=-1;side<=1;side+=2){
+                    int width=horizontal?d.footprintWidth:d.footprintDepth,depth=horizontal?d.footprintDepth:d.footprintWidth;
+                    int x=a.x,y=a.y;
+                    if(horizontal){x+=side<0?-width:a.width;if(a.rotation==0)y+=a.depth-depth;}
+                    else{y+=side<0?-depth:a.depth;if(a.rotation==3)x+=a.width-width;}
+                    Add(x,y,width,depth,a.rotation);
+                }
+                // The facing row leaves exactly one road module between the front doors.
+                int opposite=(a.rotation+2)&3,ow=(opposite&1)==0?d.footprintWidth:d.footprintDepth,od=(opposite&1)==0?d.footprintDepth:d.footprintWidth;
+                int ox=a.x,oy=a.y;switch(a.rotation){case 0:oy+=a.depth+1;break;case 1:ox-=ow+1;break;case 2:oy-=od+1;break;default:ox+=a.width+1;break;}Add(ox,oy,ow,od,opposite);
+                void Add(int x,int y,int width,int depth,int rotation){
+                    if(x<0||y<0||x+width>Grid.Resolution||y+depth>Grid.Resolution)return;
+                    var p=Grid.Point(a.face,x+width*.5,y+depth*.5);var area=Grid.Area(d,p,rotation);
+                    if(!GridClear(area,out _,d))return;
+                    float score=-50000+Distance(p,EntranceAnchor(team,p));
+                    // Keep corner shops close to residents, but distribute services along the street.
+                    if(!string.IsNullOrEmpty(d.retailResource))foreach(var shop in Buildings)if(shop.team==team&&!shop.removed&&!string.IsNullOrEmpty(shop.definition.retailResource))score+=Mathf.Max(0,40-Distance(p,CubeSphere.Decode(shop.position)))*2;
+                    candidates.Add((p,rotation,score));
+                }
+            }
+        }
         bool ConstructOriented(BuildingDefinition d,int team,Vector3 direction,int rotation){direction=SnapBuilding(d,direction,rotation);var valid=Validate(d,direction,rotation,true,team);if(!valid.valid||!fixture.IsFootprintClear(direction,FootprintRadius(d))||!Factions[team].wallet.Spend(d.cost))return false;
-            var b=Create(d,direction,rotation,false,team);b.node=valid.node;if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
+            var b=Create(d,direction,rotation,false,team);b.node=valid.node;Civilisation?.SponsorProject(this,b);if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
     }
 }

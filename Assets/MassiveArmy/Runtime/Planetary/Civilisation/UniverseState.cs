@@ -37,6 +37,7 @@ namespace MassiveArmy.Planetary
         public string body;public int planetId,navigationContext;public PlanetResourceProfile composition;
         public CelestialEnvironment environment;public List<long> colonies=new List<long>(),orbitalAssets=new List<long>(),surfaceInstallations=new List<long>();
         public List<RoadTile> roads=new List<RoadTile>();
+        public List<GatheringRegion> gatheringRegions=new List<GatheringRegion>();
         public double lastSimulatedTime;
     }
     [Serializable] public sealed class CivilisationFaction {
@@ -48,6 +49,12 @@ namespace MassiveArmy.Planetary
         public long id;public int faction;public string body,name;public ColonyStage stage;public double selfSufficiency,powerBalance,waterBalance,foodBalance;
         public double retailFoodCoverage,retailDrinksCoverage,retailMedicineCoverage;
         public int workforce,employed,workerDemand,plannedWorkerDemand;
+        public List<ResidentState> residents=new List<ResidentState>();
+        public List<HouseholdState> households=new List<HouseholdState>();
+        public List<EnterpriseState> enterprises=new List<EnterpriseState>();
+        public CouncilState council=new CouncilState();
+        public double civicFoodService,civicDrinksService,civicMedicineService,civicServiceSeconds;
+        public int societyRevision;public long lastCivicDay=-1;
         public int population,housingCapacity,housedPopulation;public double growthProgress,foodDemand,foodSupplied,powerGeneration,powerDemand;
         public ResourceInventory inventory=new ResourceInventory();public List<SurfaceInstallation> installations=new List<SurfaceInstallation>();
         public List<CargoVehicleState> cargoVehicles=new List<CargoVehicleState>();public List<CargoVehicleOrder> cargoOrders=new List<CargoVehicleOrder>();

@@ -5,16 +5,17 @@ namespace MassiveArmy.Planetary
 {
     public sealed partial class PlanetRtsHud {
         bool resourcesView;
-        void OpenResources(){resourcesView=true;if(civilisationOpen){civilisationOpen=false;}ToggleCivilisation();}
+        void OpenResources(){residentsView=false;resourcesView=true;if(civilisationOpen){civilisationOpen=false;}ToggleCivilisation();}
         bool civilisationOpen;double nextCivilisationRefresh;VisualElement civilisationContent;int inspectedFaction;string inspectedPlanet;
         void ToggleCivilisation(){civilisationOpen=!civilisationOpen;technologyOpen=false;var modal=front.Q("modal");modal.Clear();modal.style.display=civilisationOpen?DisplayStyle.Flex:DisplayStyle.None;if(!civilisationOpen)return;
             var panel=new VisualElement();panel.AddToClassList("panel");panel.style.width=1000;panel.style.maxHeight=700;modal.Add(panel);Label(panel,"RESOURCES & SETTLEMENT ECONOMY","heading");
-            var actions=new VisualElement();actions.AddToClassList("row");panel.Add(actions);Button(actions,"CLOSE",ToggleCivilisation);Button(actions,"ALL RESOURCES",()=>{resourcesView=true;nextCivilisationRefresh=0;});Button(actions,"INDUSTRY & WORLDS",()=>{resourcesView=false;nextCivilisationRefresh=0;});if(fixture.sessionMode==PlanetGameMode.AiTest){Button(actions,"CYAN",()=>{inspectedFaction=0;nextCivilisationRefresh=0;});Button(actions,"RED",()=>{inspectedFaction=1;nextCivilisationRefresh=0;});Label(panel,"OBSERVER · TRUE UNIVERSE INFORMATION","muted");}else{inspectedFaction=0;Label(panel,"FACTION KNOWLEDGE · undiscovered worlds and enemy inventories remain hidden","muted");}
+            var actions=new VisualElement();actions.AddToClassList("row");panel.Add(actions);Button(actions,"CLOSE",ToggleCivilisation);Button(actions,"PEOPLE & COUNCIL",()=>{residentsView=true;resourcesView=false;nextCivilisationRefresh=0;});Button(actions,"ALL RESOURCES",()=>{residentsView=false;resourcesView=true;nextCivilisationRefresh=0;});Button(actions,"INDUSTRY & WORLDS",()=>{residentsView=false;resourcesView=false;nextCivilisationRefresh=0;});if(fixture.sessionMode==PlanetGameMode.AiTest){Button(actions,"CYAN",()=>{inspectedFaction=0;nextCivilisationRefresh=0;});Button(actions,"RED",()=>{inspectedFaction=1;nextCivilisationRefresh=0;});Label(panel,"OBSERVER · TRUE UNIVERSE INFORMATION","muted");}else{inspectedFaction=0;Label(panel,"FACTION KNOWLEDGE · undiscovered worlds and enemy inventories remain hidden","muted");}
             civilisationContent=new ScrollView();civilisationContent.style.height=570;panel.Add(civilisationContent);nextCivilisationRefresh=0;RefreshCivilisation();
         }
         void RefreshCivilisation(){
             if(!civilisationOpen||civilisationContent==null||world.Civilisation==null||Time.realtimeSinceStartupAsDouble<nextCivilisationRefresh)return;nextCivilisationRefresh=Time.realtimeSinceStartupAsDouble+1;
             var simulation=world.Civilisation;var state=simulation.State;var faction=state.Faction(inspectedFaction);bool observer=fixture.sessionMode==PlanetGameMode.AiTest;float scroll=((ScrollView)civilisationContent).scrollOffset.y;civilisationContent.Clear();
+            if(residentsView){RefreshResidents(simulation,scroll);return;}
             if(resourcesView){RefreshResources(simulation,scroll);return;}
             if(simulation.CatchingUp(fixture.definition.bodyId))Label(civilisationContent,"CATCHING UP DORMANT SETTLEMENT ECONOMY","heading");Label(civilisationContent,faction.name+" · "+faction.priority,"subheading");Label(civilisationContent,faction.reason,"muted");
             foreach(var colony in state.colonies){if(colony.faction!=inspectedFaction)continue;Label(civilisationContent,colony.name.ToUpperInvariant(),"heading");

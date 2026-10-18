@@ -25,9 +25,9 @@ namespace MassiveArmy.Planetary
             result.Encapsulate(PlanetConstructionGrid.Warp(Vector3.Scale(source.center+Vector3.up*source.extents.y,scale),x,z,plane,foundation));result.Expand(.02f);return result;
         }
         void PlaceConstruction(Transform target,BuildingDefinition definition,Vector3 direction,int rotation){var pose=PrepareConstruction(target,definition,direction,rotation);target.SetPositionAndRotation(fixture.RenderBodyPosition(new Double3(pose.direction)*pose.foundation),pose.rotation);}
-        internal bool GridClear(PlanetConstructionGrid.Footprint area,out string reason){
+        internal bool GridClear(PlanetConstructionGrid.Footprint area,out string reason,BuildingDefinition candidate=null){
             var port=Grid.Port(area);foreach(var b in Buildings){if(b.removed)continue;var other=Area(b);if(area.Overlaps(other)){reason="Building grid footprints overlap";return false;}if(area.Contains(Grid.Port(other))||other.Contains(port)){reason="Keep the neighbouring building's road entrance clear";return false;}}
-            if(Roads!=null)for(int y=0;y<area.depth;y++)for(int x=0;x<area.width;x++)if(Roads.HasRoad(new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y))){reason="Building footprint overlaps a road module";return false;}
+            if(Roads!=null)for(int y=0;y<area.depth;y++)for(int x=0;x<area.width;x++)if(Roads.HasRoad(new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y))&&!(candidate?.id=="gate"&&GatePassage(area,new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y)))){reason="Building footprint overlaps a road module";return false;}
             reason="";return true;
         }
     }

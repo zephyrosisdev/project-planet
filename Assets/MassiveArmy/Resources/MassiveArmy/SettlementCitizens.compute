@@ -1,0 +1,49 @@
+#pragma kernel ResetDraw
+#pragma kernel ClearFlows
+#pragma kernel BuildFlows
+#pragma kernel Walk
+#pragma kernel CopyWalkers
+struct Node {float4 position;int4 neighbours;};
+struct Goal {int node,team,active,pad;};
+struct Order {uint home,target,team,model;float4 parameters;};
+struct Walker {float4 position;uint node,next,initialised,pad;};
+struct Pose {float4 position,right,up,forward,properties;};
+StructuredBuffer<Node> _Nodes;StructuredBuffer<Goal> _Goals;StructuredBuffer<Order> _Orders;
+RWStructuredBuffer<uint> _Parents,_Queue;RWStructuredBuffer<uint4> _Search;
+RWStructuredBuffer<Walker> _Walkers;StructuredBuffer<Walker> _PreviousWalkers;RWStructuredBuffer<Pose> _CargoPoses;
+RWStructuredBuffer<uint> _CitizenVisible,_DrawArgs;float4 _Frustum[6];
+uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount;float _Delta,_Speed,_Clock,_DrawRange;float3 _CameraBody;
+#define INVALID 0xffffffffu
+[numthreads(1,1,1)]void ResetDraw(uint3 id:SV_DispatchThreadID){_DrawArgs[1]=0;}
+[numthreads(128,1,1)] void ClearFlows(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i<_NodeStride*_GoalCount)_Parents[i]=INVALID;if(i<_GoalCount)_Search[i]=0;}
+// Each destination owns one persistent reverse BFS, shared by every commuter going there.
+// Work is capped at 128 nodes per destination per dispatch; only graph changes reset it.
+[numthreads(32,1,1)] void BuildFlows(uint3 id:SV_DispatchThreadID){uint g=id.x;if(g>=_GoalCount)return;Goal goal=_Goals[g];if(goal.active==0||goal.node<0||goal.node>=(int)_NodeCount)return;uint offset=g*_NodeStride;uint4 search=_Search[g];
+ if(search.z==0){_Queue[offset]=(uint)goal.node;_Parents[offset+goal.node]=(uint)goal.node;search=uint4(0,1,1,0);}
+ for(uint work=0;work<128&&search.x<search.y;work++){uint node=_Queue[offset+search.x++];int4 links=_Nodes[node].neighbours;
+  for(uint edge=0;edge<4;edge++){int other=links[edge];if(other<0||other>=(int)_NodeCount||_Nodes[other].position.w!=goal.team||_Parents[offset+other]!=INVALID)continue;_Parents[offset+other]=node;_Queue[offset+search.y++]=(uint)other;}
+ }_Search[g]=search;
+}
+[numthreads(128,1,1)] void CopyWalkers(uint3 id:SV_DispatchThreadID){if(id.x<_WalkerCount){Walker w=(Walker)0;if(id.x<_PreviousCount)w=_PreviousWalkers[id.x];_Walkers[id.x]=w;}}
+[numthreads(128,1,1)] void Walk(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount)return;Order order=_Orders[i];Walker w=_Walkers[i];Pose pose=(Pose)0;
+ if(order.parameters.w<0||order.home>=_NodeCount||order.target>=_GoalCount){_CargoPoses[i]=pose;return;}
+ if(w.initialised==0){w.position=_Nodes[order.home].position;w.node=w.next=order.home;w.initialised=1;}
+ if(distance(_CameraBody,w.position.xyz)>_DrawRange*1.5){_CargoPoses[i]=pose;_Walkers[i]=w;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
+ if(w.node>=_NodeCount){_CargoPoses[i]=pose;return;}float remaining=min(_Delta,.25)*_Speed;float3 forward=0;bool moving=false;uint goal=_Goals[order.target].node;bool entered=false;
+ // Retarget at road junctions, preserving GPU position mid-edge. Never teleport on a changed job or time of day.
+ for(uint hop=0;hop<8;hop++){
+  if(w.next==w.node){uint next=_Parents[order.target*_NodeStride+w.node];if(next==INVALID||next==w.node)break;w.next=next;}
+  if(w.next>=_NodeCount||!any(_Nodes[w.node].neighbours==(int)w.next))break;
+  float3 target=_Nodes[w.next].position.xyz;float3 delta=target-w.position.xyz;float distance=length(delta);forward=distance>.001?delta/distance:forward;
+  if(distance>remaining){w.position.xyz+=forward*remaining;moving=remaining>0;remaining=0;break;}
+  w.position.xyz=target;w.node=w.next;remaining=max(0,remaining-distance);moving=distance>0;entered=true;if(w.node==goal||remaining<=0)break;
+ }
+ float3 up=normalize(w.position.xyz);float3 f=forward-up*dot(forward,up);if(dot(f,f)<.001){f=cross(up,abs(up.y)>.95?float3(1,0,0):float3(0,1,0));}f=normalize(f);float3 right=normalize(cross(up,f));
+ // Deterministic lane offset separates pedestrians from the cargo lane without CPU transforms.
+ float lane=((i*1664525u+1013904223u)&255)/255.0*1.4-.7;
+ pose.position=float4(w.position.xyz+right*lane-up*.8,1);float scale=order.parameters.w;pose.up=float4(up*scale,0);pose.forward=float4(f*scale,0);pose.right=float4(right*scale,0);
+ float visible=order.parameters.z>0&&distance(_CameraBody,w.position.xyz)<_DrawRange&&dot(normalize(_CameraBody),up)>.0?1:0;
+ for(uint plane=0;plane<6;plane++)if(dot(_Frustum[plane].xyz,pose.position.xyz)+_Frustum[plane].w < -2)visible=0;
+ // Residents disappear inside their home/workplace at arrival; walking meshes stay visible on the road.
+ pose.properties=float4(order.model,order.team,moving?_Clock*8+i:0,visible*(w.node==goal&&w.next==w.node?0:1));_CargoPoses[i]=pose;_Walkers[i]=w;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}
+}

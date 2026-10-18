@@ -459,6 +459,26 @@
       "capacity": 20000,
       "mass": 1,
       "startingStock": 0
+    },
+    {
+      "id": "timber",
+      "name": "Timber",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "scrap",
+      "name": "Scrap",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
     }
   ],
   "recipes": [
@@ -1071,6 +1091,44 @@
       ],
       "seconds": 10,
       "requiredTech": ""
+    },
+    {
+      "id": "salvage_construction",
+      "name": "Recycle salvage into construction materials",
+      "building": "civil_fabricator",
+      "requiredTech": "",
+      "seconds": 12,
+      "inputs": [
+        {
+          "resource": "scrap",
+          "amount": 4
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "construction_materials",
+          "amount": 3
+        }
+      ]
+    },
+    {
+      "id": "timber_construction",
+      "name": "Process timber into construction materials",
+      "building": "civil_fabricator",
+      "requiredTech": "",
+      "seconds": 12,
+      "inputs": [
+        {
+          "resource": "timber",
+          "amount": 5
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "construction_materials",
+          "amount": 2
+        }
+      ]
     }
   ],
   "archetypes": [
@@ -3086,14 +3144,14 @@
     },
     {
       "id": "civil_housing",
-      "name": "Civilian Housing",
-      "description": "Homes for 50 civilians. Requires delivered food, road access and power.",
+      "name": "Family home",
+      "description": "One household, up to six residents. Ownership may be private, rental or social.",
       "mesh": "command",
       "category": 0,
       "terrain": 0,
       "nodes": [],
       "cost": {
-        "materials": 160
+        "materials": 60
       },
       "requiredTech": "",
       "tier": 1,
@@ -3101,21 +3159,21 @@
       "radius": 10,
       "health": 2400,
       "armour": 20,
-      "consumption": 3,
-      "maxLevel": 3,
+      "consumption": 0.5,
+      "maxLevel": 1,
       "footprintWidth": 2,
       "footprintDepth": 2,
       "production": [],
       "upgrades": [],
-      "housingCapacity": 50,
-      "foodUse": 0.03,
+      "housingCapacity": 6,
+      "foodUse": 0.005,
       "workers": 0,
       "district": 1
     },
     {
       "id": "civil_road",
       "name": "Road module",
-      "description": "1×1 cargo road. Adjacent modules form corners, junctions and crossings automatically.",
+      "description": "1\u00d71 cargo road. Adjacent modules form corners, junctions and crossings automatically.",
       "mesh": "wall",
       "category": 5,
       "terrain": 0,
@@ -3340,6 +3398,181 @@
       "retailResource": "medicine",
       "retailPerResident": 0.0001,
       "district": 2
+    },
+    {
+      "id": "civil_rental_home",
+      "name": "Private rental home",
+      "description": "One household, up to six residents. Ownership may be private, rental or social.",
+      "mesh": "command",
+      "category": 0,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 60
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 0.5,
+      "maxLevel": 1,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 6,
+      "foodUse": 0.005,
+      "workers": 0,
+      "district": 1
+    },
+    {
+      "id": "civil_social_home",
+      "name": "Social housing home",
+      "description": "One household, up to six residents. Ownership may be private, rental or social.",
+      "mesh": "command",
+      "category": 0,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 60
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 0.5,
+      "maxLevel": 1,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 6,
+      "foodUse": 0.005,
+      "workers": 0,
+      "district": 1
+    },
+    {
+      "id": "civil_school",
+      "name": "Community school",
+      "description": "Road-connected local community school.",
+      "mesh": "lab",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 2,
+      "district": 0
+    },
+    {
+      "id": "civil_council",
+      "name": "Local council",
+      "description": "Road-connected local local council.",
+      "mesh": "command",
+      "category": 0,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 2,
+      "district": 0
+    },
+    {
+      "id": "civil_gathering_camp",
+      "name": "Timber and salvage yard",
+      "description": "Road-connected local timber and salvage yard.",
+      "mesh": "mine",
+      "category": 1,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 100
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 2,
+      "district": 4
+    },
+    {
+      "id": "civil_fence",
+      "name": "Defensive fence",
+      "description": "Low-cost defensive boundary built and repaired by workers.",
+      "category": 6,
+      "cost": {
+        "materials": 8,
+        "fuel": 0,
+        "rareElements": 0,
+        "isotopes": 0,
+        "research": 0
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 3,
+      "radius": 3,
+      "health": 800,
+      "armour": 40,
+      "consumption": 0.1,
+      "vision": 105,
+      "maxLevel": 3,
+      "production": [],
+      "nodes": [],
+      "upgrades": [
+        "level2",
+        "level3"
+      ],
+      "footprintWidth": 1,
+      "footprintDepth": 1,
+      "explosionRadius": 0,
+      "foodUse": 0.001,
+      "workers": 0,
+      "district": 7,
+      "mesh": "wall"
     }
   ],
   "technologies": [

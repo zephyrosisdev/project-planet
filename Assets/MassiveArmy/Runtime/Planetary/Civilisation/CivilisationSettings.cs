@@ -33,6 +33,10 @@ namespace MassiveArmy.Planetary
         [Header("Population and upkeep")]
         public int startingPopulation=24;
         public float populationFoodPerSecond=.002f,populationGrowthSeconds=30,buildingInputReserveSeconds=120;
+        [Header("Households and daily life")]
+        [Min(60)]public float settlementDaySeconds=600;
+        [Min(1)]public int calendarDaysPerYear=365,maximumCivilianAgents=16384;
+        public float civilianWalkingSpeed=2.8f,civilianDrawDistance=1800;
         [Header("Dormant settlements")]
         public float catchupBudgetMilliseconds=.5f,catchupMaximumStepSeconds=60;
         public int catchupStepsPerFrame=4;

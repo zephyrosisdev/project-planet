@@ -46,6 +46,7 @@ namespace MassiveArmy.Planetary
                 bool economyReady=AiEconomyReady(team);
                 if(!built&&Civilisation==null&&f.generation+owned.Where(b=>!b.Complete).Sum(b=>b.definition.generation)<f.demand+35)built=BuildAI("wind",team,cycle);
                 if(!built&&economyReady)foreach(string id in new[]{"lab","autocannon","oil","rare","factory","at_turret","aa_turret","advanced_lab","strategic_lab"})if(!Has(id)&&AiCanSpend(team,Catalog.Buildings[id].cost)&&BuildAI(id,team,cycle)){built=true;AIActivity[team]="Constructing "+Catalog.Buildings[id].name;break;}
+                if(!built&&economyReady&&cycle%3==0)built=BuildLocalDefences(team,cycle);
                 if(economyReady)foreach(var lab in owned.Where(b=>b.Complete&&b.powered&&b.queue.Count==0&&b.definition.category==BuildingCategory.Research)){
                     var tech=Catalog.technologies.OrderBy(t=>t.tier).FirstOrDefault(t=>t.requiredBuilding==lab.definition.id&&t.requiredBuildingLevel<=lab.level&&!f.HasTech(t.id)&&!f.researching.Contains(t.id)&&t.prerequisites.All(f.HasTech)&&AiCanSpend(team,t.cost));if(tech!=null)Research(lab,tech.id);
                     else if(lab.level<Math.Min(3,f.tier)&&!lab.Upgrading&&AiCanSpend(team,lab.definition.cost*(.65f*lab.level)))Upgrade(lab);
