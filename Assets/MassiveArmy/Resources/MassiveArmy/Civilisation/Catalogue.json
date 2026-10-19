@@ -3573,6 +3573,114 @@
       "workers": 0,
       "district": 7,
       "mesh": "wall"
+    },
+    {
+      "id": "civil_port",
+      "name": "Cargo port",
+      "description": "Transfers finite cargo between local road networks using ships.",
+      "mesh": "naval_yard",
+      "category": 5,
+      "terrain": 2,
+      "nodes": [],
+      "cost": {
+        "materials": 300
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 25,
+      "radius": 12,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 3,
+      "footprintDepth": 3,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "workers": 0,
+      "district": 5
+    },
+    {
+      "id": "civil_airport",
+      "name": "Freight airport",
+      "description": "Transfers finite cargo between local road networks using freight aircraft.",
+      "mesh": "airbase",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 400
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 25,
+      "radius": 12,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 5,
+      "maxLevel": 3,
+      "footprintWidth": 4,
+      "footprintDepth": 4,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.02,
+      "workers": 0,
+      "district": 5
+    },
+    {
+      "id": "civil_freight_station",
+      "name": "Freight station",
+      "description": "Rail freight infrastructure for physically transporting goods between regional warehouses.",
+      "mesh": "logistics",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 260
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 8,
+      "health": 2200,
+      "armour": 20,
+      "consumption": 3,
+      "maxLevel": 3,
+      "footprintWidth": 3,
+      "footprintDepth": 3,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.015,
+      "workers": 0,
+      "district": 5
+    },
+    {
+      "id": "civil_rail",
+      "name": "Railway track",
+      "description": "Rail freight infrastructure for physically transporting goods between regional warehouses.",
+      "mesh": "wall",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 2
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 8,
+      "health": 2200,
+      "armour": 20,
+      "consumption": 0,
+      "maxLevel": 3,
+      "footprintWidth": 1,
+      "footprintDepth": 1,
+      "production": [],
+      "upgrades": [],
+      "foodUse": 0.001,
+      "workers": 0,
+      "district": 5
     }
   ],
   "technologies": [
@@ -4019,6 +4127,144 @@
       ],
       "unlockUnits": [],
       "unlockUpgrades": [],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_bulk_shipping_2",
+      "name": "Bulk Shipping 2",
+      "description": "Unlocks larger freight carriers and paid retrofits.",
+      "branch": "Freight Logistics",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 240,
+        "research": 160
+      },
+      "time": 60,
+      "prerequisites": [],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [
+        "civil_bulk_shipping_2"
+      ],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_bulk_shipping_3",
+      "name": "Bulk Shipping 3",
+      "description": "Unlocks larger freight carriers and paid retrofits.",
+      "branch": "Freight Logistics",
+      "requiredBuilding": "advanced_lab",
+      "tier": 3,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 360,
+        "research": 240
+      },
+      "time": 90,
+      "prerequisites": [
+        "civil_bulk_shipping_2"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [
+        "civil_bulk_shipping_3"
+      ],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_heavy_airlift_2",
+      "name": "Heavy Airlift 2",
+      "description": "Unlocks larger freight carriers and paid retrofits.",
+      "branch": "Freight Logistics",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 240,
+        "research": 160
+      },
+      "time": 60,
+      "prerequisites": [],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [
+        "civil_heavy_airlift_2"
+      ],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_heavy_airlift_3",
+      "name": "Heavy Airlift 3",
+      "description": "Unlocks larger freight carriers and paid retrofits.",
+      "branch": "Freight Logistics",
+      "requiredBuilding": "advanced_lab",
+      "tier": 3,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 360,
+        "research": 240
+      },
+      "time": 90,
+      "prerequisites": [
+        "civil_heavy_airlift_2"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [
+        "civil_heavy_airlift_3"
+      ],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_heavy_rail_2",
+      "name": "Heavy Rail 2",
+      "description": "Larger freight trains and paid wagon/locomotive retrofits.",
+      "branch": "Freight Logistics",
+      "requiredBuilding": "lab",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 240,
+        "research": 160
+      },
+      "time": 60,
+      "prerequisites": [],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [
+        "civil_heavy_rail_2"
+      ],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_heavy_rail_3",
+      "name": "Heavy Rail 3",
+      "description": "Larger freight trains and paid wagon/locomotive retrofits.",
+      "branch": "Freight Logistics",
+      "requiredBuilding": "advanced_lab",
+      "tier": 3,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 360,
+        "research": 240
+      },
+      "time": 90,
+      "prerequisites": [
+        "civil_heavy_rail_2"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [
+        "civil_heavy_rail_3"
+      ],
       "unlockAbilities": [],
       "unlockModifiers": []
     }

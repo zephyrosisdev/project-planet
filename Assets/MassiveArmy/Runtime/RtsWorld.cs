@@ -11,6 +11,8 @@ namespace MassiveArmy
         public BuildingDefinition definition;
         public Vector2 position,rally;
         public float health,construction,upgradeProgress,upgradeTime;
+        public bool awaitingProjectMaterials;public long protectionSite;
+        public bool roadSuspended;public int roadFailures;public double roadRetryAfter;
         public bool powered=true,paused,repeat,repairing,gateOpen,holdFire,removed,gateTraversable;
         public TargetPriority priority;
         public readonly List<QueueOrder> queue=new List<QueueOrder>();

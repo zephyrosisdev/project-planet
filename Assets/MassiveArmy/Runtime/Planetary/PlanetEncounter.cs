@@ -19,12 +19,12 @@ namespace MassiveArmy.Planetary
         internal void ResetCrowdForValidation(){crowdGrid.SetData(new Vector4[navigation.CellCount]);pressureA.SetData(new float[navigation.CellCount]);pressureB.SetData(new float[navigation.CellCount]);}
         internal GraphicsBuffer SteeringForValidation=>steering;internal GraphicsBuffer CrowdForValidation=>crowdGrid;
         readonly PlanetDevelopment world;readonly PlanetPathfindingAdapter navigation;readonly ComputeShader shader,movement;
-        readonly GraphicsBuffer snapshot,heads,next,damage,free,counters,sites,steering,structures,structureDamage,eligibility,presence,objectives,noise,hearing;
+        readonly GraphicsBuffer snapshot,heads,next,damage,free,counters,sites,steering,eligibility,presence,objectives,noise,hearing;
         readonly GraphicsBuffer interestSources,interestRegions,activity,activeIndices,activeDispatch,lastSimulationTick;readonly int interestResolution;bool useInterest;
         public bool InterestManagement=true;public uint ActiveZombies {get;private set;}public uint DormantZombies=>useInterest?zombies>ActiveZombies?zombies-ActiveZombies:0:0;
         internal GraphicsBuffer RoamOriginsForValidation=>roamOrigins;
         internal GraphicsBuffer ActivityForValidation=>activity;internal GraphicsBuffer ActiveDispatchForValidation=>activeDispatch;
-        readonly Vector4[] structureData=new Vector4[128*3];
+        GraphicsBuffer structures,structureDamage;Vector4[] structureData=new Vector4[128*3];uint[] clearStructureDamage=new uint[128];
         readonly uint[] reset=new uint[8],values=new uint[8];readonly int capacity,resolution,headCount;readonly List<Vector2> entries=new List<Vector2>();
         public readonly SwarmSchedule Schedule=new SwarmSchedule();
         bool disposed,pending;int waveAge;double nextRead;uint nextOrderTick;uint zombies,waveAlive;int patrol;int ambientRemaining;uint serial;
@@ -45,7 +45,7 @@ namespace MassiveArmy.Planetary
             bool sparse=world.definition.radius>=PlanetDefinition.RegionalNavigationRadius&&Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-dense-spatial")<0;headCount=sparse?262144:navigation.CellCount;if(sparse)shader.EnableKeyword("PLANET_SPARSE_SPATIAL");shader.SetInt("_HeadCount",headCount);shader.SetInt("_SpatialRes",sparse?Mathf.CeilToInt(2*world.definition.radius/128):resolution);
             contactResolution=Mathf.Clamp(Mathf.CeilToInt(2*world.definition.radius/24),32,512);contactHeads=Buffer(6*contactResolution*contactResolution,4);contactNext=Buffer(capacity,4);shader.SetInt("_ContactRes",contactResolution);float maxContactRadius=ZombieDefinition.Archetype.radius;foreach(var type in world.Base.Catalog.units)if((int)type.movement<3)maxContactRadius=Mathf.Max(maxContactRadius,type.radius);shader.SetFloat("_MaxContactRadius",maxContactRadius);
             crowdDispatch=new GraphicsBuffer(GraphicsBuffer.Target.Structured|GraphicsBuffer.Target.IndirectArguments,4,4);crowdWork=Buffer(12*((resolution+15)/16)*((resolution+15)/16),4);shader.SetInt("_CrowdTiled",resolution%16==0?1:0);crowdMass=Buffer(navigation.CellCount,4);crowdGrid=Buffer(navigation.CellCount,16);pressureA=Buffer(navigation.CellCount,4);pressureB=Buffer(navigation.CellCount,4);crowdGrid.SetData(new Vector4[navigation.CellCount]);pressureA.SetData(new float[navigation.CellCount]);pressureB.SetData(new float[navigation.CellCount]);
-            snapshot=Buffer(capacity,64);heads=Buffer(headCount,4);next=Buffer(capacity*(sparse?3:1),4);damage=Buffer(capacity,4);free=Buffer(capacity,4);counters=Buffer(8,4);steering=Buffer(capacity,16);structures=Buffer(128*3,16);structureDamage=Buffer(128,4);structureDamage.SetData(new uint[128]);
+            snapshot=Buffer(capacity,64);heads=Buffer(headCount,4);next=Buffer(capacity*(sparse?3:1),4);damage=Buffer(capacity,4);free=Buffer(capacity,4);counters=Buffer(8,4);steering=Buffer(capacity,16);structures=Buffer(128*3,16);structureDamage=Buffer(128,4);structureDamage.SetData(clearStructureDamage);
             interestSources=Buffer(6*interestResolution*interestResolution,4);interestRegions=Buffer(6*interestResolution*interestResolution,4);activity=Buffer(capacity,4);activeIndices=Buffer(capacity,4);lastSimulationTick=Buffer(capacity,4);activeDispatch=new GraphicsBuffer(GraphicsBuffer.Target.Structured|GraphicsBuffer.Target.IndirectArguments,6,4);activeDispatch.SetData(new uint[6]);
             if(deployment==null){deployment=new Deployment();var prepare=deployment.Prepare(world.definition,world.Rig.FocusDirection,resolution);while(prepare.MoveNext()){} }
             entries.AddRange(deployment.entries);var eligible=deployment.eligible;var home=world.Rig.FocusDirection;
@@ -122,6 +122,7 @@ namespace MassiveArmy.Planetary
         {
             reset[0]=(uint)world.unitCount;counters.SetData(reset);shader.SetInt("_Count",world.unitCount);Dispatch("FindFree",world.unitCount);shader.SetInt("_SpawnCount",requested);shader.SetInt("_SpawnWave",wave?1:0);shader.SetInt("_SpawnTeam",team);shader.SetInt("_SpawnType",type);shader.SetInt("_SpawnGroup",group);shader.SetInt("_Serial",(int)serial);Dispatch("Spawn",requested);serial+=(uint)requested;counters.GetData(values);world.SetArmyCount((int)values[0]);if(team==2)zombies+=values[2];return values[2];
         }
+        public void WakeDefenceOrders(){nextOrderTick=Math.Min(nextOrderTick,world.SimulationTicks);}
         public void BeforeTick()
         {
             for(int strike=strikes.Count-1;strike>=0;strike--)if(world.SimulationTicks>=strikes[strike].tick){var hit=strikes[strike];strikes.RemoveAt(strike);Detonate(hit.direction,hit.radius,hit.damage);}
@@ -130,15 +131,15 @@ namespace MassiveArmy.Planetary
             if(world.sessionMode==PlanetGameMode.Swarm){Schedule.Advance(BattleSettings.Tick);if(Schedule.Active)waveAge++;else waveAge=0;if(Schedule.Active&&Schedule.Remaining>0){uint added=Spawn((int)Math.Min(256UL,Schedule.Remaining),2,31,17,true);Schedule.ConfirmSpawn(added);}if(waveAge>45)Schedule.TryClear(waveAlive,pending);}
             shader.SetInt("_AiTest",world.sessionMode==PlanetGameMode.AiTest?1:0);
             if(world.SimulationTicks>=nextOrderTick){nextOrderTick=world.SimulationTicks+240;patrol++;objectives.SetData(new[]{uint.MaxValue,uint.MaxValue});Dispatch("Objectives",navigation.CellCount);var goals=new uint[2];objectives.GetData(goals);
-                for(int team=0;team<2;team++){if(team==0&&world.sessionMode!=PlanetGameMode.AiTest)continue;Vector3 target;if(goals[team]!=uint.MaxValue){int i=(int)(goals[team]&131071u);target=CubeSphere.Direction(new PlanetNavCoordinate(world.definition.bodyId,(CubeFace)(i/(resolution*resolution)),i%resolution,i/resolution%resolution),resolution);}else if(world.StrategyEnabled){var enemy=world.Base.Buildings.Find(b=>b.team!=team&&!b.removed&&b.definition.id=="command");target=world.SimulationTicks<1350?world.Base.Homes[team]:enemy!=null?CubeSphere.Decode(enemy.position):world.Base.Homes[1-team];}else target=CubeSphere.Decode(entries[(patrol*811+team*271)%entries.Count]);// A remote rival is a strategic destination, not a walkable local ground order.
-                    if(world.StrategyEnabled&&world.sessionMode==PlanetGameMode.AiTest&&Vector3.Dot(world.Base.Homes[0],world.Base.Homes[1])<-.8f&&CubeSphere.ArcDistance(world.Base.Homes[team],target,world.definition.radius)>5000){
+                for(int team=0;team<2;team++){bool defending=world.Base.TryProtectionTarget(team,out var protectionTarget);if(team==0&&world.sessionMode!=PlanetGameMode.AiTest&&!defending)continue;Vector3 target;if(defending)target=protectionTarget;else if(goals[team]!=uint.MaxValue){int i=(int)(goals[team]&131071u);target=CubeSphere.Direction(new PlanetNavCoordinate(world.definition.bodyId,(CubeFace)(i/(resolution*resolution)),i%resolution,i/resolution%resolution),resolution);}else if(world.StrategyEnabled){var enemy=world.Base.Buildings.Find(b=>b.team!=team&&!b.removed&&b.definition.id=="command");target=world.SimulationTicks<1350?world.Base.Homes[team]:enemy!=null?CubeSphere.Decode(enemy.position):world.Base.Homes[1-team];}else target=CubeSphere.Decode(entries[(patrol*811+team*271)%entries.Count]);// A remote rival is a strategic destination, not a walkable local ground order.
+                    if(!defending&&world.StrategyEnabled&&world.sessionMode==PlanetGameMode.AiTest&&Vector3.Dot(world.Base.Homes[0],world.Base.Homes[1])<-.8f&&CubeSphere.ArcDistance(world.Base.Homes[team],target,world.definition.radius)>5000){
                         float angle=((world.SimulationTicks>1350?world.SimulationTicks-1350:0)/3600)*2.3999632f+team*Mathf.PI*.5f;
                         target=world.SimulationTicks<1350?world.Base.Homes[team]:world.Base.TeamOffset(team,new Vector2(Mathf.Cos(angle),Mathf.Sin(angle))*850);
                     }
                     navigation.SetGoal(team==0?15:16,target,MovementClass.Infantry);}
                 var building=world.Base.Buildings.Find(b=>!b.removed&&b.definition.id=="command")??world.Base.Buildings.Find(b=>!b.removed);navigation.SetGoal(17,building!=null?CubeSphere.Decode(building.position):CubeSphere.Decode(entries[patrol*811%entries.Count]),MovementClass.Infantry);
             }
-            int structureCount=world.Base.Buildings.Count;shader.SetInt("_StructureCount",structureCount);
+            int structureCount=world.Base.Buildings.Count;EnsureStructures(structureCount);shader.SetInt("_StructureCount",structureCount);
             for(int i=0;i<structureCount;i++){var b=world.Base.Buildings[i];var d=CubeSphere.Decode(b.position);structureData[i*3]=new Vector4(d.x,d.y,d.z,Mathf.Sqrt(b.definition.footprintWidth*b.definition.footprintWidth+b.definition.footprintDepth*b.definition.footprintDepth)*4);structureData[i*3+1]=new Vector4(b.removed?0:b.health,b.Armour,b.team,b.Complete&&b.powered&&!b.paused?b.definition.id=="silo"?0:b.definition.weaponRange:0);structureData[i*3+2]=new Vector4(b.definition.weaponDamage,0,0,0);}
             structures.SetData(structureData);
             shader.SetInt("_Count",world.unitCount);shader.SetFloat("_Dt",BattleSettings.Tick);shader.SetInt("_Tick",(int)world.SimulationTicks);bool wasInterested=useInterest;useInterest=InterestManagement&&zombies>=8192&&world.definition.radius*2>world.InterestRadius;
@@ -162,9 +163,15 @@ namespace MassiveArmy.Planetary
             if(pending||Time.realtimeSinceStartupAsDouble<nextRead)return;nextRead=Time.realtimeSinceStartupAsDouble+.5;
             // Clear only the statistics tail; spawning counters occupy the first three words.
             counters.SetData(new uint[4],0,4,4);Dispatch(useInterest?"StatisticsBatched":"Statistics",world.unitCount);pending=true;
-            AsyncGPUReadback.Request(structureDamage,result=>{if(disposed||result.hasError)return;var damage=result.GetData<uint>();for(int i=0;i<world.Base.Buildings.Count;i++)if(damage[i]>0)world.Base.Damage(world.Base.Buildings[i],damage[i]);});structureDamage.SetData(new uint[128]);
+            AsyncGPUReadback.Request(structureDamage,result=>{if(disposed||result.hasError)return;var damage=result.GetData<uint>();for(int i=0;i<Math.Min(damage.Length,world.Base.Buildings.Count);i++)if(damage[i]>0)world.Base.Damage(world.Base.Buildings[i],damage[i]);});structureDamage.SetData(clearStructureDamage);
             if(useInterest)AsyncGPUReadback.Request(activeDispatch,result=>{if(!disposed&&!result.hasError)ActiveZombies=result.GetData<uint>()[5];});
             AsyncGPUReadback.Request(counters,result=>{if(disposed)return;pending=false;if(!result.hasError){var statistics=result.GetData<uint>();zombies=statistics[6];waveAlive=statistics[7];}});
+        }
+        void EnsureStructures(int count){
+            if(count<=structureDamage.count)return;int oldCount=structureDamage.count,capacity=Mathf.NextPowerOfTwo(count);var old=structureDamage;
+            structures.Dispose();structures=Buffer(capacity*3,16);structureDamage=Buffer(capacity,4);structureData=new Vector4[capacity*3];clearStructureDamage=new uint[capacity];
+            int copy=shader.FindKernel("GrowStructureDamage");shader.SetInt("_OldStructureCapacity",oldCount);shader.SetInt("_NewStructureCapacity",capacity);shader.SetBuffer(copy,"_PreviousStructureDamage",old);shader.SetBuffer(copy,"_StructureDamage",structureDamage);shader.Dispatch(copy,(capacity+127)/128,1,1);
+            foreach(string name in new[]{"Steer","Fight","Defences","MarkObservers"}){int kernel=shader.FindKernel(name);shader.SetBuffer(kernel,"_Structures",structures);shader.SetBuffer(kernel,"_StructureDamage",structureDamage);}old.Dispose();
         }
         public void UpdatePresentation()=>nuclear.Update();
         public const float TestNukeCraterRadius=360,RocketBlastRadius=24;
@@ -182,7 +189,7 @@ namespace MassiveArmy.Planetary
             if(world.deformTerrainOnNuke){if(world.definition.Edits.AddCrater(direction,crater))world.TerrainChanged();else world.Base.Notice="Persistent crater budget reached (32); blast damage still applied";}
             nuclear.Play(direction,Mathf.Max(radius,crater));NukesDetonated++;
         }
-        public void Dispose(){disposed=true;nuclear.Dispose();roamOrigins.Dispose();crowdCommands?.Dispose();decals.Dispose();movement.DisableKeyword("PLANET_ENCOUNTERS");movement.DisableKeyword("PLANET_CROWD");foreach(var buffer in new[]{contactHeads,contactNext,crowdDispatch,crowdWork,crowdMass,crowdGrid,pressureA,pressureB,snapshot,heads,next,damage,free,counters,sites,steering,structures,structureDamage,eligibility,presence,objectives,noise,hearing,interestSources,interestRegions,activity,activeIndices,activeDispatch,lastSimulationTick})buffer.Dispose();ArmyLifetime.Destroy(shader);}
+        public void Dispose(){disposed=true;nuclear.Dispose();roamOrigins.Dispose();crowdCommands?.Dispose();decals.Dispose();movement.DisableKeyword("PLANET_ENCOUNTERS");movement.DisableKeyword("PLANET_CROWD");foreach(var buffer in new[]{contactHeads,contactNext,crowdDispatch,crowdWork,crowdMass,crowdGrid,pressureA,pressureB,snapshot,heads,next,damage,free,counters,sites,steering,eligibility,presence,objectives,noise,hearing,interestSources,interestRegions,activity,activeIndices,activeDispatch,lastSimulationTick})buffer.Dispose();ArmyLifetime.Destroy(shader);}
     }
 }
 

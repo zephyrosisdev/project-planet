@@ -20,11 +20,11 @@ namespace MassiveArmy.Planetary
             PlanetDevelopment.BindSurface(shader,definition);shader.SetInt("_PlanetUnitCount",count);dispatch=(count+127)/128;
             counts=new GraphicsBuffer(GraphicsBuffer.Target.Structured,totals.Length,4);pick=new GraphicsBuffer(GraphicsBuffer.Target.Structured,1,4);
             pickKernel=shader.FindKernel("Pick");selectKernel=shader.FindKernel("Select");countKernel=shader.FindKernel("CountGroups");orderKernel=shader.FindKernel("Order");
-            foreach(int k in new[]{pickKernel,selectKernel,countKernel,orderKernel})shader.SetBuffer(k,"_PlanetUnits",units);
+            foreach(int k in new[]{pickKernel,selectKernel,countKernel,orderKernel,shader.FindKernel("RespondToSite")})shader.SetBuffer(k,"_PlanetUnits",units);
             shader.SetBuffer(pickKernel,"_Pick",pick);shader.SetBuffer(selectKernel,"_Pick",pick);shader.SetBuffer(countKernel,"_CommandCounts",counts);
         }
         public void SetCount(int count){dispatch=(count+127)/128;shader.SetInt("_PlanetUnitCount",count);}
-        public void BindCatalog(GraphicsBuffer archetypes,GraphicsBuffer traits){shader.EnableKeyword("PLANET_RTS_CONTENT");shader.SetBuffer(countKernel,"_Archetypes",archetypes);shader.SetBuffer(orderKernel,"_Archetypes",archetypes);shader.SetBuffer(pickKernel,"_Traits",traits);shader.SetBuffer(selectKernel,"_Traits",traits);}
+        public void BindCatalog(GraphicsBuffer archetypes,GraphicsBuffer traits){shader.EnableKeyword("PLANET_RTS_CONTENT");shader.SetBuffer(countKernel,"_Archetypes",archetypes);shader.SetBuffer(orderKernel,"_Archetypes",archetypes);shader.SetBuffer(shader.FindKernel("RespondToSite"),"_Archetypes",archetypes);shader.SetBuffer(pickKernel,"_Traits",traits);shader.SetBuffer(selectKernel,"_Traits",traits);}
         public void Select(Matrix4x4 planetToClip,Vector3 cameraLocal,Vector2 screenSize,Vector2 a,Vector2 b,int operation=0,bool click=false)
         {
             shader.SetMatrix("_SelectionVP",planetToClip);shader.SetVector("_SelectionCamera",cameraLocal);shader.SetVector("_SelectionScreen",screenSize);
@@ -46,6 +46,9 @@ namespace MassiveArmy.Planetary
             }
             for(int m=0;m<5;m++)if(groups[m]>=0){navigation.SetGoal(groups[m],direction,(MovementClass)m);shader.SetInt("_CommandGroup",groups[m]);shader.SetInt("_CommandMovement",m);shader.SetInt("_Stop",0);shader.SetVector("_CommandGoal",CubeSphere.Encode(direction));shader.Dispatch(orderKernel,dispatch,1,1);}
             Status=$"Move order: {SelectedCount} units";return true;
+        }
+        public void RespondToSite(int team,Vector3 direction,float radius,float planetRadius){
+            int kernel=shader.FindKernel("RespondToSite");shader.SetInt("_DefenceTeam",team);shader.SetVector("_DefenceSite",direction);shader.SetFloat("_DefenceChord",2*Mathf.Sin(Mathf.Min(Mathf.PI,radius/planetRadius)*.5f));shader.Dispatch(kernel,dispatch,1,1);
         }
         public void Stop(){shader.SetInt("_Stop",1);shader.Dispatch(orderKernel,dispatch,1,1);Count();Status=$"Stopped {SelectedCount} units";}
         public void Dispose(){counts.Dispose();pick.Dispose();ArmyLifetime.Destroy(shader);}

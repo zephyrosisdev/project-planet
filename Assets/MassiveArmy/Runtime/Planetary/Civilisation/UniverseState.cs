@@ -33,10 +33,12 @@ namespace MassiveArmy.Planetary
     [Serializable] public sealed class CelestialEnvironment {
         public bool atmosphere,breathable;public double pressure,oxygen,temperature=288,habitability;
     }
+    [Serializable] public sealed class FrontierSurvey {public int team,cursor;public string resource;}
     [Serializable] public sealed class PlanetState {
         public string body;public int planetId,navigationContext;public PlanetResourceProfile composition;
         public CelestialEnvironment environment;public List<long> colonies=new List<long>(),orbitalAssets=new List<long>(),surfaceInstallations=new List<long>();
-        public List<RoadTile> roads=new List<RoadTile>();
+        public List<ResourceNode> frontierDeposits=new List<ResourceNode>();public List<FrontierSurvey> frontierSurveys=new List<FrontierSurvey>();
+        public List<RoadTile> roads=new List<RoadTile>(),rails=new List<RoadTile>();
         public List<GatheringRegion> gatheringRegions=new List<GatheringRegion>();
         public double lastSimulatedTime;
     }
@@ -45,7 +47,12 @@ namespace MassiveArmy.Planetary
         public List<string> technologies=new List<string>();public string priority="Develop planetary industry",reason="Bootstrap resources available";
     }
     public enum ColonyStage {InitialOutpost,Dependent,Industrial,SelfSufficient,Developed}
+    [Serializable] public sealed class ProtectionSite {
+        public long original,project;public string definition,status="Defending site";public Vector2 position;public int rotation,node=-1,stage;public double lastHit,nextAttempt;public bool destroyed,finished,cancelled;
+        public List<long> fortifications=new List<long>();
+    }
     [Serializable] public sealed class ColonyState {
+        public List<ProtectionSite> protectionSites=new List<ProtectionSite>();
         public long id;public int faction;public string body,name;public ColonyStage stage;public double selfSufficiency,powerBalance,waterBalance,foodBalance;
         public double retailFoodCoverage,retailDrinksCoverage,retailMedicineCoverage;
         public int workforce,employed,workerDemand,plannedWorkerDemand;

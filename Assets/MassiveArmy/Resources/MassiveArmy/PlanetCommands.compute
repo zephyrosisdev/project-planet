@@ -4,6 +4,7 @@
 #pragma kernel Select
 #pragma kernel CountGroups
 #pragma kernel Order
+#pragma kernel RespondToSite
 #pragma multi_compile _ PLANET_RTS_CONTENT
 #include "ArmyCommon.hlsl"
 #include "PlanetTopology.hlsl"
@@ -76,4 +77,13 @@ uint _AttackMove;
     if(_Stop!=0){u.flags=(u.flags&~ATTACK_MOVE)|STOPPED;u.velocity=0;u.previous=u.position;}
     else{if(Movement(u)!=_CommandMovement)return;u.flags&=~(STOPPED|ARRIVED|ATTACK_MOVE);if(_AttackMove!=0)u.flags|=ATTACK_MOVE;u.group=_CommandGroup;u.destination=_CommandGoal;}
     _PlanetUnits[id.x]=u;
+}
+
+uint _DefenceTeam;float3 _DefenceSite;float _DefenceChord;
+[numthreads(128,1,1)]void RespondToSite(uint3 id:SV_DispatchThreadID){
+ if(id.x>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[id.x];
+ if((u.flags&ALIVE)==0||Team(u)!=_DefenceTeam||Movement(u)!=0)return;
+ if(_DefenceTeam==0&&(u.flags&(STOPPED|ARRIVED))==0&&u.group!=15)return;
+ if(length(PlanetDecode(u.position)-_DefenceSite)>_DefenceChord)return;
+ u.flags=(u.flags&~(STOPPED|ARRIVED))|ATTACK_MOVE;u.group=_DefenceTeam==0?15:16;u.destination=PlanetEncode(_DefenceSite);_PlanetUnits[id.x]=u;
 }

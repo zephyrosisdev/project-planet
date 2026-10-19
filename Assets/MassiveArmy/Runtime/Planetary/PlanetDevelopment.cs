@@ -25,7 +25,7 @@ namespace MassiveArmy.Planetary
 
         public bool Paused,AttackMoveArmed,NuclearTargetArmed;public System.Action returnToMenu;
 
-        public string ModeStatus=>sessionMode.ToString()+" Ã‚Â· Radius "+(definition!=null?(definition.radius/1000).ToString("0.#"):"6")+" km Ã‚Â· "+(encounter?.Status??"Planetary base operations");
+        public string ModeStatus=>sessionMode.ToString()+" ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Radius "+(definition!=null?(definition.radius/1000).ToString("0.#"):"6")+" km ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· "+(encounter?.Status??"Planetary base operations");
 
         PlanetEncounter encounter;PlanetLighting lighting;PlanetSpacecraft spacecraft;PlanetHeadquartersHud headquartersHud;
         internal PlanetHeadquartersHud HeadquartersForValidation=>headquartersHud;
@@ -133,7 +133,7 @@ namespace MassiveArmy.Planetary
         public Vector3 RenderBodyPosition(Double3 bodyPosition)=>origin.RenderPosition(definition.position.Add(bodyPosition));
         public Double3 RenderToBody(Vector3 renderPosition)=>origin.RenderToUniverse(renderPosition).RelativeTo(definition.position);
 
-        public bool LaunchNuke(Vector3 direction){NuclearTargetArmed=false;bool launched=encounter!=null&&encounter.LaunchNuke(Base.Selected,direction);Base.Notice=launched?"NUCLEAR MISSILE LAUNCHED Ã‚Â· 12 seconds to impact":"Launch unavailable: check range, fuel, isotopes, technology and silo cooldown";return launched;}
+        public bool LaunchNuke(Vector3 direction){NuclearTargetArmed=false;bool launched=encounter!=null&&encounter.LaunchNuke(Base.Selected,direction);Base.Notice=launched?"NUCLEAR MISSILE LAUNCHED ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· 12 seconds to impact":"Launch unavailable: check range, fuel, isotopes, technology and silo cooldown";return launched;}
 
         public bool OrderSelected(Vector3 direction,bool attackMove=false)
 
@@ -176,6 +176,7 @@ namespace MassiveArmy.Planetary
 
             var footprints=new Vector4[buildings.Count];for(int i=0;i<buildings.Count;i++){var b=buildings[i];var d=CubeSphere.Decode(b.position);footprints[i]=new Vector4(d.x,d.y,d.z,b.removed||b.definition.id=="gate"&&b.gateOpen?0:Mathf.Sqrt(b.definition.footprintWidth*b.definition.footprintWidth+b.definition.footprintDepth*b.definition.footprintDepth)*4+2);}
 
+            if(buildingFootprints.count<Mathf.Max(1,buildings.Count)){buildingFootprints.Dispose();buildingFootprints=new GraphicsBuffer(GraphicsBuffer.Target.Structured,Mathf.NextPowerOfTwo(buildings.Count),16);}
             buildingFootprints.SetData(footprints);int stamp=movement.FindKernel("StampBuildings");movement.SetBuffer(stamp,"_PlanetBuildings",buildingFootprints);movement.SetBuffer(stamp,"_PlanetCosts",costs);movement.SetInt("_PlanetBuildingCount",buildings.Count);movement.Dispatch(stamp,(cells+127)/128,1,1);navigation.SetRegionalBuildings(buildingFootprints,buildings.Count);navigation.Regional?.Bind(movement,moveKernel);if(asynchronous)navigation.InvalidateAsync();else navigation.Invalidate();
 
         }
@@ -186,6 +187,12 @@ namespace MassiveArmy.Planetary
 
         public PlanetRtsCamera Rig=>rig;
 
+        static readonly string[] simulationSpeedLabels={"0.25x","0.5x","1x","2x","4x","8x"};
+        public string SimulationSpeedLabel=>modes!=null&&modes.Mode!=PlayerControlMode.RTS?"1x":simulationSpeedLabels[simulationSpeedIndex];
+        static readonly float[] simulationSpeeds={.25f,.5f,1,2,4,8};int simulationSpeedIndex=2;
+        public float SimulationSpeed=>modes!=null&&modes.Mode!=PlayerControlMode.RTS?1:simulationSpeeds[simulationSpeedIndex];
+        public float SimulationDelta=>Time.deltaTime*SimulationSpeed;
+        public void ChangeSimulationSpeed(int step){simulationSpeedIndex=Mathf.Clamp(simulationSpeedIndex+System.Math.Sign(step),0,simulationSpeeds.Length-1);if(Base!=null)Base.Notice=$"Simulation {SimulationSpeed:0.##}x (numpad +/-)";}
         public uint SimulationTicks {get;private set;}
 
         bool initialized;internal bool DeferredInitialization;
@@ -437,6 +444,7 @@ namespace MassiveArmy.Planetary
 
             if(!Ready||!ResidentActive)return;lighting?.Update();var keyboard=Keyboard.current;
 
+            if(keyboard!=null&&Application.isFocused&&modes.Mode==PlayerControlMode.RTS&&!(hud?.TextFocused??false)){if(keyboard.numpadPlusKey.wasPressedThisFrame)ChangeSimulationSpeed(1);if(keyboard.numpadMinusKey.wasPressedThisFrame)ChangeSimulationSpeed(-1);}
             if(keyboard!=null&&keyboard.f2Key.wasPressedThisFrame)showTerrainDebug=!showTerrainDebug;
 
             if((cbt!=null||streamed!=null)&&keyboard!=null&&keyboard.f3Key.wasPressedThisFrame){showTerrainTriangles=!showTerrainTriangles;if(showTerrainTriangles)terrainMaterial.EnableKeyword("PLANET_CBT_DEBUG");else terrainMaterial.DisableKeyword("PLANET_CBT_DEBUG");}
@@ -449,7 +457,7 @@ namespace MassiveArmy.Planetary
 
             bool interact=keyboard!=null&&keyboard.fKey.wasPressedThisFrame;bool rts=keyboard!=null&&keyboard.tabKey.wasPressedThisFrame;
 
-            if(modes.Mode==PlayerControlMode.RTS){bool input=rig.InputEnabled;rig.InputEnabled=input&&!(hud?.ModalOpen??false)&&!(hud?.TextFocused??false);rig.Step();rig.InputEnabled=input;}spacecraft?.StepUnpiloted(Time.deltaTime);if(IsPiloting)spacecraft.Step(Time.deltaTime);else if(IsFirstPerson){spacecraft?.Rebase();Base?.Rebase();Physics.SyncTransforms();if(AutomaticPlayerStep)player.Step(Time.deltaTime);}spacecraft?.Rebase();Base?.Rebase();if(IsFirstPerson&&spacecraft!=null){Physics.SyncTransforms();shipInteraction=spacecraft.FindInteraction(view.transform.position,view.transform.forward);}if(rts)SetFirstPerson(false);else if(interact)Interact();encounter?.UpdatePresentation();spacecraft?.StepWeapons(Time.deltaTime);var mouse=Mouse.current;
+            if(modes.Mode==PlayerControlMode.RTS){bool input=rig.InputEnabled;rig.InputEnabled=input&&!(hud?.ModalOpen??false)&&!(hud?.TextFocused??false);rig.Step();rig.InputEnabled=input;}spacecraft?.StepUnpiloted(SimulationDelta);if(IsPiloting)spacecraft.Step(Time.deltaTime);else if(IsFirstPerson){spacecraft?.Rebase();Base?.Rebase();Physics.SyncTransforms();if(AutomaticPlayerStep)player.Step(Time.deltaTime);}spacecraft?.Rebase();Base?.Rebase();if(IsFirstPerson&&spacecraft!=null){Physics.SyncTransforms();shipInteraction=spacecraft.FindInteraction(view.transform.position,view.transform.forward);}if(rts)SetFirstPerson(false);else if(interact)Interact();encounter?.UpdatePresentation();spacecraft?.StepWeapons(SimulationDelta);var mouse=Mouse.current;
 
             bool placing=Base!=null&&(Base.Placing!=null||Base.RoadPlacing);
 
@@ -470,7 +478,7 @@ namespace MassiveArmy.Planetary
 
             movement.SetBuffer(moveKernel,"_PlanetField",navigation.Global);movement.SetVector("_PlanetGoal",CubeSphere.Encode(goal));movement.SetFloat("_PlanetSpeed",unitSpeed);movement.SetFloat("_PlanetDt",BattleSettings.Tick);
 
-            uint previousTick=SimulationTicks;accumulator=Paused||!SimulationActive?0:Mathf.Min(accumulator+Time.deltaTime,BattleSettings.Tick*4);while(accumulator>=BattleSettings.Tick){encounter?.BeforeTick();if(encounter!=null)encounter.MoveUnits();else movement.Dispatch(moveKernel,(unitCount+127)/128,1,1);encounter?.AfterTick();if(!(SystemRuntime?.Civilisation?.CatchingUp(definition.bodyId)??false))Base?.Tick(BattleSettings.Tick);accumulator-=BattleSettings.Tick;SimulationTicks++;}SimulationEndForValidation?.Invoke();Base?.Rebase();resourceDecals?.Update();hud?.Tick();if(hud!=null){if(headquartersHud==null)headquartersHud=new PlanetHeadquartersHud(this);headquartersHud.Tick();}
+            uint previousTick=SimulationTicks;accumulator=Paused||!SimulationActive?0:Mathf.Min(accumulator+SimulationDelta,BattleSettings.Tick*4*Mathf.Max(1,SimulationSpeed));while(accumulator>=BattleSettings.Tick){encounter?.BeforeTick();if(encounter!=null)encounter.MoveUnits();else movement.Dispatch(moveKernel,(unitCount+127)/128,1,1);encounter?.AfterTick();if(!(SystemRuntime?.Civilisation?.CatchingUp(definition.bodyId)??false))Base?.Tick(BattleSettings.Tick);accumulator-=BattleSettings.Tick;SimulationTicks++;}SimulationEndForValidation?.Invoke();Base?.Rebase();resourceDecals?.Update();hud?.Tick();if(hud!=null){if(headquartersHud==null)headquartersHud=new PlanetHeadquartersHud(this);headquartersHud.Tick();}
 
             spacecraft?.RenderTrajectory();spacecraft?.RenderWeapons();spacecraft?.RenderLanding();flightHudRenderer?.SetActive(IsPiloting);var vp=GL.GetGPUProjectionMatrix(view.projectionMatrix,true)*view.worldToCameraMatrix;var centre=origin.RenderPosition(definition.position);var bounds=new Bounds(centre,Vector3.one*(definition.radius+definition.ReliefBound)*2);
 
@@ -522,16 +530,16 @@ namespace MassiveArmy.Planetary
 
             if(!Ready)return;
 
-            if(IsPiloting){GUI.Label(new Rect(12,12,1100,80),$"CAPITAL SHIP Ã‚Â· {spacecraft.Speed:F0} m/s\nW/S thrust Ã‚Â· A/D strafe Ã‚Â· Space land/take off Ã‚Â· R/C climb/descend Ã‚Â· V flight assist Ã‚Â· mouse pitch/yaw Ã‚Â· Q/E roll Ã‚Â· Shift boost Ã‚Â· G landing gear Ã‚Â· B brake Ã‚Â· L orbit attitude lock Ã‚Â· Left mouse fire rocket Ã‚Â· F leave seat Ã‚Â· Tab/H return to RTS");}
+            if(IsPiloting){GUI.Label(new Rect(12,12,1100,80),$"CAPITAL SHIP ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {spacecraft.Speed:F0} m/s\nW/S thrust ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· A/D strafe ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Space land/take off ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· R/C climb/descend ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· V flight assist ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· mouse pitch/yaw ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Q/E roll ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Shift boost ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· G landing gear ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· B brake ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· L orbit attitude lock ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Left mouse fire rocket ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· F leave seat ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· Tab/H return to RTS");}
 
-            else if(modes.Mode==PlayerControlMode.FirstPerson){GUI.Label(new Rect(Screen.width*.5f-4,Screen.height*.5f-10,20,20),"+");GUI.Label(new Rect(12,12,900,60),$"Health {player.Environment.Health:F0}   Oxygen {player.Environment.Oxygen:F0}%   Inventory: repair tool, suit oxygen\nWASD walk Ã¢â‚¬Â¢ mouse look Ã¢â‚¬Â¢ Space jump Ã¢â‚¬Â¢ F interact Ã¢â‚¬Â¢ Tab return to RTS");}
+            else if(modes.Mode==PlayerControlMode.FirstPerson){GUI.Label(new Rect(Screen.width*.5f-4,Screen.height*.5f-10,20,20),"+");GUI.Label(new Rect(12,12,900,60),$"Health {player.Environment.Health:F0}   Oxygen {player.Environment.Oxygen:F0}%   Inventory: repair tool, suit oxygen\nWASD walk ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ mouse look ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Space jump ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ F interact ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Tab return to RTS");}
 
-            else if(hud==null) GUI.Label(new Rect(12,12,1300,80),"PLANET DEVELOPMENT Ã¢â‚¬Â¢ WASD / middle drag pan Ã¢â‚¬Â¢ wheel zoom Ã¢â‚¬Â¢ Q/E rotate Ã¢â‚¬Â¢ F first person\nClick / drag select Ã¢â‚¬Â¢ Shift add Ã¢â‚¬Â¢ Ctrl remove Ã¢â‚¬Â¢ right-click move Ã¢â‚¬Â¢ X stop Ã¢â‚¬Â¢ Esc clear Ã¢â‚¬Â¢ F2 terrain statistics Ã¢â‚¬Â¢ F3 wireframe\n"+(commands?.Status??"Legacy all-tank commands")+" Ã¢â‚¬Â¢ Production combat, construction, fog and vehicles are pending migration.");
+            else if(hud==null) GUI.Label(new Rect(12,12,1300,80),"PLANET DEVELOPMENT ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ WASD / middle drag pan ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ wheel zoom ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Q/E rotate ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ F first person\nClick / drag select ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Shift add ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Ctrl remove ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ right-click move ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ X stop ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Esc clear ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ F2 terrain statistics ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ F3 wireframe\n"+(commands?.Status??"Legacy all-tank commands")+" ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ Production combat, construction, fog and vehicles are pending migration.");
 
             if(InteractionPrompt.Length>0)GUI.Label(new Rect(Screen.width*.5f-200,Screen.height*.65f,600,40),InteractionPrompt);
             if(selecting&&Mouse.current!=null){var end=Mouse.current.position.ReadValue();var rect=Rect.MinMaxRect(Mathf.Min(selectionStart.x,end.x),Screen.height-Mathf.Max(selectionStart.y,end.y),Mathf.Max(selectionStart.x,end.x),Screen.height-Mathf.Min(selectionStart.y,end.y));GUI.Box(rect,GUIContent.none);}
 
-            if(showTerrainDebug)GUI.Label(new Rect(12,90,1100,45),streamed!=null?$"Streamed terrain Ã¢â‚¬Â¢ {streamed.ResidentPatches} visible / {streamed.GpuLeafCount} leaf patches Ã¢â‚¬Â¢ level {streamed.DeepestLevel} Ã¢â‚¬Â¢ {streamed.BufferBytes/1024f:F0} KiB buffers Ã¢â‚¬Â¢ {(streamed.BudgetLimited?"budget limited":"within detail target")}\nRadius {definition.radius:F0} m Ã¢â‚¬Â¢ navigation cells {navigation.CellCount} Ã¢â‚¬Â¢ tick {SimulationTicks}":cbt!=null?$"CBT {(cbt.Converged?"settled":"refining")} Ã¢â‚¬Â¢ active {cbt.ActiveLeaves} / visible {cbt.VisibleLeaves} / depth-limited {cbt.SaturatedLeaves} Ã¢â‚¬Â¢ {cbt.BufferBytes/1048576f:F2} MiB terrain buffers\nNavigation cells {navigation.CellCount} Ã¢â‚¬Â¢ tick {SimulationTicks} Ã¢â‚¬Â¢ origin sectors {origin.Origin.sectorX},{origin.Origin.sectorY},{origin.Origin.sectorZ}":"Uniform terrain baseline Ã¢â‚¬Â¢ adaptiveTerrain enables CBT");
+            if(showTerrainDebug)GUI.Label(new Rect(12,90,1100,45),streamed!=null?$"Streamed terrain ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ {streamed.ResidentPatches} visible / {streamed.GpuLeafCount} leaf patches ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ level {streamed.DeepestLevel} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ {streamed.BufferBytes/1024f:F0} KiB buffers ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ {(streamed.BudgetLimited?"budget limited":"within detail target")}\nRadius {definition.radius:F0} m ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ navigation cells {navigation.CellCount} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ tick {SimulationTicks}":cbt!=null?$"CBT {(cbt.Converged?"settled":"refining")} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ active {cbt.ActiveLeaves} / visible {cbt.VisibleLeaves} / depth-limited {cbt.SaturatedLeaves} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ {cbt.BufferBytes/1048576f:F2} MiB terrain buffers\nNavigation cells {navigation.CellCount} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ tick {SimulationTicks} ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ origin sectors {origin.Origin.sectorX},{origin.Origin.sectorY},{origin.Origin.sectorZ}":"Uniform terrain baseline ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ adaptiveTerrain enables CBT");
 
         }
 
@@ -562,6 +570,7 @@ namespace MassiveArmy.Planetary
     }
 
 }
+
 
 
 

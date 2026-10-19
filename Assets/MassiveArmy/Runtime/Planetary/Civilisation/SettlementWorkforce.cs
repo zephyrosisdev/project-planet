@@ -2,6 +2,8 @@ using System;
 namespace MassiveArmy.Planetary {
     public sealed partial class CivilisationRuntime {
         // Strategic biographies assign job slots; live civilian and army movement stay on GPU.
+        internal static bool RecoveryEssential(BuildingDefinition definition)=>WorkerPriority(definition)==0||definition.generation>0||definition.id=="oil"||definition.id=="civil_oil_well"||definition.id=="civil_oil_refinery"||definition.id=="civil_mine_methane";
+        internal static int ConstructionPriority(RtsBuilding building)=>!building.Complete?(RecoveryEssential(building.definition)?0:building.definition.housingCapacity>0?1:2):3;
         internal static int WorkerPriority(BuildingDefinition d){
             if(d.extractedResource=="water"||d.id.StartsWith("civil_farm_")||d.id=="civil_food_processing"||d.id=="civil_hydroponics"||d.id=="civil_beef_shed"||d.id=="civil_butcher")return 0;
             if(d.extraction>0)return 1;
@@ -13,12 +15,12 @@ namespace MassiveArmy.Planetary {
             colony.workforce=Math.Max(0,Math.Min(colony.population,colony.residents.Count==0?colony.population:adults));colony.employed=colony.workerDemand=colony.plannedWorkerDemand=0;
             foreach(var b in local.Buildings){if(b.team!=team||b.removed)continue;
                 b.WorkersAssigned=0;b.WorkforceEfficiency=b.definition.workers==0?1:0;
-                if(b.paused||!b.powered||b.node>=0&&local.Nodes[b.node].remaining<=0)continue;
+                if(b.paused||!b.powered||b.roadSuspended||b.node>=0&&local.Nodes[b.node].remaining<=0)continue;
                 int required=b.definition.workers*b.level;colony.plannedWorkerDemand+=required;
                 if(b.Complete)colony.workerDemand+=required;
             }
-            int projects=0;foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&!b.paused&&b.powered&&(!b.Complete||b.repairing&&b.health<b.MaxHealth))projects++;
-            colony.workerDemand+=projects*2;int remaining=Math.Max(0,colony.workforce-(projects>0?2:0));
+            int projects=0;foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&!b.paused&&!b.roadSuspended&&b.powered&&!b.awaitingProjectMaterials&&(!b.Complete||b.repairing&&b.health<b.MaxHealth))projects++;
+            colony.workerDemand+=projects*2;int remaining=Math.Max(0,colony.workforce-(projects>0?Math.Min(4,Math.Max(2,projects/4)):0));
             // Share shortages fairly within a priority; food/water and extraction survive expansion.
             for(int priority=0;priority<4;priority++){
                 int demand=0;foreach(var b in local.Buildings)if(Available(local,b,team,priority))demand+=b.definition.workers*b.level;
@@ -32,11 +34,11 @@ namespace MassiveArmy.Planetary {
             }
             MatchResidentJobs(local,colony);
         }
-        static bool Available(PlanetRtsBase local,RtsBuilding b,int team,int priority)=>b.team==team&&b.Complete&&!b.paused&&b.powered&&b.definition.workers>0&&(b.node<0||local.Nodes[b.node].remaining>0)&&WorkerPriority(b.definition)==priority;
+        static bool Available(PlanetRtsBase local,RtsBuilding b,int team,int priority)=>b.team==team&&b.Complete&&!b.paused&&!b.roadSuspended&&b.powered&&b.definition.workers>0&&(b.node<0||local.Nodes[b.node].remaining>0)&&WorkerPriority(b.definition)==priority;
         public static void ResourceTotals(ColonyState colony,string resource,out double stored,out double local,out double transit){
             stored=colony.inventory.Get(resource);local=transit=0;
-            foreach(var item in colony.installations)if(!ReferenceEquals(item.inventory,colony.inventory))local+=item.inventory.Get(resource);
-            foreach(var cargo in colony.cargoVehicles)if(cargo.resource==resource)transit+=cargo.loaded;
+            foreach(var item in colony.installations)if(!ReferenceEquals(item.inventory,colony.inventory)){if(item.definition=="civil_warehouse"||item.definition=="civil_market")stored+=item.inventory.Get(resource);else local+=item.inventory.Get(resource);}
+            foreach(var cargo in colony.cargoVehicles)if(cargo.resource==resource)transit+=cargo.loaded+cargo.buffered+cargo.transferred;
         }
     }
 }

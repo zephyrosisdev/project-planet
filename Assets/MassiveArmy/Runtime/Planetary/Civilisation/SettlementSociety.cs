@@ -29,7 +29,7 @@ namespace MassiveArmy.Planetary {
         static double Random(long id,string salt)=>PlanetResourceProfile.Random(id+":"+salt);
         internal static ResidentState Person(ColonyState c,long id)=>c.residents.Find(p=>p.id==id);
         internal static HouseholdState Family(ColonyState c,long id)=>c.households.Find(h=>h.id==id);
-        internal static RtsBuilding SocietyBuilding(PlanetRtsBase local,long id)=>local.Buildings.Find(b=>b.persistentId==id&&!b.removed);
+        internal static RtsBuilding SocietyBuilding(PlanetRtsBase local,long id)=>local.FindBuilding(id);
         internal static double Credits(ColonyState c){double sum=c.council.treasury;foreach(var p in c.residents)sum+=p.savings;foreach(var e in c.enterprises)sum+=e.balance;return sum;}
         internal void EnsureResidents(ColonyState c){
             if(!c.council.initialised){c.council.initialised=true;c.council.treasury=500;}
@@ -54,8 +54,8 @@ namespace MassiveArmy.Planetary {
             c.residents.Add(p);h.members.Add(id);if(h.owner==0&&age>=18)h.owner=id;if(h.shopper==0&&age>=18)h.shopper=id;c.societyRevision++;
         }
         internal static void BindHouseholds(PlanetRtsBase local,ColonyState c){
-            var used=new HashSet<long>();foreach(var h in c.households){var home=SocietyBuilding(local,h.home);if(home==null||!home.Complete||home.definition.housingCapacity<=0||home.team!=c.faction||!used.Add(h.home))h.home=0;}
-            foreach(var h in c.households)if(h.home==0){RtsBuilding preferred=null;foreach(var candidate in local.Buildings)if(candidate.team==c.faction&&!candidate.removed&&candidate.Complete&&candidate.definition.housingCapacity>=h.members.Count&&!used.Contains(candidate.persistentId)){if(preferred==null)preferred=candidate;var tenure=candidate.definition.id=="civil_social_home"?HomeTenure.SocialHousing:candidate.definition.id=="civil_rental_home"?HomeTenure.PrivateRental:HomeTenure.OwnerOccupied;if(tenure==h.tenure){preferred=candidate;break;}}
+            var used=new HashSet<long>();foreach(var h in c.households){var home=SocietyBuilding(local,h.home);if(home==null||home.roadSuspended||!home.Complete||home.definition.housingCapacity<=0||home.team!=c.faction||!used.Add(h.home))h.home=0;}
+            foreach(var h in c.households)if(h.home==0){RtsBuilding preferred=null;foreach(var candidate in local.Buildings)if(candidate.team==c.faction&&!candidate.removed&&!candidate.roadSuspended&&candidate.Complete&&candidate.definition.housingCapacity>=h.members.Count&&!used.Contains(candidate.persistentId)){if(preferred==null)preferred=candidate;var tenure=candidate.definition.id=="civil_social_home"?HomeTenure.SocialHousing:candidate.definition.id=="civil_rental_home"?HomeTenure.PrivateRental:HomeTenure.OwnerOccupied;if(tenure==h.tenure){preferred=candidate;break;}}
                 if(preferred!=null){var b=preferred;h.home=b.persistentId;used.Add(h.home);h.tenure=b.definition.id=="civil_social_home"?HomeTenure.SocialHousing:b.definition.id=="civil_rental_home"?HomeTenure.PrivateRental:HomeTenure.OwnerOccupied;
                     if(h.tenure==HomeTenure.PrivateRental){foreach(var owner in c.residents)if(owner.alive&&owner.age>=18&&owner.household!=h.id&&(h.owner==0||owner.savings>(Person(c,h.owner)?.savings??0)))h.owner=owner.id;}
                     c.societyRevision++;}
@@ -76,9 +76,10 @@ namespace MassiveArmy.Planetary {
                     best.workplace=b.persistentId;best.role=role;best.wage=role==CivilianRole.Engineer?18:role==CivilianRole.Gatherer?10:8;changed=true;
                 }
             }
-            foreach(var b in local.Buildings){if(b.team!=c.faction)continue;b.constructionWorkers=0;if(b.removed||b.paused||!b.powered||b.Complete&&(!b.repairing||b.health>=b.MaxHealth))continue;
-                for(int i=0;i<2;i++){ResidentState builder=null;foreach(var p in c.residents)if(p.alive&&p.age>=18&&p.age<75&&p.workplace==0&&(builder==null||p.education>builder.education))builder=p;if(builder==null||c.employed>=c.workforce)break;builder.workplace=b.persistentId;builder.role=b.definition.id=="wall"||b.definition.id=="civil_fence"||b.definition.id=="gate"?CivilianRole.Worker:CivilianRole.Engineer;builder.wage=12;b.constructionWorkers++;c.employed++;changed=true;}
-            }
+            var projects=new List<RtsBuilding>();foreach(var b in local.Buildings)if(b.team==c.faction){b.constructionWorkers=0;if(!b.removed&&!b.paused&&!b.roadSuspended&&b.powered&&!b.awaitingProjectMaterials&&(!b.Complete||b.repairing&&b.health<b.MaxHealth))projects.Add(b);}
+            if(projects.Count>1){var ordinals=new Dictionary<int,int>();for(int i=0;i<projects.Count;i++)ordinals[projects[i].index]=i;int start=(int)(local.Civilisation.SimulationTime/15)%projects.Count;projects.Sort((a,b)=>{int rank=ConstructionPriority(a).CompareTo(ConstructionPriority(b));return rank!=0?rank:((ordinals[a.index]-start+projects.Count)%projects.Count).CompareTo((ordinals[b.index]-start+projects.Count)%projects.Count);});}
+            // Share builders one per project before assigning a second builder to any project.
+            for(int pass=0;pass<2;pass++)foreach(var b in projects){ResidentState builder=null;foreach(var p in c.residents)if(p.alive&&p.age>=18&&p.age<75&&p.workplace==0&&(builder==null||p.education>builder.education))builder=p;if(builder==null||c.employed>=c.workforce)break;builder.workplace=b.persistentId;builder.role=b.definition.id=="wall"||b.definition.id=="civil_fence"||b.definition.id=="gate"?CivilianRole.Worker:CivilianRole.Engineer;builder.wage=12;b.constructionWorkers++;c.employed++;changed=true;}
             foreach(var p in c.residents)if(p.workplace==0){p.wage=0;p.role=CivilianRole.Survivor;}
             if(changed)c.societyRevision++;
         }

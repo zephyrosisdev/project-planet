@@ -25,6 +25,8 @@ namespace MassiveArmy.Planetary
         public float roadTileSize=8,roadTileCost=1,roadMaximumStepHeight=3;
         public int roadSearchBudget=4096,maximumRoadTiles=32768,maximumCargoVehicles=64;
         public float groundCargoSpeed=12,airCargoSpeed=55,cargoCapacity=80,cargoHandlingSeconds=3;
+        public float railTileCost=2,trainCargoCapacity=480,trainCargoSpeed=35,trainCargoCost=750;
+        public float shipCargoCapacity=240,airFreightCapacity=160,shipCargoSpeed=18,freightAircraftSpeed=90,shipCargoCost=620,freightAircraftCost=900;
         public float inputBufferBatches=3,outputBufferBatches=2;
         public float cargoVehicleSeconds=30,cargoVehicleMaterialCost=120,airCargoVehicleMaterialCost=350;
         public float groundFuelPerMetre=.0001f,airFuelPerMetre=.001f;

@@ -1,3 +1,4 @@
+#pragma kernel GrowStructureDamage
 #pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
 #define PLANET_SPECIALIZE_TERRAIN 1
 #pragma multi_compile _ PLANET_SPARSE_SPATIAL
@@ -184,3 +185,6 @@ groupshared uint StatisticsLocal[4];
  // Event-only exact destinations avoid coarse hearing-cell quantization, with no new per-tick unit work.
  if((u.flags&ZOMBIE_WANDERING)!=0&&distance<_StrategicHearingRadius&&StartingRefugeClear(_StrategicBlast.xyz)){u.destination=PlanetEncode(_StrategicBlast.xyz);u.flags&=~(ARRIVED|STOPPED);_Units[id.x]=u;}}
 [numthreads(1,1,1)]void StrategicStamp(uint3 id:SV_DispatchThreadID){uint serial;InterlockedAdd(_RemainsCounter[0],1,serial);serial++;float3 up=_StrategicBlast.xyz;Remains stamp;stamp.centre=float4(up,_StrategicRadius*2);stamp.tangent=float4(normalize(cross(abs(up.y)>.95?float3(1,0,0):float3(0,1,0),up)),0);stamp.metadata=float4(0,0,0,serial);_Remains[(serial-1)%512]=stamp;int2 centre=PlanetPositionCell(PlanetEncode(up),_RemainsResolution);int extent=min(16,1+(int)ceil(_StrategicRadius/(2*_PlanetRadius/_RemainsResolution*.4)));for(int y=-extent;y<=extent;y++)for(int x=-extent;x<=extent;x++){int2 c=centre;for(int a=0;a<abs(x);a++)c=PlanetNeighbour(c,int2(x<0?-1:1,0),_RemainsResolution);for(int b=0;b<abs(y);b++)c=PlanetNeighbour(c,int2(0,y<0?-1:1),_RemainsResolution);InterlockedMax(_RemainsIndex[PlanetIndex(c,_RemainsResolution)],serial);}}
+
+StructuredBuffer<uint> _PreviousStructureDamage;uint _OldStructureCapacity,_NewStructureCapacity;
+[numthreads(128,1,1)]void GrowStructureDamage(uint3 id:SV_DispatchThreadID){if(id.x<_NewStructureCapacity)_StructureDamage[id.x]=id.x<_OldStructureCapacity?_PreviousStructureDamage[id.x]:0;}

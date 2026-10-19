@@ -177,11 +177,11 @@ namespace MassiveArmy.Planetary
 
             context.Clear();queueStatus=null;var building=world.Selected;if(building==null){Label(context,"SELECT A BUILDING","heading");return;}
 
-            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(world.Civilisation!=null){Label(context,"DISTRICT · "+building.definition.district,"muted");HouseholdContext(context,building);}
+            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(world.Civilisation!=null){Label(context,"DISTRICT · "+building.definition.district,"muted");HouseholdContext(context,building);if(building.roadSuspended)Label(context,"Road access blocked · suspended while another route is planned","muted");}
 
             var portrait=new Image{image=art?.Find("building",building.definition.id)?.portrait,scaleMode=ScaleMode.ScaleToFit};portrait.AddToClassList("portrait-large");context.Add(portrait);
 
-            queueStatus=Label(context,"","muted");queueStatus.name="planet-building-status";
+            queueStatus=Label(context,"","muted");queueStatus.name="planet-building-status";if(building.awaitingProjectMaterials)queueStatus.text="REBUILD PROJECT: waiting for delivered construction supplies";
             if(building.team!=0||fixture.sessionMode==PlanetGameMode.AiTest){Label(context,"AI faction "+(building.team+1)+" · autonomous base","muted");return;}
 
             var row=new VisualElement();row.AddToClassList("row");context.Add(row);Button(row,"UPGRADE",()=>world.Upgrade(building),"planet-upgrade");Button(row,building.paused?"RESUME":"PAUSE",()=>{building.paused=!building.paused;revision=-1;},"planet-pause");
@@ -223,7 +223,7 @@ namespace MassiveArmy.Planetary
 
             for(int i=0;i<resources.Count;i++)resources[i].text=$"{world.Faction.wallet.Stock[i]:0} / {world.Faction.wallet.Capacity[i]:0}";
 
-            layout.Value("fps",$"{1/Mathf.Max(Time.smoothDeltaTime,.0001f):0} FPS · TICK {fixture.SimulationTicks}"+(fixture.Paused?" · PAUSED":""));layout.Value("faction","PLANET COMMAND");layout.Value("swarm",fixture.ModeStatus);layout.Value("outcome",world.Outcome);
+            layout.Value("fps",$"{1/Mathf.Max(Time.smoothDeltaTime,.0001f):0} FPS · TICK {fixture.SimulationTicks} · {fixture.SimulationSpeedLabel}"+(fixture.Paused?" · PAUSED":""));layout.Value("faction","PLANET COMMAND");layout.Value("swarm",fixture.ModeStatus);layout.Value("outcome",world.Outcome);
 
             selection.text=$"{fixture.Commands.SelectedCount} SELECTED • {fixture.unitCount} ACTIVE\n"+fixture.Commands.Status;notice.text=world.Notice;power.text=$"POWER {world.Faction.generation:0} / {world.Faction.demand:0} • EFFICIENCY {world.Faction.efficiency:P0}";
 
@@ -233,7 +233,7 @@ namespace MassiveArmy.Planetary
 
             RefreshMap();
 
-            var b=world.Selected;if(b!=null&&queueStatus!=null)queueStatus.text=b.Complete?$"LEVEL {b.level} • HEALTH {b.health:0} / {b.MaxHealth:0}\n"+(world.Civilisation==null?"":$"WORKERS {b.WorkersAssigned}/{b.definition.workers*b.level} · STAFFING {b.WorkforceEfficiency:P0}\n")+(b.queue.Count==0?"Queue empty":$"{b.queue[0].id}: {b.queue[0].Fraction:P0}"):$"CONSTRUCTION {b.construction/b.definition.time:P0}";
+            var b=world.Selected;if(b!=null&&queueStatus!=null)queueStatus.text=b.Complete?$"LEVEL {b.level} • HEALTH {b.health:0} / {b.MaxHealth:0}\n"+(world.Civilisation==null?"":$"WORKERS {b.WorkersAssigned}/{b.definition.workers*b.level} · STAFFING {b.WorkforceEfficiency:P0}\n")+(b.queue.Count==0?"Queue empty":$"{b.queue[0].id}: {b.queue[0].Fraction:P0}"):b.awaitingProjectMaterials?"REBUILD PROJECT: waiting for delivered construction supplies":$"CONSTRUCTION {b.construction/b.definition.time:P0}";
 
         }
 

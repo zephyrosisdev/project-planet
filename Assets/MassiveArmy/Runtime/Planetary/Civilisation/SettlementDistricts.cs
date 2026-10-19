@@ -20,6 +20,7 @@ namespace MassiveArmy.Planetary {
             foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.definition.district!=d.district){bool compatible=(d.district==SettlementDistrict.Residential&&b.definition.district==SettlementDistrict.Commercial)||(d.district==SettlementDistrict.Commercial&&b.definition.district==SettlementDistrict.Residential)||b.definition.district==SettlementDistrict.Civic;float gap=Distance(p,CubeSphere.Decode(b.position));if(!compatible&&gap<40)separation+=40-gap;}
             return road*.8f+grouping*1.2f+separation*2;
         }
+        internal bool CivilianExpansion(BuildingDefinition d)=>Civilisation!=null&&d.district!=SettlementDistrict.Military&&d.id!="command"&&d.id!="outpost";
         bool BuildDistrict(BuildingDefinition d,int team){
             var candidates=new List<(Vector3 point,int rotation,float score)>();
             if(d.housingCapacity>0||!string.IsNullOrEmpty(d.retailResource))AddStreetCandidates(d,team,candidates);
@@ -27,7 +28,10 @@ namespace MassiveArmy.Planetary {
                 for(int sign=-1;sign<=1;sign+=2){int dx=(a.rotation&1)==0?sign*a.width:0,dy=(a.rotation&1)!=0?sign*a.depth:0;var p=Grid.Point(a.face,a.x+a.width*.5+dx,a.y+a.depth*.5+dy);
                     if(GridClear(Grid.Area(d,p,a.rotation),out _))candidates.Add((p,a.rotation,-100000+Distance(p,EntranceAnchor(team,p))));}
             }
-            foreach(var anchorBuilding in Buildings){if(anchorBuilding.team!=team||anchorBuilding.removed||!anchorBuilding.Complete||anchorBuilding.definition.buildRadius<=0)continue;
+            int anchorCount=0;foreach(var anchorBuilding in Buildings)if(anchorBuilding.team==team&&!anchorBuilding.removed&&anchorBuilding.Complete&&(CivilianExpansion(d)||anchorBuilding.definition.buildRadius>0))anchorCount++;
+            int ordinal=0;int start=anchorCount==0?0:(int)(Civilisation.SimulationTime/Math.Max(1,Civilisation.Settings.strategyTickSeconds))%anchorCount;
+            for(int pass=0;pass<2&&candidates.Count<196;pass++)foreach(var anchorBuilding in Buildings){if(anchorBuilding.team!=team||anchorBuilding.removed||!anchorBuilding.Complete||!CivilianExpansion(d)&&anchorBuilding.definition.buildRadius<=0)continue;
+                int index=ordinal++%Math.Max(1,anchorCount);if(pass==0?index<start:index>=start)continue;
                 var origin=Area(anchorBuilding);var offset=SettlementDistricts.Offset(d.district);var centre=Grid.Point(origin.face,origin.x+origin.width*.5+offset.x,origin.y+origin.depth*.5+offset.y);
                 int stride=Math.Max(d.footprintWidth,d.footprintDepth)+2;
                 for(int y=-3;y<=3;y++)for(int x=-3;x<=3;x++){
@@ -40,6 +44,19 @@ namespace MassiveArmy.Planetary {
             candidates.Sort((a,b)=>a.score.CompareTo(b.score));int budget=Math.Min(24,candidates.Count);
             for(int i=0;i<budget;i++){var c=candidates[i];if(ConstructOriented(d,team,c.point,c.rotation))return true;}
             return false;
+        }
+        internal bool BuildSettlementFrontier(string requested,int team){
+            var wanted=Catalog.Buildings[requested];if(!CivilianExpansion(wanted)||wanted.terrain==TerrainRule.Node)return false;
+            // Roads supply civilian construction; forward bases do not unlock economic land.
+            int count=0;foreach(var building in Buildings)if(building.team==team&&!building.removed&&building.Complete)count++;
+            if(count==0)return false;int selected=(int)(Civilisation.SimulationTime/Math.Max(1,Civilisation.Settings.strategyTickSeconds))%count,index=0;
+            foreach(var anchorBuilding in Buildings){if(anchorBuilding.team!=team||anchorBuilding.removed||!anchorBuilding.Complete)continue;if(index++!=selected)continue;
+                var origin=CubeSphere.Decode(anchorBuilding.position);var east=Vector3.Cross(Mathf.Abs(origin.y)>.95f?Vector3.right:Vector3.up,origin).normalized;float range=48+Math.Max(wanted.footprintWidth,wanted.footprintDepth)*8;
+                double phase=Math.Floor(Civilisation.SimulationTime/Math.Max(1,Civilisation.Settings.strategyTickSeconds)/count);
+                for(int attempt=0;attempt<16;attempt++){float angle=(float)(phase*2.3999632+attempt*Math.PI/8);var target=(origin+(east*Mathf.Cos(angle)+Vector3.Cross(origin,east)*Mathf.Sin(angle))*range/fixture.definition.radius).normalized;
+                    if(ConstructForTeam(requested,team,target))return true;
+                }return false;
+            }return false;
         }
         readonly List<(Vector3 point,int rotation,float score)> previewStreetCandidates=new List<(Vector3,int,float)>();
         void AlignResidentialPreview(BuildingDefinition d,ref Vector3 point,ref int rotation){
@@ -72,7 +89,7 @@ namespace MassiveArmy.Planetary {
                 }
             }
         }
-        bool ConstructOriented(BuildingDefinition d,int team,Vector3 direction,int rotation){direction=SnapBuilding(d,direction,rotation);var valid=Validate(d,direction,rotation,true,team);if(!valid.valid||!fixture.IsFootprintClear(direction,FootprintRadius(d))||!Factions[team].wallet.Spend(d.cost))return false;
+        bool ConstructOriented(BuildingDefinition d,int team,Vector3 direction,int rotation){direction=SnapBuilding(d,direction,rotation);var valid=Validate(d,direction,rotation,true,team);if(!valid.valid||!fixture.IsFootprintClear(direction,FootprintRadius(d))||!ConstructionCost(team,direction,d.cost,true))return false;
             var b=Create(d,direction,rotation,false,team);b.node=valid.node;Civilisation?.SponsorProject(this,b);if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
     }
 }

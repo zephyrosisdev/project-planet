@@ -4,7 +4,7 @@ namespace MassiveArmy.Planetary
 {
     public sealed partial class PlanetRtsBase {
         public PlanetConstructionGrid Grid {get;private set;}
-        sealed class ConstructionPose {public PlanetConstructionGrid.Footprint area;public int terrain;public float foundation;public Quaternion rotation;public Vector3 direction;public Renderer[] renderers;}
+        sealed class ConstructionPose {public PlanetConstructionGrid.Footprint area;public int terrain;public float foundation;public Quaternion rotation;public Vector3 direction;public Renderer[] renderers;public bool positioned;public Vector3 renderedPosition;}
         readonly Dictionary<Transform,ConstructionPose> constructionPoses=new Dictionary<Transform,ConstructionPose>();
         public Vector3 SnapBuilding(BuildingDefinition definition,Vector3 direction,int rotation)=>Grid.Snap(definition,direction,rotation);
         internal PlanetConstructionGrid.Footprint Area(RtsBuilding building)=>Grid.Area(building.definition,CubeSphere.Decode(building.position),building.rotation);
@@ -24,10 +24,12 @@ namespace MassiveArmy.Planetary
             var result=new Bounds();for(int i=0;i<8;i++){var corner=source.center+Vector3.Scale(source.extents,new Vector3((i&1)==0?-1:1,(i&2)==0?-1:1,(i&4)==0?-1:1));var p=PlanetConstructionGrid.Warp(Vector3.Scale(corner,scale),x,z,plane,foundation);if(i==0)result=new Bounds(p,Vector3.zero);else result.Encapsulate(p);}
             result.Encapsulate(PlanetConstructionGrid.Warp(Vector3.Scale(source.center+Vector3.up*source.extents.y,scale),x,z,plane,foundation));result.Expand(.02f);return result;
         }
-        void PlaceConstruction(Transform target,BuildingDefinition definition,Vector3 direction,int rotation){var pose=PrepareConstruction(target,definition,direction,rotation);target.SetPositionAndRotation(fixture.RenderBodyPosition(new Double3(pose.direction)*pose.foundation),pose.rotation);}
+        void PlaceConstruction(Transform target,BuildingDefinition definition,Vector3 direction,int rotation){var pose=PrepareConstruction(target,definition,direction,rotation);PlacePreparedConstruction(target,pose);}
+        void PlacePreparedConstruction(Transform target,ConstructionPose pose){var position=fixture.RenderBodyPosition(new Double3(pose.direction)*pose.foundation);if(LegacyCityPresentation||!pose.positioned||position!=pose.renderedPosition){target.SetPositionAndRotation(position,pose.rotation);pose.positioned=true;pose.renderedPosition=position;}}
         internal bool GridClear(PlanetConstructionGrid.Footprint area,out string reason,BuildingDefinition candidate=null){
             var port=Grid.Port(area);foreach(var b in Buildings){if(b.removed)continue;var other=Area(b);if(area.Overlaps(other)){reason="Building grid footprints overlap";return false;}if(area.Contains(Grid.Port(other))||other.Contains(port)){reason="Keep the neighbouring building's road entrance clear";return false;}}
             if(Roads!=null)for(int y=0;y<area.depth;y++)for(int x=0;x<area.width;x++)if(Roads.HasRoad(new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y))&&!(candidate?.id=="gate"&&GatePassage(area,new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y)))){reason="Building footprint overlaps a road module";return false;}
+            if(Rails!=null)for(int y=0;y<area.depth;y++)for(int x=0;x<area.width;x++)if(Rails.HasRoad(new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y))){reason="Building footprint overlaps a railway module";return false;}
             reason="";return true;
         }
     }

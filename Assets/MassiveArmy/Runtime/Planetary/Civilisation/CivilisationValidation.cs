@@ -8,6 +8,18 @@ using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 namespace MassiveArmy.Planetary
 {
+    public sealed partial class PlanetRtsBase {
+        internal RtsBuilding DisconnectedCropFixture(){
+            var definition=Catalog.Buildings["civil_farm_wheat"];
+            for(int attempt=0;attempt<96;attempt++){
+                float angle=attempt*2.3999632f,range=120+Mathf.Sqrt(attempt)*12;
+                var point=TeamOffset(0,new Vector2(Mathf.Cos(angle)*range,Mathf.Sin(angle)*range));
+                int rotation=EntranceRotation(definition,point,0);point=SnapBuilding(definition,point,rotation);
+                if(Roads.Node(Grid.Direction(Grid.Port(Grid.Area(definition,point,rotation))))>=0)continue;
+                if(ConstructOriented(definition,0,point,rotation))return Buildings[Buildings.Count-1];
+            }return null;
+        }
+    }
     [DefaultExecutionOrder(-230)]public sealed class CivilisationValidation:MonoBehaviour {
         [Serializable]sealed class Report {public string status="PASS",error="";public List<string> checks=new List<string>();public int runtimeErrors,roadTiles,population;public double catchupMaxMs;public long allocatedBytes,reservedBytes;}
         readonly Report report=new Report();PlanetDevelopment world;CivilisationRuntime simulation;string output;
@@ -50,7 +62,7 @@ namespace MassiveArmy.Planetary
             var inventory=new ResourceInventory();inventory.Bind(simulation.Catalogue);inventory.Deposit("iron",8);inventory.Deposit("carbon",2);IndustryRecipe steel=null;foreach(var recipe in simulation.Catalogue.recipes)if(recipe.id=="steel")steel=recipe;
             inventory.RunRecipe(steel,steel.seconds*2);Check(inventory.Get("iron")==0&&inventory.Get("carbon")==0&&inventory.Get("steel")==8,"Recipes consume finite inputs and create configured outputs");double before=inventory.Get("steel");inventory.RunRecipe(steel,100);Check(inventory.Get("steel")==before,"Missing inputs stop manufacturing");
             Check(!inventory.Spend(new[]{new MaterialQuantity("steel",5),new MaterialQuantity("steel",5)}),"Duplicate manifest lines cannot overspend a stockpile");
-            foreach(var definition in local.Catalog.buildings)Check(definition.foodUse>0&&definition.consumption>0,"Food and energy upkeep configured: "+definition.id);
+            foreach(var definition in local.Catalog.buildings)if(definition.id!="civil_rail")Check(definition.foodUse>0&&definition.consumption>0,"Food and energy upkeep configured: "+definition.id);
             var warehouse=Find("civil_warehouse");Check(warehouse!=null&&ReferenceEquals(Installation(colony,warehouse).inventory,colony.inventory),"Warehouse holds the actual settlement inventory");
             Check(local.Roads.Connected(Find("barracks"),warehouse),"Starter production is connected through placed spherical road tiles");
             ValidateGrid(local);
@@ -71,8 +83,8 @@ namespace MassiveArmy.Planetary
             Step(120);bool gpuRouted=false;foreach(var vehicle in colony.cargoVehicles)if(vehicle.gpuRouteMetres>0)gpuRouted=true;Check(gpuRouted,"GPU road search reports route distances without downloading cart positions");Check(colony.inventory.Get("iron")>warehouseIron,"A finite cargo trip collects ore and delivers it to connected storage");
             local.CargoNavigation.Step(0,true);var tracked=colony.cargoVehicles[0];uint mission=tracked.navigationVersion;double routeDistance=tracked.gpuRouteMetres;local.CargoNavigation.ValidateStorageGrowth();local.CargoNavigation.Step(0,true);
             Check(tracked.navigationVersion==mission&&Math.Abs(tracked.gpuRouteMetres-routeDistance)<.01,"Growing road search storage preserves GPU mission and route progress");
-            Check(local.TryConstructInfrastructure("civil_farm_wheat",0),"Farm parcel is placeable through the existing building framework");var farm=Find("civil_farm_wheat");farm.construction=farm.definition.time;Step(1);var field=Installation(colony,farm);Supply(colony,field,"food",5);Supply(colony,field,"water",30);Supply(colony,field,"seeds",3);
-            Step(150);Check(field.harvests>0&&field.inventory.Get("grain")>0,"Crop parcels consume supplied water and seeds, grow and retain a finite harvest locally");
+            var farm=local.DisconnectedCropFixture();Check(farm!=null,"A disconnected farm parcel uses paid original building construction");farm.construction=farm.definition.time;Step(1);var field=Installation(colony,farm);Supply(colony,field,"food",5);Supply(colony,field,"water",30);Supply(colony,field,"seeds",3);
+            Step(150);Check(field.harvests>0&&field.inventory.Get("grain")>0,"Crop parcels consume supplied water and seeds, grow and retain a finite harvest locally: harvests="+field.harvests+", growth="+field.growth+", workers="+farm.WorkersAssigned+", power="+local.Faction.efficiency+", food="+field.inventory.Get("food")+", efficiency="+farm.Efficiency+", water="+field.inventory.Get("water")+", seeds="+field.inventory.Get("seeds")+", suspended="+farm.roadSuspended);
             Check(!local.Roads.Connected(farm,warehouse),"Manual-road fixture leaves the new farm disconnected");simulation.Settings.autoExtendSettlementRoads=true;double beforeExtension=colony.inventory.Get("construction_materials");Step(12);
             Check(local.Roads.Connected(farm,warehouse)&&colony.inventory.Get("construction_materials")<beforeExtension,"Settlement expansion automatically pays for a road to the existing warehouse network");simulation.Settings.autoExtendSettlementRoads=false;
             Check(local.Catalog.Buildings.ContainsKey("civil_oil_well")&&local.Catalog.Buildings.ContainsKey("civil_oil_refinery")&&simulation.Catalogue.crops.Length==7,"Oil industry, markets and seven crop types are data-driven placeable infrastructure");

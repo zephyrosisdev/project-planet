@@ -50,7 +50,7 @@ namespace MassiveArmy.Planetary
         void Update(){
             if(Galaxy==null||ActiveWorld==null||!ActiveWorld.Ready)return;
             var observer=ActiveWorld.ObserverPosition;var offset=observer.RelativeTo(ActiveWorld.definition.position);
-            if(!ActiveWorld.Paused){double step=Math.Min(Time.deltaTime,.05);Galaxy.Publish(Galaxy.Time+step,Bodies);Civilisation?.Advance(step);}
+            if(!ActiveWorld.Paused){double step=Math.Min(Time.deltaTime,.05)*ActiveWorld.SimulationSpeed;Galaxy.Publish(Galaxy.Time+step,Bodies);Civilisation?.Advance(step);}
             for(int i=0;i<worlds.Length;i++)if(worlds[i]!=null&&worlds[i].definition!=Bodies[i]){worlds[i].definition.position=Bodies[i].position;worlds[i].definition.velocity=Bodies[i].velocity;}
             ActiveWorld.FollowCelestialFrame(offset);
             UpdateStarlight();
