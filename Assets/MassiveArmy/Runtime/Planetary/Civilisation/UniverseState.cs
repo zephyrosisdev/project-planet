@@ -72,6 +72,9 @@ namespace MassiveArmy.Planetary
         public ResourceInventory inventory=new ResourceInventory();public string crop;public double growth,soilFertility=.8;public int harvests;public bool planted;
     }
     [Serializable] public sealed class UniverseState {
+        public List<OrbitalAssetState> orbitals=new List<OrbitalAssetState>();
+        public List<OrbitalLaunchJob> orbitalLaunches=new List<OrbitalLaunchJob>();
+        public List<OrbitalShipment> orbitalShipments=new List<OrbitalShipment>();
         public int schemaVersion=1,galaxySeed;public long nextId=1;public double time;
         public List<PlanetState> planets=new List<PlanetState>();public List<CivilisationFaction> factions=new List<CivilisationFaction>();public List<ColonyState> colonies=new List<ColonyState>();
         public PlanetState Planet(string id){foreach(var planet in planets)if(planet.body==id)return planet;return null;}

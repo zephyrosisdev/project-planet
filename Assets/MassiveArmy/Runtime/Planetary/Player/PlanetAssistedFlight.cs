@@ -19,11 +19,12 @@ namespace MassiveArmy.Planetary
                 var ahead=(p+new Double3(desired)*.75).Float.normalized;float terrain=Mathf.Max(Mathf.Max(surface.SampleHeight(up),surface.SampleHeight(ahead)),world.definition.oceanHeight);
                 double error=world.definition.radius+terrain+heldClearance-p.Magnitude;desired+=up*Mathf.Clamp((float)error*2,-100,100);
             }else desired=brake?Vector3.zero:pose.rotation*Vector3.ClampMagnitude(thrust,1)*speed;
+            if(!lowFlight&&world.Orbitals!=null){var station=world.Orbitals.Nearest(p,out double range);if(station!=null&&range<20000)desired+=station.Pose.linearVelocity.Float;}
             var velocity=pose.linearVelocity+new Double3(Vector3.ClampMagnitude(desired-pose.linearVelocity.Float,(brake?160:80)*dt));var next=p+velocity*dt;var nextUp=next.Float.normalized;
             double floor=world.definition.radius+Math.Max(surface.SampleHeight(nextUp),world.definition.oceanHeight)+(lowFlight?60:8);
             if(next.Magnitude<floor){next=new Double3(nextUp)*floor;float inward=Vector3.Dot(velocity.Float,nextUp);if(inward<0)velocity-=new Double3(nextUp)*inward;}
             if(lowFlight)pose.rotation=Quaternion.FromToRotation(up,nextUp)*pose.rotation;
-            pose.position=next;pose.linearVelocity=velocity;pose.angularVelocity=pose.rotation*(angularVelocity*Mathf.Deg2Rad);shipFrame.Pose=pose;
+            StationCollision(p,ref next,ref velocity);pose.position=next;pose.linearVelocity=velocity;pose.angularVelocity=pose.rotation*(angularVelocity*Mathf.Deg2Rad);shipFrame.Pose=pose;
         }
     }
 }

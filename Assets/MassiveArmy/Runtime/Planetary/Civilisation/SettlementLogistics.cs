@@ -66,7 +66,7 @@ namespace MassiveArmy.Planetary
         }
         double RetailTarget(ColonyState colony,RtsBuilding b,double horizon)=>Math.Max(civilisation.Settings.cargoCapacity*.25,Math.Min(colony.population,100*b.level)*b.definition.retailPerResident*horizon)+(b.definition.retailResource=="food"?FoodTarget(b.definition.foodUse*b.level,horizon):0);
         double FoodTarget(double upkeep,double horizon)=>Math.Max(upkeep*horizon,civilisation.Settings.cargoCapacity*.25);
-        double InputTarget(MaterialQuantity input,IndustryRecipe recipe,RtsBuilding producer,double horizon)=>Math.Max(civilisation.Settings.cargoCapacity*.25,Math.Max(input.amount*civilisation.Settings.inputBufferBatches,input.amount/recipe.seconds*producer.level*horizon));
+        double InputTarget(MaterialQuantity input,IndustryRecipe recipe,RtsBuilding producer,double horizon)=>producer.definition.id=="civil_launch_pad"&&input.resource=="propellant"?200:Math.Max(civilisation.Settings.cargoCapacity*.25,Math.Max(input.amount*civilisation.Settings.inputBufferBatches,input.amount/recipe.seconds*producer.level*horizon));
         // Reserve idle vehicles for the earliest food shortage across the whole settlement before exports.
         // Fixed installation order otherwise lets a busy early mine starve later housing indefinitely.
         bool DeliverFood(PlanetRtsBase local,ColonyState colony,CargoVehicleState vehicle,SurfaceInstallation warehouse,RtsBuilding home){
@@ -95,7 +95,7 @@ namespace MassiveArmy.Planetary
                 }
             }return false;
         }
-        double RegionalReserve(SurfaceInstallation item,string resource)=>item.definition!="civil_warehouse"?0:resource=="construction_materials"?civilisation.Settings.aiConstructionReserve:resource=="food"||resource=="propellant"||resource=="water"?100:resource=="seeds"?10:0;
+        double RegionalReserve(SurfaceInstallation item,string resource)=>item.definition=="civil_launch_pad"?(resource=="construction_materials"?120:resource=="propellant"?200:resource=="orbital_kit"?64:0):item.definition!="civil_warehouse"?0:resource=="construction_materials"?civilisation.Settings.aiConstructionReserve:resource=="food"||resource=="propellant"||resource=="water"?100:resource=="seeds"?10:0;
         bool CollectFood(PlanetRtsBase local,ColonyState colony,CargoVehicleState vehicle,SurfaceInstallation warehouse,RtsBuilding home){
             double demand=colony.population*civilisation.Settings.populationFoodPerSecond;foreach(var b in local.Buildings)if(b.team==colony.faction&&!b.removed)demand+=b.definition.foodUse*b.level;
             if(warehouse.inventory.Get("food")>=Math.Max(civilisation.Settings.cargoCapacity,demand*civilisation.Settings.logisticsReserveSeconds))return false;
@@ -125,7 +125,7 @@ namespace MassiveArmy.Planetary
                 if(item.id==warehouse.id)continue;var producer=Building(local,item.id);if(producer==null||!producer.Complete)continue;
                 double upkeep=producer.definition.foodUse*producer.level+(producer.definition.housingCapacity>0?Math.Min(colony.population,producer.definition.housingCapacity*producer.level)*civilisation.Settings.populationFoodPerSecond:0);
                 IndustryRecipe recipe=null;foreach(var candidate in civilisation.Catalogue.recipes)if(candidate.id==item.recipe&&candidate.building==item.definition){recipe=candidate;break;}
-                foreach(var resource in civilisation.Catalogue.resources){double surplus=item.inventory.Get(resource.id)-RegionalReserve(item,resource.id);if(recipe!=null){foreach(var input in recipe.inputs)if(input.resource==resource.id)surplus-=InputTarget(input,recipe,producer,SupplyHorizon(local,home,producer,vehicle.aerial));}if(item.definition.StartsWith("civil_farm_")&&(resource.id=="water"||resource.id=="seeds"||resource.id=="fertiliser"))continue;
+                foreach(var resource in civilisation.Catalogue.resources){if(item.definition=="civil_launch_pad"&&resource.id=="orbital_kit")continue;double surplus=item.inventory.Get(resource.id)-RegionalReserve(item,resource.id);if(recipe!=null){foreach(var input in recipe.inputs)if(input.resource==resource.id)surplus-=InputTarget(input,recipe,producer,SupplyHorizon(local,home,producer,vehicle.aerial));}if(item.definition.StartsWith("civil_farm_")&&(resource.id=="water"||resource.id=="seeds"||resource.id=="fertiliser"))continue;
                     if(resource.id=="food")surplus-=FoodTarget(upkeep,SupplyHorizon(local,home,producer,vehicle.aerial));
                     if(resource.id==producer.definition.retailResource)surplus=Math.Min(surplus,item.inventory.Get(resource.id)-RetailTarget(colony,producer,SupplyHorizon(local,home,producer,vehicle.aerial)));
                     double minimumLoad=warehouse.inventory.Get(resource.id)<1?.1:civilisation.Settings.cargoCapacity*.25;

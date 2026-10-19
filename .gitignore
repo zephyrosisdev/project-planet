@@ -171,3 +171,5 @@ TestResults/UiRedesign/*-pending.txt
 /TestResults/AiClearance/Player/player.log
 /TestResults/AiClearance/PlayerFinal/player.log
 TestResults
+ProfilerCaptures
+Assets/_Recovery

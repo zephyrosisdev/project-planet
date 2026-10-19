@@ -81,7 +81,7 @@ namespace MassiveArmy.Planetary
             if(fixture.sessionMode==PlanetGameMode.AiTest){construction.SetEnabled(false);front.Q("commands").SetEnabled(false);front.Q("quick-actions").SetEnabled(false);}
 
             MakeMap();context=front.Q("context");Refresh();
-            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"RESIDENTS",OpenResidents,"residents-open");Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
+            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.style.position=Position.Absolute;toolbar.style.right=12;toolbar.style.top=78;front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"ORBITALS",OpenOrbitals,"orbitals-open");Button(toolbar,"RESIDENTS",OpenResidents,"residents-open");Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
 
         }
 
@@ -190,6 +190,7 @@ namespace MassiveArmy.Planetary
 
             row=new VisualElement();row.AddToClassList("row");context.Add(row);Button(row,building.powered?"POWER DOWN":"POWER UP",()=>{building.powered=!building.powered;world.NotifyChanged();});Button(row,"SELL 45%",()=>world.Sell(building));if(building.Upgrading)Button(context,"CANCEL UPGRADE",()=>world.CancelUpgrade(building));
 
+            LaunchControls(context,building);
             if(building.definition.id=="gate")Button(context,building.gateOpen?"CLOSE GATE":"OPEN GATE",()=>world.SetGate(building,!building.gateOpen),"gate-toggle");
             if(building.definition.id=="silo")Button(context,"LAUNCH NUKE · 100F / 25I",()=>{fixture.NuclearTargetArmed=true;world.Notice="Click a target within silo range · right-click cancels";},"planet-launch-nuke");
 

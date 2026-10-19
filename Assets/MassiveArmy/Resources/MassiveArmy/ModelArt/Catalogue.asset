@@ -323,6 +323,12 @@ MonoBehaviour:
     gateLeaf: {fileID: 0}
     walls: []
     material: {fileID: 2100000, guid: 61fd9fdb98d63084ea8c15fe1415f2ea, type: 2}
+  - id: civil_launch_pad
+    near: {fileID: 4300000, guid: 4b978c32876bf9e4b9ac65154793fba4, type: 2}
+    far: {fileID: 4300000, guid: 4b978c32876bf9e4b9ac65154793fba4, type: 2}
+    gateLeaf: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 5550344ebb1f1084aadfa4926cbfe8a6, type: 2}
   unitIds:
   - infantry
   - engineer

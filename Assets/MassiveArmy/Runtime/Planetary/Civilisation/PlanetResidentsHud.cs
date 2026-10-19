@@ -4,7 +4,7 @@ using UnityEngine.UIElements;
 namespace MassiveArmy.Planetary {
     public sealed partial class PlanetRtsHud {
         bool residentsView;int residentPage;
-        void OpenResidents(){residentsView=true;resourcesView=false;if(civilisationOpen)civilisationOpen=false;ToggleCivilisation();}
+        void OpenResidents(){orbitalsView=false;residentsView=true;resourcesView=false;if(civilisationOpen)civilisationOpen=false;ToggleCivilisation();}
         void HouseholdContext(VisualElement parent,RtsBuilding building){
             var colony=world.Settlements?[building.team];if(colony==null||building.definition.housingCapacity<=0)return;
             var h=colony.households.Find(x=>x.home==building.persistentId);if(h==null){Label(parent,"VACANT FAMILY HOME · up to six residents","body");return;}

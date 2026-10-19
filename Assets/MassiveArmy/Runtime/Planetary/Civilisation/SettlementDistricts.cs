@@ -13,16 +13,24 @@ namespace MassiveArmy.Planetary {
             foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.Complete&&(b.definition.id=="command"||b.definition.id=="outpost")){var p=CubeSphere.Decode(b.position);float distance=(p-point).sqrMagnitude;if(distance<best){best=distance;result=p;}}return result;}
         internal int EntranceRotation(BuildingDefinition d,Vector3 direction,int team){var target=EntranceAnchor(team,direction);int best=0;float distance=float.MaxValue;
             for(int rotation=0;rotation<4;rotation++){float value=(Grid.Direction(Grid.Port(Grid.Area(d,direction,rotation)))-target).sqrMagnitude;if(value<distance){distance=value;best=rotation;}}return best;}
-        internal float DistrictScore(BuildingDefinition d,Vector3 p,int rotation,int team,Vector3 centre){
-            var entrance=Grid.Direction(Grid.Port(Grid.Area(d,p,rotation)));float road=Distance(entrance,EntranceAnchor(team,p));
-            foreach(var b in Buildings)if(b.team==team&&!b.removed){float link=Distance(entrance,Grid.Direction(Grid.Port(Area(b))));road=Mathf.Min(road,link);}
+        // One immutable infrastructure snapshot per placement search, not per candidate.
+        sealed class DistrictSites {
+            public readonly List<(SettlementDistrict district,Vector3 direction,Vector3 entrance)> sites=new List<(SettlementDistrict,Vector3,Vector3)>();
+            public readonly List<Vector3> anchors=new List<Vector3>();public Vector3 home;
+            public Vector3 Anchor(Vector3 point){var result=home;float best=float.MaxValue;foreach(var p in anchors){float distance=(p-point).sqrMagnitude;if(distance<best){best=distance;result=p;}}return result;}
+        }
+        DistrictSites CaptureDistrictSites(int team){var result=new DistrictSites{home=Homes[team]};foreach(var b in Buildings)if(b.team==team&&!b.removed){var p=CubeSphere.Decode(b.position);result.sites.Add((b.definition.district,p,Grid.Direction(Grid.Port(Area(b)))));if(b.Complete&&(b.definition.id=="command"||b.definition.id=="outpost"))result.anchors.Add(p);}return result;}
+        float DistrictScore(BuildingDefinition d,Vector3 p,int rotation,Vector3 centre,DistrictSites snapshot){
+            var entrance=Grid.Direction(Grid.Port(Grid.Area(d,p,rotation)));float road=Distance(entrance,snapshot.Anchor(p));
+            foreach(var site in snapshot.sites)road=Mathf.Min(road,Distance(entrance,site.entrance));
             float grouping=Distance(p,centre),separation=0;
-            foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.definition.district!=d.district){bool compatible=(d.district==SettlementDistrict.Residential&&b.definition.district==SettlementDistrict.Commercial)||(d.district==SettlementDistrict.Commercial&&b.definition.district==SettlementDistrict.Residential)||b.definition.district==SettlementDistrict.Civic;float gap=Distance(p,CubeSphere.Decode(b.position));if(!compatible&&gap<40)separation+=40-gap;}
+            foreach(var site in snapshot.sites)if(site.district!=d.district){bool compatible=(d.district==SettlementDistrict.Residential&&site.district==SettlementDistrict.Commercial)||(d.district==SettlementDistrict.Commercial&&site.district==SettlementDistrict.Residential)||site.district==SettlementDistrict.Civic;float gap=Distance(p,site.direction);if(!compatible&&gap<40)separation+=40-gap;}
             return road*.8f+grouping*1.2f+separation*2;
         }
+        int DistrictRotation(BuildingDefinition d,Vector3 p,DistrictSites snapshot){var anchor=snapshot.Anchor(p);int best=0;float distance=float.MaxValue;for(int rotation=0;rotation<4;rotation++){float value=(Grid.Direction(Grid.Port(Grid.Area(d,p,rotation)))-anchor).sqrMagnitude;if(value<distance){distance=value;best=rotation;}}return best;}
         internal bool CivilianExpansion(BuildingDefinition d)=>Civilisation!=null&&d.district!=SettlementDistrict.Military&&d.id!="command"&&d.id!="outpost";
         bool BuildDistrict(BuildingDefinition d,int team){
-            var candidates=new List<(Vector3 point,int rotation,float score)>();
+            using var timing=SettlementPerformance.Sample("DistrictPlacement");var snapshot=CaptureDistrictSites(team);var candidates=new List<(Vector3 point,int rotation,float score)>();
             if(d.housingCapacity>0||!string.IsNullOrEmpty(d.retailResource))AddStreetCandidates(d,team,candidates);
             if(d.id.StartsWith("civil_farm_"))foreach(var field in Buildings){if(field.team!=team||field.removed||field.definition.id!=d.id)continue;var a=Area(field);
                 for(int sign=-1;sign<=1;sign+=2){int dx=(a.rotation&1)==0?sign*a.width:0,dy=(a.rotation&1)!=0?sign*a.depth:0;var p=Grid.Point(a.face,a.x+a.width*.5+dx,a.y+a.depth*.5+dy);
@@ -35,9 +43,9 @@ namespace MassiveArmy.Planetary {
                 var origin=Area(anchorBuilding);var offset=SettlementDistricts.Offset(d.district);var centre=Grid.Point(origin.face,origin.x+origin.width*.5+offset.x,origin.y+origin.depth*.5+offset.y);
                 int stride=Math.Max(d.footprintWidth,d.footprintDepth)+2;
                 for(int y=-3;y<=3;y++)for(int x=-3;x<=3;x++){
-                    var p=Grid.Point(origin.face,origin.x+origin.width*.5+offset.x+x*stride,origin.y+origin.depth*.5+offset.y+y*stride);int rotation=EntranceRotation(d,p,team);
+                    var p=Grid.Point(origin.face,origin.x+origin.width*.5+offset.x+x*stride,origin.y+origin.depth*.5+offset.y+y*stride);int rotation=DistrictRotation(d,p,snapshot);
                     if(!GridClear(Grid.Area(d,p,rotation),out _))continue;
-                    candidates.Add((p,rotation,DistrictScore(d,p,rotation,team,centre)));
+                    candidates.Add((p,rotation,DistrictScore(d,p,rotation,centre,snapshot)));
                 }
                 if(candidates.Count>=196)break;
             }

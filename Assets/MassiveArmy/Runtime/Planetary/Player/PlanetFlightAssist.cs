@@ -9,6 +9,6 @@ namespace MassiveArmy.Planetary
         Quaternion LockedAttitude(Double3 position)=>(OrbitAxes(position,lockNormal)*lockOffset).normalized;
         public void ToggleRotationLock(){if(Landed||AutoFlightActive)return;RotationLocked=!RotationLocked;angularVelocity=Vector3.zero;if(RotationLocked){SetFlightAssistance(false);var momentum=Double3.Cross(pose.position,pose.linearVelocity);lockNormal=momentum.Magnitude>1e-6?momentum.Float.normalized:Vector3.Cross(pose.position.Float.normalized,pose.rotation*Vector3.up).normalized;if(lockNormal.sqrMagnitude<.1f)lockNormal=Vector3.Cross(pose.position.Float.normalized,pose.rotation*Vector3.right).normalized;lockOffset=Quaternion.Inverse(OrbitAxes(pose.position,lockNormal))*pose.rotation;}nextOrbitRefresh=0;}
         internal void SetFlightStateForValidation(SpacePose state)=>ResetFlightState(state);
-        void ResetFlightState(SpacePose state){galaxyPrediction?.Invalidate();AutoFlightActive=false;pose=state;pose.rotation=pose.rotation.normalized;angularVelocity=Vector3.zero;RotationLocked=false;FlightAssistEnabled=false;Landed=false;nextLandingRefresh=0;GearDeployed=false;shipFrame.Pose=pose;nextArcRefresh=0;nextOrbitRefresh=0;}
+        void ResetFlightState(SpacePose state){dockStation=0;dockProgress=0;galaxyPrediction?.Invalidate();AutoFlightActive=false;pose=state;pose.rotation=pose.rotation.normalized;angularVelocity=Vector3.zero;RotationLocked=false;FlightAssistEnabled=false;Landed=false;nextLandingRefresh=0;GearDeployed=false;shipFrame.Pose=pose;nextArcRefresh=0;nextOrbitRefresh=0;}
     }
 }

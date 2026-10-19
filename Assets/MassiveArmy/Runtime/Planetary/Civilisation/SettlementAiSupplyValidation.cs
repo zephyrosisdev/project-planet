@@ -36,7 +36,7 @@ namespace MassiveArmy.Planetary {
                 Check(summary.totalMines>=3,"Faction "+team+" constructs multiple extractors and a paid replacement on another node");Check(summary.recovered,"Faction "+team+" retains two working HQ-road-connected mines after depletion");Check(summary.endingMaterials>=100&&summary.longestMaterialDrought<120,"Faction "+team+" maintains construction funds without prolonged material starvation");Check(summary.deliveredMaterials>100,"Faction "+team+" receives physical cargo deliveries of construction materials");
             }Check(report.runtimeErrors==0,"No runtime errors during autonomous growth");Finish();
         }
-        void Finish(){Time.captureDeltaTime=0;frames.Sort();report.frameSamplesMs=frames.ToArray();if(frames.Count>0){report.medianMs=frames[frames.Count/2];report.p95Ms=frames[(int)((frames.Count-1)*.95)];}report.allocatedBytes=Profiler.GetTotalAllocatedMemoryLong();report.reservedBytes=Profiler.GetTotalReservedMemoryLong();File.WriteAllText(Path.Combine(output,"validation.json"),JsonUtility.ToJson(report,true));Application.Quit(report.status=="PASS"?0:1);}
+        void Finish(){SettlementPerformance.Write(output);Time.captureDeltaTime=0;frames.Sort();report.frameSamplesMs=frames.ToArray();if(frames.Count>0){report.medianMs=frames[frames.Count/2];report.p95Ms=frames[(int)((frames.Count-1)*.95)];}report.allocatedBytes=Profiler.GetTotalAllocatedMemoryLong();report.reservedBytes=Profiler.GetTotalReservedMemoryLong();File.WriteAllText(Path.Combine(output,"validation.json"),JsonUtility.ToJson(report,true));Application.Quit(report.status=="PASS"?0:1);}
         void OnDestroy(){Time.captureDeltaTime=0;Application.logMessageReceived-=Log;}
     }
 }

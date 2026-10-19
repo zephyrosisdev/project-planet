@@ -11,7 +11,7 @@ namespace MassiveArmy.Planetary {
         struct Walker {public Vector4 position;public uint node,next,initialised,pad;}
         readonly Report report=new Report();PlanetDevelopment world;string output;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]static void Install(){if(!Application.isEditor&&Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-household-validation")>=0)new GameObject("Household validation").AddComponent<SettlementHouseholdValidation>();}
-        void Awake(){var args=Environment.GetCommandLineArgs();output=args[Array.IndexOf(args,"-planet-output")+1];Directory.CreateDirectory(output);world=FindAnyObjectByType<PlanetDevelopment>();world.sessionMode=PlanetGameMode.AiTest;world.currentRtsContent=true;world.configuredRadius=120000;world.requestedCapacity=8192;world.ambientZombies=0;world.Paused=true;Application.logMessageReceived+=Log;}
+        void Awake(){var args=Environment.GetCommandLineArgs();output=args[Array.IndexOf(args,"-planet-output")+1];Directory.CreateDirectory(output);world=FindAnyObjectByType<PlanetDevelopment>();world.sessionMode=Array.IndexOf(args,"-planet-orbital-validation")>=0?PlanetGameMode.Rts:PlanetGameMode.AiTest;world.currentRtsContent=true;world.configuredRadius=120000;world.requestedCapacity=8192;world.ambientZombies=0;world.Paused=true;Application.logMessageReceived+=Log;}
         void Log(string message,string stack,LogType type){if(type==LogType.Error||type==LogType.Exception||type==LogType.Assert)report.runtimeErrors++;}
         void OnDestroy(){Time.captureDeltaTime=0;Application.logMessageReceived-=Log;}
         void Check(bool value,string label){if(!value)throw new InvalidOperationException(label);report.checks.Add(label);}
@@ -24,7 +24,7 @@ namespace MassiveArmy.Planetary {
             RenderTexture.active=target;var picture=new Texture2D(1440,900,TextureFormat.RGB24,false);picture.ReadPixels(new Rect(0,0,1440,900),0,0);picture.Apply();int lit=0;foreach(var pixel in picture.GetPixels32())if(pixel.r>40||pixel.g>40||pixel.b>40)lit++;
             File.WriteAllBytes(Path.Combine(output,"commute.png"),picture.EncodeToPNG());Destroy(picture);RenderTexture.active=previous;view.targetTexture=oldTarget;view.enabled=enabled;target.Release();Destroy(target);Check(lit>1000,"Shared residential streets render through the actual game camera");
         }
-        IEnumerator Run(){double deadline=Time.realtimeSinceStartupAsDouble+120;while(!world.Ready&&Time.realtimeSinceStartupAsDouble<deadline)yield return null;Check(world.Ready,"Planet initialises with family homes, both AI teams and GPU civilians");
+        IEnumerator Run(){double deadline=Time.realtimeSinceStartupAsDouble+120;while(!world.Ready&&Time.realtimeSinceStartupAsDouble<deadline)yield return null;Check(world.Ready,"Planet initialises with family homes, both AI teams and GPU civilians");ValidatePlacementCaches();if(Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-orbital-validation")>=0){yield return ValidateOrbitals();yield break;}
             if(Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-settlement-recovery")>=0){yield return ValidateSettlementRecovery();yield break;}
             if(Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-site-protection")>=0){yield return ValidateSiteProtection();yield break;}
             if(Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-freight-validation")>=0){yield return ValidateFreight();yield break;}

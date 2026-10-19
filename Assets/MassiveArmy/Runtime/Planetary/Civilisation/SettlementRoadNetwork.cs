@@ -21,7 +21,7 @@ namespace MassiveArmy.Planetary
         public Vector3 Direction(PlanetNavCoordinate cell)=>CubeSphere.Direction(cell,resolution);
         PlanetNavCoordinate Cell(Vector3 direction)=>CubeSphere.Cell(world.definition.bodyId,direction,resolution);
         static PlanetNavCoordinate Neighbour(PlanetNavCoordinate cell,int index,int resolution)=>CubeSphere.Neighbour(cell,index==0?-1:index==1?1:0,index==2?-1:index==3?1:0,resolution);
-        public Vector3 Port(RtsBuilding building){var area=local.Area(building);if(rail&&building.definition.id=="civil_freight_station")area=new PlanetConstructionGrid.Footprint(area.face,area.x,area.y,area.width,area.depth,(area.rotation+1)&3);return Direction(local.Grid.Port(area));}
+        public Vector3 Port(RtsBuilding building)=>Entrance(building).port;
         public bool HasRoad(PlanetNavCoordinate cell)=>tiles.ContainsKey(Key(cell));
         void RefreshFootprints(){occupied.Clear();foreach(var b in local.Buildings)if(!b.removed)occupied.Add((b,local.Area(b)));}
         public void RefreshBuildings(){RefreshFootprints();if(saved.Count>0){Revision++;RebuildGraph();}}
@@ -60,10 +60,18 @@ namespace MassiveArmy.Planetary
             }return null;
         }
         // CPU component labels describe infrastructure connectivity; live cargo paths are searched only by SettlementRoad.compute.
-        public bool Connected(RtsBuilding from,RtsBuilding to){int a=Node(Port(from)),b=Node(Port(to));return from.team==to.team&&a>=0&&b>=0&&saved[a].faction==from.team&&saved[b].faction==from.team&&components[a]==components[b];}
+        readonly Dictionary<RtsBuilding,(Vector2 position,int rotation,int width,int depth,bool station,Vector3 port,int node)> entranceNodes=new Dictionary<RtsBuilding,(Vector2,int,int,int,bool,Vector3,int)>();
+        (Vector3 port,int node) Entrance(RtsBuilding building){
+            bool station=rail&&building.definition.id=="civil_freight_station";
+            if(entranceNodes.TryGetValue(building,out var value)&&value.position.Equals(building.position)&&value.rotation==building.rotation&&value.width==building.definition.footprintWidth&&value.depth==building.definition.footprintDepth&&value.station==station)return (value.port,value.node);
+            var area=local.Area(building);if(station)area=new PlanetConstructionGrid.Footprint(area.face,area.x,area.y,area.width,area.depth,(area.rotation+1)&3);
+            var port=Direction(local.Grid.Port(area));int node=Node(port);entranceNodes[building]=(building.position,building.rotation,building.definition.footprintWidth,building.definition.footprintDepth,station,port,node);return (port,node);
+        }
+        public bool Connected(RtsBuilding from,RtsBuilding to){if(from.team!=to.team)return false;int a=Entrance(from).node,b=Entrance(to).node;return a>=0&&b>=0&&saved[a].faction==from.team&&saved[b].faction==from.team&&components[a]==components[b];}
         internal int Node(Vector3 direction)=>indices.TryGetValue(Key(Cell(direction)),out int value)?value:-1;
         bool GateBlocked(PlanetNavCoordinate cell)=>closedGateCells.Count>0&&closedGateCells.Contains(Key(cell));
         void RebuildGraph(){
+            entranceNodes.Clear();
             closedGateCells.Clear();foreach(var entry in occupied)if(entry.building.definition.id=="gate"&&entry.building.Complete&&!entry.building.gateOpen)for(int y=0;y<entry.area.depth;y++)for(int x=0;x<entry.area.width;x++)closedGateCells.Add(Key(new PlanetNavCoordinate(world.definition.bodyId,entry.area.face,entry.area.x+x,entry.area.y+y)));
             indices.Clear();for(int i=0;i<saved.Count;i++)indices[Key(saved[i].cell)]=i;Nodes=new GpuNode[saved.Count];components=new int[saved.Count];Array.Fill(components,-1);
             for(int i=0;i<saved.Count;i++){var tile=saved[i];int[] neighbours={-1,-1,-1,-1};tile.connections=0;for(int edge=0;edge<4;edge++)if(indices.TryGetValue(Key(Neighbour(tile.cell,edge,resolution)),out int other)&&saved[other].faction==tile.faction&&!GateBlocked(tile.cell)&&!GateBlocked(saved[other].cell)){neighbours[edge]=other;tile.connections|=1<<edge;}Vector3 p=Direction(tile.cell)*(world.definition.radius+tile.height+1);Nodes[i]=new GpuNode{position=new Vector4(p.x,p.y,p.z,tile.faction),west=neighbours[0],east=neighbours[1],south=neighbours[2],north=neighbours[3]};}

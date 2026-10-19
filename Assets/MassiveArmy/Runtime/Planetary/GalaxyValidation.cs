@@ -10,7 +10,7 @@ namespace MassiveArmy.Planetary
 {
     [DefaultExecutionOrder(-230)] public sealed class GalaxyValidation:MonoBehaviour
     {
-        [Serializable]sealed class Report {public string status="PASS",error="",predictionStatus="";public List<string> checks=new List<string>();public int systems,stars,planets,nodes,runtimeErrors;public double integrationDifference,predictionMaxSliceMs,primaryShare;public long allocatedBytes,reservedBytes;}
+        [Serializable]sealed class Report {public string status="PASS",error="",predictionStatus="";public List<string> checks=new List<string>();public int systems,stars,planets,nodes,runtimeErrors;public double orbitalReturnMs;public double integrationDifference,predictionMaxSliceMs,primaryShare;public long allocatedBytes,reservedBytes;}
         readonly Report report=new Report();PlanetDevelopment world;string output;RenderTexture target,hudTarget,hudComposite;Material hudMaterial;bool captureHud;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)] static void Install(){if(!Application.isEditor&&Array.IndexOf(Environment.GetCommandLineArgs(),"-galaxy-validation")>=0)new GameObject("Galaxy integration validation").AddComponent<GalaxyValidation>();}
         void Awake(){var args=Environment.GetCommandLineArgs();output=args[Array.IndexOf(args,"-planet-output")+1];Directory.CreateDirectory(output);world=FindAnyObjectByType<PlanetDevelopment>();Time.captureDeltaTime=1f/60;world.Paused=true;world.ambientZombies=32;world.requestedCapacity=4096;world.currentRtsContent=true;Application.targetFrameRate=-1;QualitySettings.vSyncCount=0;Application.logMessageReceived+=OnLog;}
@@ -21,7 +21,7 @@ namespace MassiveArmy.Planetary
         IEnumerator Guard(){var steps=Run();while(true){object current;try{if(!steps.MoveNext())break;current=steps.Current;}catch(Exception e){report.status="FAIL";report.error=e.ToString();UnityEngine.Debug.LogException(e);break;}yield return current;}report.allocatedBytes=Profiler.GetTotalAllocatedMemoryLong();report.reservedBytes=Profiler.GetTotalReservedMemoryLong();File.WriteAllText(Path.Combine(output,"validation.json"),JsonUtility.ToJson(report,true));Application.Quit(report.status=="PASS"?0:1);}
         IEnumerator Run(){
             while(!world.Ready)yield return null;world.Paused=true;world.Rig.InputEnabled=false;
-            var runtime=world.SystemRuntime;var galaxy=runtime.Galaxy;Check(galaxy!=null,"Default planet entry creates a generated galaxy");
+            var runtime=world.SystemRuntime;var galaxy=runtime.Galaxy;if(PlanetOrbitalStress.Enabled)PlanetOrbitalStress.Seed(world);Check(galaxy!=null,"Default planet entry creates a generated galaxy");
             report.systems=galaxy.SystemNodes.Length;report.nodes=galaxy.Nodes.Length;report.planets=runtime.Bodies.Length;
             foreach(var n in galaxy.Nodes)if(n.kind==CelestialKind.Star)report.stars++;
             Check(report.systems==48&&report.planets==192&&report.stars>48,"Configured 48 systems and 192 planets, including binary stars");
@@ -111,6 +111,15 @@ namespace MassiveArmy.Planetary
             Check(world.SimulationTicks==tick,"The departed star system stops all army simulation");
             Check(next.View.transform.position.magnitude<1e-6,"Camera remains at render origin after interstellar handoff");
             Capture("new-system",true);
+            if(PlanetOrbitalStress.Enabled){
+                var asset=runtime.Civilisation.State.orbitals[0];var station=world.Orbitals.Find(asset.id);
+                Check(world.Orbitals.ViewCount==32&&!station.Root.activeInHierarchy,"Departed orbital views and collision are inactive in the distant system");
+                var orbit=asset.Pose(runtime.Civilisation.RenderTime);var back=next.ShipForValidation.Pose;back.position=world.definition.position.Add(orbit.position+Double3.Rotate(orbit.rotation,new Double3(0,0,-250))).RelativeTo(next.definition.position);back.linearVelocity=world.definition.velocity+orbit.linearVelocity-next.definition.velocity;back.rotation=orbit.rotation;next.ShipForValidation.ResetForSystemValidation(back);
+                var watch=Stopwatch.StartNew();runtime.EnterPlanet(0);watch.Stop();report.orbitalReturnMs=watch.Elapsed.TotalMilliseconds;
+                Check(runtime.ActiveWorld==world&&station.Root.activeInHierarchy&&world.Orbitals.Find(asset.id)==station,"Returning reuses the original orbital identities and station views");
+                Check((station.Root.transform.position-world.RenderBodyPosition(asset.Pose(runtime.Civilisation.RenderTime).position)).magnitude<.005,"Returned station geometry and collision rebase before the first rendered frame");
+                Check(world.View.transform.position==Vector3.zero&&!next.ResidentActive,"Orbital return retains a zero-origin camera and sleeps the departed planet");
+            }
             Check(report.runtimeErrors==0,"Galaxy flight, sky, predictions, previews and cross-system activation emit no runtime errors");
         }
         int PixelDifference(string first,string second){

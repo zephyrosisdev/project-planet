@@ -7,7 +7,13 @@ namespace MassiveArmy.Planetary
         sealed class ConstructionPose {public PlanetConstructionGrid.Footprint area;public int terrain;public float foundation;public Quaternion rotation;public Vector3 direction;public Renderer[] renderers;public bool positioned;public Vector3 renderedPosition;}
         readonly Dictionary<Transform,ConstructionPose> constructionPoses=new Dictionary<Transform,ConstructionPose>();
         public Vector3 SnapBuilding(BuildingDefinition definition,Vector3 direction,int rotation)=>Grid.Snap(definition,direction,rotation);
-        internal PlanetConstructionGrid.Footprint Area(RtsBuilding building)=>Grid.Area(building.definition,CubeSphere.Decode(building.position),building.rotation);
+        readonly struct CachedBuildingArea {
+            public readonly Vector2 position;public readonly int rotation,width,depth;public readonly PlanetConstructionGrid.Footprint area;
+            public CachedBuildingArea(RtsBuilding b,PlanetConstructionGrid.Footprint area){position=b.position;rotation=b.rotation;width=b.definition.footprintWidth;depth=b.definition.footprintDepth;this.area=area;}
+            public bool Matches(RtsBuilding b)=>position.Equals(b.position)&&rotation==b.rotation&&width==b.definition.footprintWidth&&depth==b.definition.footprintDepth;
+        }
+        readonly Dictionary<RtsBuilding,CachedBuildingArea> buildingAreas=new Dictionary<RtsBuilding,CachedBuildingArea>();
+        internal PlanetConstructionGrid.Footprint Area(RtsBuilding building){if(buildingAreas.TryGetValue(building,out var cached)&&cached.Matches(building))return cached.area;var area=Grid.Area(building.definition,CubeSphere.Decode(building.position),building.rotation);buildingAreas[building]=new CachedBuildingArea(building,area);return area;}
         public float FoundationRadius(RtsBuilding building){var pose=PrepareConstruction(building.visual.transform,building.definition,CubeSphere.Decode(building.position),building.rotation);return pose.foundation;}
         ConstructionPose PrepareConstruction(Transform target,BuildingDefinition definition,Vector3 direction,int rotation){
             var area=Grid.Area(definition,direction,rotation);int terrain=fixture.definition.Edits.Revision;

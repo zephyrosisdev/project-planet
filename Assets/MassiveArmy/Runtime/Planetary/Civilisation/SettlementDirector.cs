@@ -26,6 +26,7 @@ namespace MassiveArmy.Planetary {
                         faction.reason=extended?reason:building.definition.name+": "+reason;if(team==0)local.Notice=faction.reason;}
                 }
                 if(!faction.autonomous||local.World.sessionMode==PlanetGameMode.Swarm)continue;
+                civilisation.Orbitals.Plan(local,team);
                 bool Build(string id){var definition=local.Catalog.Buildings[id];faction.reason="Constructing "+definition.name;if(local.TryConstructInfrastructure(id,team))return true;
                     bool expanded=definition.terrain==TerrainRule.Node?local.ExpandForDeposit(id,team)||local.SurveyFrontierDeposit(id,team):local.BuildSettlementFrontier(id,team);
                     faction.reason=expanded?"Developing frontier for "+definition.name:local.Factions[team].wallet.CanAfford(definition.cost)?"Seeking a clear serviced site for "+definition.name:"Waiting for construction resources: "+definition.name;return expanded;}

@@ -479,6 +479,17 @@
       "capacity": 20000,
       "mass": 1,
       "startingStock": 0
+    },
+    {
+      "id": "orbital_kit",
+      "name": "Orbital payload kit",
+      "element": false,
+      "bootstrap": false,
+      "legacy": -1,
+      "capacity": 64,
+      "mass": 20,
+      "startingStock": 0,
+      "symbol": "OK"
     }
   ],
   "recipes": [
@@ -1129,6 +1140,37 @@
           "amount": 2
         }
       ]
+    },
+    {
+      "id": "orbital_kit",
+      "name": "Orbital payload kits",
+      "building": "civil_launch_pad",
+      "inputs": [
+        {
+          "resource": "steel",
+          "amount": 10
+        },
+        {
+          "resource": "electronics",
+          "amount": 4
+        },
+        {
+          "resource": "construction_materials",
+          "amount": 30
+        },
+        {
+          "resource": "propellant",
+          "amount": 10
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "orbital_kit",
+          "amount": 1
+        }
+      ],
+      "seconds": 60,
+      "requiredTech": "civil_rocketry"
     }
   ],
   "archetypes": [
@@ -2465,8 +2507,8 @@
     {
       "id": "civil_launch_pad",
       "name": "Launch Pad",
-      "description": "Launch Pad infrastructure for the interplanetary civilisation economy.",
-      "mesh": "strategic_lab",
+      "description": "Road-serviced launch complex. Manufactures payload kits and launches satellites, research stations, orbital warehouses and crew docking stations. Fuel and hardware must be delivered to the pad.",
+      "mesh": "civil_launch_pad",
       "category": 7,
       "terrain": 0,
       "nodes": [],
@@ -2475,18 +2517,18 @@
       },
       "requiredTech": "civil_rocketry",
       "tier": 1,
-      "time": 20,
-      "radius": 10,
+      "time": 90,
+      "radius": 24,
       "health": 2400,
       "armour": 20,
-      "consumption": 5,
+      "consumption": 20,
       "maxLevel": 3,
-      "footprintWidth": 2,
-      "footprintDepth": 2,
+      "footprintWidth": 6,
+      "footprintDepth": 6,
       "production": [],
       "upgrades": [],
       "foodUse": 0.02,
-      "workers": 3,
+      "workers": 6,
       "district": 3
     },
     {
@@ -4265,6 +4307,28 @@
       "unlockUpgrades": [
         "civil_heavy_rail_3"
       ],
+      "unlockAbilities": [],
+      "unlockModifiers": []
+    },
+    {
+      "id": "civil_orbital_science",
+      "name": "Orbital Science",
+      "description": "Requires an operating orbital research station. Increases orbital research by 50% and freighter capacity from 200 to 400 mass.",
+      "branch": "Civilisation",
+      "requiredBuilding": "civil_launch_pad",
+      "tier": 2,
+      "requiredBuildingLevel": 1,
+      "cost": {
+        "materials": 100,
+        "research": 300
+      },
+      "time": 120,
+      "prerequisites": [
+        "civil_satellites"
+      ],
+      "unlockBuildings": [],
+      "unlockUnits": [],
+      "unlockUpgrades": [],
       "unlockAbilities": [],
       "unlockModifiers": []
     }

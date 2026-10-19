@@ -8,7 +8,7 @@ namespace MassiveArmy.Planetary
     public sealed partial class CivilisationRuntime {
         sealed class LocalColony {public PlanetRtsBase local;public ColonyState[] colonies;}
         public readonly CivilisationCatalogue Catalogue;public readonly CivilisationSettings Settings;
-        public readonly SettlementLogistics Logistics;
+        public readonly SettlementLogistics Logistics;public readonly OrbitalEconomy Orbitals;
         readonly SettlementDirector settlementDirector;
         public UniverseState State {get;private set;}
         readonly PlanetSystemRuntime system;readonly Dictionary<int,string> bodyIds=new Dictionary<int,string>();
@@ -20,7 +20,7 @@ namespace MassiveArmy.Planetary
         public double MaximumCatchupSliceMs {get;private set;}
         public bool CatchingUp(int planetId){var planet=Planet(planetId);return planet!=null&&State.time-planet.lastSimulatedTime>Math.Max(.25,Settings.economyTickSeconds)*1.5;}
         public CivilisationRuntime(PlanetSystemRuntime system,CivilisationSettings settings){
-            this.system=system;Settings=settings;Catalogue=CivilisationCatalogue.Load();Logistics=new SettlementLogistics(this);settlementDirector=new SettlementDirector(this);State=new UniverseState{galaxySeed=system.Galaxy.Settings.seed};
+            this.system=system;Settings=settings;Catalogue=CivilisationCatalogue.Load();Logistics=new SettlementLogistics(this);settlementDirector=new SettlementDirector(this);State=new UniverseState{galaxySeed=system.Galaxy.Settings.seed};Orbitals=new OrbitalEconomy(this,system);
             var galaxy=system.Galaxy;int[] ordinals=new int[galaxy.SystemNodes.Length];
             foreach(var node in galaxy.Nodes){
                 if(node.kind==CelestialKind.Planet)node.stableId="g"+State.galaxySeed+"/s"+node.system+"/p"+(ordinals[node.system]++);
@@ -68,12 +68,12 @@ namespace MassiveArmy.Planetary
             // No sweep over inactive planets, settlements, roads, factories or vehicles.
             if(world==null||!world.SimulationActive||!locals.TryGetValue(world.definition.bodyId,out var active))return;
             var planet=Planet(world.definition.bodyId);double missing=State.time-planet.lastSimulatedTime;if(missing<=1e-9)return;
-            if(missing<=step*1.5){evaluationTime=State.time;TickLocal(active,missing);settlementDirector.Tick(active.local);planet.lastSimulatedTime=State.time;evaluationTime=-1;return;}
+            if(missing<=step*1.5){evaluationTime=State.time;using(SettlementPerformance.Sample("Economy"))TickLocal(active,missing);using(SettlementPerformance.Sample("Planner"))settlementDirector.Tick(active.local);planet.lastSimulatedTime=State.time;evaluationTime=-1;return;}
             ReplayingEconomy=true;var timer=System.Diagnostics.Stopwatch.StartNew();int work=Math.Max(1,Settings.catchupStepsPerFrame);
             while(planet.lastSimulatedTime<State.time-1e-9&&work-->0){
                 double duration=Math.Min(State.time-planet.lastSimulatedTime,Math.Max(step,Settings.catchupMaximumStepSeconds));
                 foreach(var colony in active.colonies)if(colony!=null){foreach(var vehicle in colony.cargoVehicles)if(vehicle.phase!=CargoVehiclePhase.Idle&&vehicle.arrival>planet.lastSimulatedTime+1e-6)duration=Math.Min(duration,vehicle.arrival-planet.lastSimulatedTime);foreach(var item in colony.installations)if(item.planted&&item.growth<1)foreach(var crop in Catalogue.crops)if(crop.id==item.crop)duration=Math.Min(duration,Math.Max(step,(1-item.growth)*crop.growthSeconds));}
-                evaluationTime=planet.lastSimulatedTime+duration;TickLocal(active,duration);active.local.AdvanceDormantInfrastructure((float)duration);settlementDirector.Tick(active.local);planet.lastSimulatedTime=evaluationTime;
+                evaluationTime=planet.lastSimulatedTime+duration;using(SettlementPerformance.Sample("Economy"))TickLocal(active,duration);using(SettlementPerformance.Sample("DormantConstruction"))active.local.AdvanceDormantInfrastructure((float)duration);using(SettlementPerformance.Sample("Planner"))settlementDirector.Tick(active.local);planet.lastSimulatedTime=evaluationTime;
                 if(timer.Elapsed.TotalMilliseconds>=Math.Max(.1,Settings.catchupBudgetMilliseconds))break;
             }
             evaluationTime=-1;ReplayingEconomy=false;timer.Stop();MaximumCatchupSliceMs=Math.Max(MaximumCatchupSliceMs,timer.Elapsed.TotalMilliseconds);
@@ -84,8 +84,8 @@ namespace MassiveArmy.Planetary
             for(int team=0;team<2;team++){
                 var colony=binding.colonies[team];if(colony==null)continue;var faction=State.Faction(team);foreach(var tech in local.Factions[team].technologies)if(!faction.technologies.Contains(tech))faction.technologies.Add(tech);
                 foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&b.persistentId==0)b.persistentId=State.AllocateId();
-                EnsureResidents(colony);BindHouseholds(local,colony);
-                AllocateWorkers(local,colony,team);
+                using(SettlementPerformance.Sample("Residents")){EnsureResidents(colony);BindHouseholds(local,colony);}
+                using(SettlementPerformance.Sample("Workforce"))AllocateWorkers(local,colony,team);
                 local.RefreshSettlementPower(team);
                 colony.powerBalance=local.Factions[team].generation-local.Factions[team].demand;
                 colony.powerGeneration=local.Factions[team].generation;colony.powerDemand=local.Factions[team].demand;
@@ -120,13 +120,13 @@ namespace MassiveArmy.Planetary
                     if(building.definition.id.StartsWith("civil_farm_")&&efficiency>0)GrowCrop(installation,State.Planet(colony.body),step*efficiency);
                 }
                 for(int i=colony.installations.Count-1;i>=0;i--){if(!liveInstallations.Contains(colony.installations[i].id)){State.Planet(colony.body).surfaceInstallations.Remove(colony.installations[i].id);colony.installations.RemoveAt(i);}}
-                ServeRetail(local,colony,step);
-                TickSociety(local,colony,step);
+                using(SettlementPerformance.Sample("Retail"))ServeRetail(local,colony,step);
+                using(SettlementPerformance.Sample("Society"))TickSociety(local,colony,step);
                 colony.inventory.CaptureWallet();
-                Logistics.Tick(local,colony,step);
+                using(SettlementPerformance.Sample("Logistics"))Logistics.Tick(local,colony,step);Orbitals.Tick(local,colony,step);
                 if(unhoused>0){double demand=unhoused*Settings.populationFoodPerSecond,food=Math.Min(colony.inventory.Get("food"),demand*step);colony.inventory.Spend("food",food);colony.foodDemand+=demand;colony.foodSupplied+=step>0?food/step:demand;}
                 colony.foodBalance=colony.foodSupplied-colony.foodDemand;
-                if(colony.housedPopulation>=colony.population&&colony.housingCapacity>colony.population&&householdsFed&&colony.powerBalance>=0){colony.growthProgress+=step;double interval=Math.Max(1,Settings.populationGrowthSeconds);int arrivals=Math.Min(colony.housingCapacity-colony.population,(int)Math.Min(int.MaxValue,colony.growthProgress/interval));colony.population+=arrivals;colony.growthProgress-=arrivals*interval;EnsureResidents(colony);BindHouseholds(local,colony);}
+                if(colony.housedPopulation>=colony.population&&colony.housingCapacity>colony.population&&householdsFed&&colony.powerBalance>=0){colony.growthProgress+=step;double interval=Math.Max(1,Settings.populationGrowthSeconds);int arrivals=Math.Min(colony.housingCapacity-colony.population,(int)Math.Min(int.MaxValue,colony.growthProgress/interval));colony.population+=arrivals;colony.growthProgress-=arrivals*interval;using(SettlementPerformance.Sample("Residents")){EnsureResidents(colony);BindHouseholds(local,colony);}}
             }
         }
         void GrowCrop(SurfaceInstallation installation,PlanetState planet,double step){
@@ -154,7 +154,7 @@ namespace MassiveArmy.Planetary
         public void Save(string path){string content=Serialize();string temporary=path+".tmp";File.WriteAllText(temporary,content);if(File.Exists(path))File.Replace(temporary,path,null);else File.Move(temporary,path);}
         public static UniverseState Deserialize(string json,int expectedSeed,CivilisationCatalogue catalogue){
             var state=JsonUtility.FromJson<UniverseState>(json);if(state==null||state.schemaVersion!=1||state.galaxySeed!=expectedSeed)throw new InvalidDataException("Civilisation save version or galaxy seed mismatch");
-            var ids=new HashSet<long>();foreach(var colony in state.colonies){if(!ids.Add(colony.id)||state.Planet(colony.body)==null||state.Faction(colony.faction)==null)throw new InvalidDataException("Invalid saved colony identity");colony.inventory.Bind(catalogue);foreach(var value in colony.inventory.stock)if(!catalogue.Resources.ContainsKey(value.resource)||!double.IsFinite(value.amount)||value.amount<0)throw new InvalidDataException("Invalid saved stockpile");}return state;
+            var ids=new HashSet<long>();foreach(var colony in state.colonies){if(!ids.Add(colony.id)||state.Planet(colony.body)==null||state.Faction(colony.faction)==null)throw new InvalidDataException("Invalid saved colony identity");colony.inventory.Bind(catalogue);foreach(var value in colony.inventory.stock)if(!catalogue.Resources.ContainsKey(value.resource)||!double.IsFinite(value.amount)||value.amount<0)throw new InvalidDataException("Invalid saved stockpile");}OrbitalEconomy.Validate(state,catalogue);return state;
         }
     }
 }
