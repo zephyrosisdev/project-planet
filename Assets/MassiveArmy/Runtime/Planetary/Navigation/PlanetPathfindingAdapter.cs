@@ -60,12 +60,22 @@ namespace MassiveArmy.Planetary
             foreach(string name in new[]{"Closest","Resolve"}){int k=goalShader.FindKernel(name);goalShader.SetBuffer(k,"_Costs",Costs);goalShader.SetBuffer(k,"_Pick",goalPick);goalShader.Dispatch(k,(CellCount+127)/128,1,1);}goalPick.GetData(picked);
             ApplyResolvedGoal(group,direction,movement,force,picked[1]);
         }
-        void ApplyResolvedGoal(int group,Vector3 direction,MovementClass movement,bool force,uint choice){
+        // Resolve the coarse destination and seed its field on the same GPU queue.
+        // No CPU readback or callback is needed for regional autonomous orders.
+        public void SetGoalQueued(int group,Vector3 direction,MovementClass movement=MovementClass.HeavyVehicle){
+            if(Regional==null){SetGoal(group,direction,movement);return;}
+            direction.Normalize();ApplyResolvedGoal(group,direction,movement,false,uint.MaxValue,true);
+        }
+        void ApplyResolvedGoal(int group,Vector3 direction,MovementClass movement,bool force,uint choice,bool queuedResolve=false){
             if(choice==uint.MaxValue&&Regional==null)return;
             var coarseDirection=direction;
             if(choice!=uint.MaxValue&&choice!=(uint)CubeSphere.Cell(0,direction,Resolution).Index(Resolution)){int cell=(int)choice;coarseDirection=CubeSphere.Direction(new PlanetNavCoordinate(0,(CubeFace)(cell/(Resolution*Resolution)),cell%Resolution,cell/Resolution%Resolution),Resolution);}
             if(Regional==null)direction=coarseDirection;
-            var p=CubeSphere.Encode(direction);if(!force&&HasGoal(group)&&orders[group].movement==(uint)movement&&(orders[group].destination-p).sqrMagnitude<1e-10f)return;orders[group]=new GroupOrder{destination=p,localOrigin=CubeSphere.Encode(coarseDirection),sequence=orders[group].sequence+1,movement=(uint)movement,count=1,columns=1};pending[group]=true;Groups.SetData(orders);
+            var p=CubeSphere.Encode(direction);if(!force&&HasGoal(group)&&orders[group].movement==(uint)movement&&(orders[group].destination-p).sqrMagnitude<1e-10f)return;orders[group]=new GroupOrder{destination=p,localOrigin=CubeSphere.Encode(coarseDirection),sequence=orders[group].sequence+1,movement=(uint)movement,count=1,columns=1};pending[group]=true;Groups.SetData(orders,group,group,1);
+            if(queuedResolve){picked[0]=picked[1]=uint.MaxValue;goalPick.SetData(picked);goalShader.SetInt("_Res",Resolution);goalShader.SetInt("_Movement",(int)movement);goalShader.SetVector("_Direction",direction);
+                foreach(string name in new[]{"Closest","Resolve"}){int k=goalShader.FindKernel(name);goalShader.SetBuffer(k,"_Costs",Costs);goalShader.SetBuffer(k,"_Pick",goalPick);goalShader.Dispatch(k,(CellCount+127)/128,1,1);}
+                int apply=goalShader.FindKernel("ApplyGoal");goalShader.SetInt("_ResolvedGroup",group);goalShader.SetBuffer(apply,"_Pick",goalPick);goalShader.SetBuffer(apply,"_ResolvedOrders",Groups);goalShader.Dispatch(apply,1,1,1);
+            }
             Regional?.SetGoal(group,direction,orders[group].sequence);
             Bind(group);foreach(var buffer in new[]{a,b}){shader.SetBuffer(reset,"_FieldWrite",buffer);shader.Dispatch(reset,(CellCount+127)/128,1,1);}
         }

@@ -32,9 +32,36 @@ namespace MassiveArmy.Planetary
         }
         void PlaceConstruction(Transform target,BuildingDefinition definition,Vector3 direction,int rotation){var pose=PrepareConstruction(target,definition,direction,rotation);PlacePreparedConstruction(target,pose);}
         void PlacePreparedConstruction(Transform target,ConstructionPose pose){var position=fixture.RenderBodyPosition(new Double3(pose.direction)*pose.foundation);if(LegacyCityPresentation||!pose.positioned||position!=pose.renderedPosition){target.SetPositionAndRotation(position,pose.rotation);pose.positioned=true;pose.renderedPosition=position;}}
-        internal bool GridClear(PlanetConstructionGrid.Footprint area,out string reason,BuildingDefinition candidate=null){
-            var port=Grid.Port(area);foreach(var b in Buildings){if(b.removed)continue;var other=Area(b);if(area.Overlaps(other)){reason="Building grid footprints overlap";return false;}if(area.Contains(Grid.Port(other))||other.Contains(port)){reason="Keep the neighbouring building's road entrance clear";return false;}}
-            if(Roads!=null)for(int y=0;y<area.depth;y++)for(int x=0;x<area.width;x++)if(Roads.HasRoad(new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y))&&!(candidate?.id=="gate"&&GatePassage(area,new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y)))){reason="Building footprint overlaps a road module";return false;}
+        // Sparse infrastructure broad phase, never GPU army records. Placement extends
+        // it on construction and invalidates it on destruction; road searches own snapshots.
+        internal sealed class ConstructionOccupancy {
+            const int BucketSize=16;
+            readonly struct Occupant {internal readonly PlanetConstructionGrid.Footprint area;internal readonly PlanetNavCoordinate port;internal readonly bool gate;internal Occupant(PlanetConstructionGrid.Footprint area,PlanetNavCoordinate port,bool gate){this.area=area;this.port=port;this.gate=gate;}}
+            readonly Dictionary<(CubeFace,int,int),List<Occupant>> buckets=new Dictionary<(CubeFace,int,int),List<Occupant>>();readonly Stack<List<Occupant>> spareBuckets=new Stack<List<Occupant>>();
+            readonly PlanetConstructionGrid grid;
+            internal ConstructionOccupancy(PlanetConstructionGrid grid){this.grid=grid;}
+            internal void Clear(){foreach(var entries in buckets.Values){entries.Clear();spareBuckets.Push(entries);}buckets.Clear();}
+            internal void Add(PlanetConstructionGrid.Footprint area,bool gate=false){var port=grid.Port(area);var entry=new Occupant(area,port,gate);
+                for(int y=area.y/BucketSize;y<=(area.y+area.depth-1)/BucketSize;y++)for(int x=area.x/BucketSize;x<=(area.x+area.width-1)/BucketSize;x++)AddBucket((area.face,x,y));
+                AddBucket((port.face,port.x/BucketSize,port.y/BucketSize));
+                void AddBucket((CubeFace,int,int) key){if(!buckets.TryGetValue(key,out var entries)){entries=spareBuckets.Count>0?spareBuckets.Pop():new List<Occupant>();buckets.Add(key,entries);}entries.Add(entry);}
+            }
+            internal bool RoadCellClear(PlanetNavCoordinate cell){if(buckets.TryGetValue((cell.face,cell.x/BucketSize,cell.y/BucketSize),out var entries))foreach(var entry in entries)if(entry.area.Contains(cell)&&!(entry.gate&&GatePassage(entry.area,cell)))return false;return true;}
+            internal bool Clear(PlanetConstructionGrid.Footprint area){var port=grid.Port(area);
+                for(int y=area.y/BucketSize;y<=(area.y+area.depth-1)/BucketSize;y++)for(int x=area.x/BucketSize;x<=(area.x+area.width-1)/BucketSize;x++)if(Blocked((area.face,x,y)))return false;
+                return !Blocked((port.face,port.x/BucketSize,port.y/BucketSize));
+                bool Blocked((CubeFace,int,int) key){if(!buckets.TryGetValue(key,out var entries))return false;foreach(var entry in entries)if(area.Overlaps(entry.area)||area.Contains(entry.port)||entry.area.Contains(port))return true;return false;}
+            }
+        }
+        ConstructionOccupancy placementOccupancy;int placementIndexedCount;bool placementDirty;
+        void InvalidatePlacementOccupancy(){placementDirty=true;}
+        ConstructionOccupancy CaptureConstructionOccupancy(){var occupancy=placementOccupancy??(placementOccupancy=new ConstructionOccupancy(Grid));if(placementDirty||placementIndexedCount>Buildings.Count){occupancy.Clear();placementIndexedCount=0;placementDirty=false;}for(;placementIndexedCount<Buildings.Count;placementIndexedCount++){var b=Buildings[placementIndexedCount];if(!b.removed)occupancy.Add(Area(b));}return occupancy;}
+        internal bool GridClear(PlanetConstructionGrid.Footprint area,out string reason,BuildingDefinition candidate=null,ConstructionOccupancy occupancy=null){
+            if(occupancy!=null){if(!occupancy.Clear(area)){reason="Building grid footprint or road entrance is occupied";return false;}}
+            else {var port=Grid.Port(area);foreach(var b in Buildings){if(b.removed)continue;var other=Area(b);if(area.Overlaps(other)){reason="Building grid footprints overlap";return false;}if(area.Contains(Grid.Port(other))||other.Contains(port)){reason="Keep the neighbouring building's road entrance clear";return false;}}}
+            var entrance=Grid.Port(area);if(Roads!=null&&Roads.OtherPortReserved(entrance)||Rails!=null&&Rails.HasRoad(entrance)){reason="Keep road and rail entrances separate";return false;}
+            if(candidate?.id=="civil_freight_station"){var trackEntrance=Grid.Port(new PlanetConstructionGrid.Footprint(area.face,area.x,area.y,area.width,area.depth,(area.rotation+1)&3));if(Roads!=null&&Roads.HasRoad(trackEntrance)||Rails!=null&&(Rails.OtherPortReserved(trackEntrance)||!Rails.FootprintCellClear(trackEntrance))){reason="Freight station requires a separate clear rail entrance";return false;}}
+            if(Roads!=null)for(int y=0;y<area.depth;y++)for(int x=0;x<area.width;x++)if((Roads.HasRoad(new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y))||Roads.OtherPortReserved(new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y)))&&!(candidate?.id=="gate"&&GatePassage(area,new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y)))){reason="Building footprint overlaps a road module";return false;}
             if(Rails!=null)for(int y=0;y<area.depth;y++)for(int x=0;x<area.width;x++)if(Rails.HasRoad(new PlanetNavCoordinate(fixture.definition.bodyId,area.face,area.x+x,area.y+y))){reason="Building footprint overlaps a railway module";return false;}
             reason="";return true;
         }

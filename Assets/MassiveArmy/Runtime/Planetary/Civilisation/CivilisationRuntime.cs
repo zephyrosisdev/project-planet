@@ -12,6 +12,7 @@ namespace MassiveArmy.Planetary
         readonly SettlementDirector settlementDirector;
         public UniverseState State {get;private set;}
         readonly PlanetSystemRuntime system;readonly Dictionary<int,string> bodyIds=new Dictionary<int,string>();
+        readonly Dictionary<long,SurfaceInstallation> tickInstallations=new Dictionary<long,SurfaceInstallation>();readonly HashSet<long> tickLiveInstallations=new HashSet<long>();
         readonly Dictionary<int,LocalColony> locals=new Dictionary<int,LocalColony>();double accumulated,evaluationTime=-1;public long EconomyTicks {get;private set;}
         public int Revision {get;private set;}
         public double RenderTime=>State.time+Math.Min(accumulated,Math.Max(.25,Settings.economyTickSeconds));
@@ -90,7 +91,7 @@ namespace MassiveArmy.Planetary
                 colony.powerBalance=local.Factions[team].generation-local.Factions[team].demand;
                 colony.powerGeneration=local.Factions[team].generation;colony.powerDemand=local.Factions[team].demand;
                 colony.housingCapacity=colony.housedPopulation=0;colony.foodDemand=colony.foodSupplied=0;int unhoused=colony.population;
-                var installationIndex=new Dictionary<long,SurfaceInstallation>(colony.installations.Count);foreach(var existing in colony.installations)if(!installationIndex.ContainsKey(existing.id))installationIndex.Add(existing.id,existing);var liveInstallations=new HashSet<long>();
+                var installationIndex=tickInstallations;installationIndex.Clear();foreach(var existing in colony.installations)if(!installationIndex.ContainsKey(existing.id))installationIndex.Add(existing.id,existing);var liveInstallations=tickLiveInstallations;liveInstallations.Clear();
                 bool primaryWarehouse=false,householdsFed=true;
                 foreach(var building in local.Buildings){
                     if(building.team!=team||building.removed)continue;

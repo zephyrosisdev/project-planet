@@ -26,16 +26,17 @@ namespace MassiveArmy.Planetary {
         void RegisterBuildingView(RtsBuilding b,RtsModelArt.Building model){
             if(LegacyCityPresentation)return;var state=new BuildingView{building=b,root=b.visual.transform,near=model.near,far=model.far??model.near};var shell=state.root.Find("Current RTS shell");if(shell!=null){state.shell=shell.GetComponent<MeshFilter>();state.renderer=shell.GetComponent<MeshRenderer>();state.shell.sharedMesh=model.near;}
             state.accessories=state.root.GetComponentsInChildren<Renderer>(true);state.bounds=model.near.bounds;state.bounds.Encapsulate(state.far.bounds);if(model.gateLeaf!=null)state.bounds.Encapsulate(model.gateLeaf.bounds);
-            if(state.shell!=null){if(!proxyMeshes.TryGetValue(model,out state.proxy)){state.proxy=BuildingProxy(state.bounds);proxyMeshes.Add(model,state.proxy);}if(state.far==state.near)state.far=state.proxy;}
+            if(state.shell!=null){if(!proxyMeshes.TryGetValue(model,out state.proxy)){state.proxy=BuildingProxy(state.bounds);proxyMeshes.Add(model,state.proxy);}state.near=state.far=state.proxy;state.shell.sharedMesh=state.proxy;}
             state.pose=PrepareConstruction(state.root,b.definition,CubeSphere.Decode(b.position),b.rotation);CacheBuildingBounds(state);buildingViews.Add(state);if(!b.Complete)pendingConstructionViews.Add(state);viewCount=-1;
         }
+        Mesh BuildingCube(RtsModelArt.Building model){if(!proxyMeshes.TryGetValue(model,out var mesh)){var bounds=model.near.bounds;if(model.far!=null)bounds.Encapsulate(model.far.bounds);if(model.gateLeaf!=null)bounds.Encapsulate(model.gateLeaf.bounds);mesh=BuildingProxy(bounds);proxyMeshes.Add(model,mesh);}return mesh;}
         static Mesh BuildingProxy(Bounds bounds){
             var vertices=new List<Vector3>(24);var uv=new List<Vector2>(24);var indices=new List<int>(36);
             Vector3[] normals={Vector3.right,Vector3.left,Vector3.up,Vector3.down,Vector3.forward,Vector3.back};
             foreach(var n in normals){var u=Mathf.Abs(n.y)>.5f?Vector3.right:Vector3.Cross(Vector3.up,n);var v=Vector3.Cross(n,u);int start=vertices.Count;
                 for(int y=0;y<2;y++)for(int x=0;x<2;x++){var corner=n+u*(x*2-1)+v*(y*2-1);vertices.Add(bounds.center+Vector3.Scale(corner,bounds.extents));uv.Add(new Vector2(x,y));}
                 indices.AddRange(new[]{start,start+1,start+2,start+1,start+3,start+2});}
-            var mesh=new Mesh{name="Shared distant building silhouette"};mesh.SetVertices(vertices);mesh.SetUVs(0,uv);mesh.SetTriangles(indices,0);mesh.RecalculateNormals();mesh.RecalculateTangents();mesh.RecalculateBounds();return mesh;
+            var mesh=new Mesh{name="Shared building cube (all distances)"};mesh.SetVertices(vertices);mesh.SetUVs(0,uv);mesh.SetTriangles(indices,0);mesh.RecalculateNormals();mesh.RecalculateTangents();mesh.RecalculateBounds();return mesh;
         }
         void LegacyRebaseInfrastructure(){foreach(var b in Buildings){PlaceTransform(b.visual.transform,b.definition,CubeSphere.Decode(b.position),b.rotation);b.visual.transform.localScale=Vector3.one*(b.Complete?1:Mathf.Lerp(.1f,1,b.construction/b.definition.time));}
             for(int i=0;i<markers.Count;i++){var up=CubeSphere.Decode(Nodes[i].position);markers[i].transform.SetPositionAndRotation(fixture.RenderBodyPosition(surface.GetSurfacePositionPrecise(up)),Quaternion.FromToRotation(Vector3.up,up));}if(ghost!=null)PlaceTransform(ghost.transform,Placing,ghostDirection,PlacementRotation);}
@@ -70,8 +71,8 @@ namespace MassiveArmy.Planetary {
                 if(visible&&state.lod==0&&pixels>=56)lod=0;else if(visible&&state.lod==1&&pixels>=10&&pixels<72)lod=1;else if(visible&&state.lod==2&&pixels<14)lod=2;
                 if(visible){if(lod==0)stats.near++;else if(lod==1)stats.far++;else stats.proxy++;}
                 if(state.shell!=null&&lod>=0&&lod!=state.lod){state.shell.sharedMesh=lod==0?state.near:lod==1?state.far:state.proxy;var inv=new Vector3(1/scale.x,1/scale.y,1/scale.z);state.renderer.localBounds=new Bounds(Vector3.Scale(bounds.center,inv),Vector3.Scale(bounds.size,inv));}
-                if(state.visible!=visible||state.lod!=lod){foreach(var renderer in state.accessories)renderer.enabled=visible&&(renderer==state.renderer||lod!=2);state.visible=visible;}
-                if(state.renderer!=null){var shadows=visible&&pixels>=32&&b.definition.housingCapacity==0?ShadowCastingMode.On:ShadowCastingMode.Off;if(state.shadows!=shadows){foreach(var renderer in state.accessories)renderer.shadowCastingMode=shadows;state.shadows=shadows;}}
+                if(state.visible!=visible||state.lod!=lod){foreach(var renderer in state.accessories)renderer.enabled=visible&&(renderer==state.renderer);state.visible=visible;}
+                if(state.renderer!=null){var shadows=ShadowCastingMode.Off;if(state.shadows!=shadows){foreach(var renderer in state.accessories)renderer.shadowCastingMode=shadows;state.shadows=shadows;}}
                 state.lod=lod;
             }BuildingViews=stats;
         }

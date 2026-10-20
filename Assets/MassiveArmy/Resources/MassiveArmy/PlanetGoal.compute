@@ -1,5 +1,7 @@
 #pragma kernel Closest
 #pragma kernel Resolve
+#pragma kernel ApplyGoal
+#include "ArmyCommon.hlsl"
 #include "PlanetTopology.hlsl"
 StructuredBuffer<float> _Costs;
 RWStructuredBuffer<uint> _Pick;
@@ -8,3 +10,10 @@ uint Requested(){return PlanetIndex(PlanetPositionCell(PlanetEncode(_Direction),
 bool Valid(uint i){return _Costs[_Movement*6*_Res*_Res+i]<5e19;}
 [numthreads(128,1,1)]void Closest(uint3 id:SV_DispatchThreadID){if(id.x>=6*_Res*_Res)return;if(Valid(Requested())){if(id.x==0){_Pick[0]=0;_Pick[1]=Requested();}return;}if(!Valid(id.x))return;float3 delta=PlanetCellDirection(PlanetCell(id.x,_Res),_Res)-_Direction;InterlockedMin(_Pick[0],asuint(dot(delta,delta)));}
 [numthreads(128,1,1)]void Resolve(uint3 id:SV_DispatchThreadID){if(id.x>=6*_Res*_Res||Valid(Requested())||!Valid(id.x))return;float3 delta=PlanetCellDirection(PlanetCell(id.x,_Res),_Res)-_Direction;if(asuint(dot(delta,delta))==_Pick[0])InterlockedMin(_Pick[1],id.x);}
+
+RWStructuredBuffer<GroupOrder> _ResolvedOrders;uint _ResolvedGroup;
+[numthreads(1,1,1)]void ApplyGoal(uint3 id:SV_DispatchThreadID){
+    GroupOrder goal=_ResolvedOrders[_ResolvedGroup];uint choice=_Pick[1];
+    goal.localOrigin=choice!=0xffffffffu&&choice!=Requested()?PlanetEncode(PlanetCellDirection(PlanetCell(choice,_Res),_Res)):goal.destination;
+    _ResolvedOrders[_ResolvedGroup]=goal;
+}
