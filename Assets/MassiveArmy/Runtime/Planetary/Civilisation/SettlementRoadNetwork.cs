@@ -52,7 +52,7 @@ namespace MassiveArmy.Planetary
             var surface=new PlanetSurface(world.definition);var a=Cell(start);var b=Cell(finish);if(OtherNetwork!=null&&(OtherNetwork.HasRoad(a)||OtherNetwork.HasRoad(b))){reason="Road/rail crossings must pass straight through, with separate entrances";return false;}if(!Allowed(a,faction,surface)||!Allowed(b,faction,surface)){reason="No dry, clear road entrance";return false;}var path=Search(a,b,faction,surface);
             if(path==null){reason="No dry, clear road route within the placement search budget";return false;}
             int additions=0;foreach(var cell in path)if(!tiles.ContainsKey(Key(cell)))additions++;
-            var settings=world.SystemRuntime.Civilisation.Settings;if(saved.Count+additions>settings.maximumRoadTiles){reason="Road capacity reached";return false;}
+            var settings=world.SystemRuntime.Civilisation.Settings;if(settings.maximumRoadTiles>0&&saved.Count+additions>settings.maximumRoadTiles){reason="Road capacity reached";return false;}
             if(!starter&&!local.Factions[faction].wallet.Spend(new ResourceCost{materials=additions*(rail?settings.railTileCost:settings.roadTileCost)})){reason="Insufficient construction materials for this road";return false;}
             foreach(var cell in path)if(!tiles.ContainsKey(Key(cell))){tiles.Add(Key(cell),faction);saved.Add(new RoadTile{cell=cell,faction=faction,height=surface.SampleHeight(Direction(cell))});}
             if(additions>0){Revision++;RebuildGraph();}reason=additions+" road tiles placed";return true;

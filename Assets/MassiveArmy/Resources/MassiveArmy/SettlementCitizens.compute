@@ -12,10 +12,10 @@ StructuredBuffer<Node> _Nodes;StructuredBuffer<Goal> _Goals;StructuredBuffer<Ord
 RWStructuredBuffer<uint> _Parents,_Queue;RWStructuredBuffer<uint4> _Search;
 RWStructuredBuffer<Walker> _Walkers;StructuredBuffer<Walker> _PreviousWalkers;RWStructuredBuffer<Pose> _CargoPoses;
 RWStructuredBuffer<uint> _CitizenVisible,_DrawArgs;float4 _Frustum[6];
-uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount;float _Delta,_Speed,_Clock,_DrawRange;float3 _CameraBody;
+uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount,_StorageWidth;float _Delta,_Speed,_Clock,_DrawRange;float3 _CameraBody;
 #define INVALID 0xffffffffu
 [numthreads(1,1,1)]void ResetDraw(uint3 id:SV_DispatchThreadID){_DrawArgs[1]=0;}
-[numthreads(128,1,1)] void ClearFlows(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i<_NodeStride*_GoalCount)_Parents[i]=INVALID;if(i<_GoalCount)_Search[i]=0;}
+[numthreads(128,1,1)] void ClearFlows(uint3 id:SV_DispatchThreadID){uint i=id.x+id.y*_StorageWidth;if(i<_NodeStride*_GoalCount)_Parents[i]=INVALID;if(i<_GoalCount)_Search[i]=0;}
 // Each destination owns one persistent reverse BFS, shared by every commuter going there.
 // Work is capped at 128 nodes per destination per dispatch; only graph changes reset it.
 [numthreads(32,1,1)] void BuildFlows(uint3 id:SV_DispatchThreadID){uint g=id.x;if(g>=_GoalCount)return;Goal goal=_Goals[g];if(goal.active==0||goal.node<0||goal.node>=(int)_NodeCount)return;uint offset=g*_NodeStride;uint4 search=_Search[g];

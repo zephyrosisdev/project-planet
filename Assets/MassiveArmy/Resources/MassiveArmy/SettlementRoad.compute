@@ -22,11 +22,11 @@ StructuredBuffer<uint> _PreviousSeen,_PreviousParents,_PreviousQueue;
 StructuredBuffer<float> _PreviousDistances;
 StructuredBuffer<Work> _PreviousWork;
 StructuredBuffer<Pose> _PreviousPoses;
-uint _PreviousStride,_PreviousSlots,_SearchSlots;
+uint _PreviousStride,_PreviousSlots,_SearchSlots,_StorageWidth;
 [numthreads(128,1,1)]
-void ClearSearch(uint index:SV_DispatchThreadID){if(index<_RoadStride*_SearchSlots)_RoadSeen[index]=0;if(index<_SearchSlots)_RoadWork[index]=(Work)0;}
+void ClearSearch(uint3 id:SV_DispatchThreadID){uint index=id.x+id.y*_StorageWidth;if(index<_RoadStride*_SearchSlots)_RoadSeen[index]=0;if(index<_SearchSlots)_RoadWork[index]=(Work)0;}
 [numthreads(128,1,1)]
-void CopySearch(uint index:SV_DispatchThreadID){
+void CopySearch(uint3 id:SV_DispatchThreadID){uint index=id.x+id.y*_StorageWidth;
  if(index>=_PreviousStride*_PreviousSlots)return;uint slot=index/_PreviousStride,cell=index%_PreviousStride,target=slot*_RoadStride+cell;
  _RoadSeen[target]=_PreviousSeen[index];_RoadParents[target]=_PreviousParents[index];_RoadQueue[target]=_PreviousQueue[index];_RoadDistances[target]=_PreviousDistances[index];
  if(cell==0){_RoadWork[slot]=_PreviousWork[slot];_CargoPoses[slot]=_PreviousPoses[slot];}

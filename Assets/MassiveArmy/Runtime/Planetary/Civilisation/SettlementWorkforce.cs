@@ -2,11 +2,12 @@ using System;
 namespace MassiveArmy.Planetary {
     public sealed partial class CivilisationRuntime {
         // Strategic biographies assign job slots; live civilian and army movement stay on GPU.
-        internal static bool RecoveryEssential(BuildingDefinition definition)=>WorkerPriority(definition)==0||definition.generation>0||definition.id=="oil"||definition.id=="civil_oil_well"||definition.id=="civil_oil_refinery"||definition.id=="civil_mine_methane";
+        internal static bool Backbone(BuildingDefinition d)=>d.researchRate>0||d.id=="civil_launch_pad"||d.id=="civil_smelter"||d.id=="civil_electronics"||d.id=="light_depot"||d.id=="helipad"||d.id=="civil_port"||d.id=="civil_airport"||d.id=="civil_freight_station";
+        internal static bool RecoveryEssential(BuildingDefinition definition)=>WorkerPriority(definition)==0||Backbone(definition)||definition.extraction>0||definition.generation>0||definition.id=="oil"||definition.id=="civil_oil_well"||definition.id=="civil_oil_refinery"||definition.id=="civil_mine_methane";
         internal static int ConstructionPriority(RtsBuilding building)=>!building.Complete?(RecoveryEssential(building.definition)?0:building.definition.housingCapacity>0?1:2):3;
         internal static int WorkerPriority(BuildingDefinition d){
             if(d.extractedResource=="water"||d.id.StartsWith("civil_farm_")||d.id=="civil_food_processing"||d.id=="civil_hydroponics"||d.id=="civil_beef_shed"||d.id=="civil_butcher")return 0;
-            if(d.extraction>0)return 1;
+            if(d.extraction>0||Backbone(d))return 1;
             if(d.id.StartsWith("civil_"))return 2;
             return 3;
         }

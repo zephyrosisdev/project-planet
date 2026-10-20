@@ -92,7 +92,7 @@ namespace MassiveArmy.Planetary
                 colony.powerGeneration=local.Factions[team].generation;colony.powerDemand=local.Factions[team].demand;
                 colony.housingCapacity=colony.housedPopulation=0;colony.foodDemand=colony.foodSupplied=0;int unhoused=colony.population;
                 var installationIndex=tickInstallations;installationIndex.Clear();foreach(var existing in colony.installations)if(!installationIndex.ContainsKey(existing.id))installationIndex.Add(existing.id,existing);var liveInstallations=tickLiveInstallations;liveInstallations.Clear();
-                bool primaryWarehouse=false,householdsFed=true;
+                bool primaryWarehouse=false;int growthHousing=0;
                 foreach(var building in local.Buildings){
                     if(building.team!=team||building.removed)continue;
                     if(building.persistentId==0)building.persistentId=State.AllocateId();liveInstallations.Add(building.persistentId);installationIndex.TryGetValue(building.persistentId,out var installation);
@@ -103,9 +103,9 @@ namespace MassiveArmy.Planetary
                     int residents=0;if(building.definition.housingCapacity>0)foreach(var household in colony.households)if(household.home==building.persistentId)residents+=household.members.Count;residents=Math.Min(unhoused,residents);unhoused-=residents;
                     double demand=building.definition.foodUse*building.level+residents*Settings.populationFoodPerSecond;colony.foodDemand+=demand;
                     double needed=demand*step,available=Math.Min(needed,installation.inventory.Get("food"));if(available>0)installation.inventory.Spend("food",available);
-                    if(residents>0&&available+1e-9<needed)householdsFed=false;
+                    if(building.definition.housingCapacity>residents&&available+1e-9>=needed&&installation.inventory.Get("food")>=1)growthHousing+=building.definition.housingCapacity-residents;
                     building.FoodEfficiency=needed>0?(float)(available/needed):1;colony.foodSupplied+=step>0?available/step:demand;
-                    double efficiency=local.Factions[team].efficiency*(RecoveryEssential(building.definition)?Math.Max(.25,building.FoodEfficiency):building.FoodEfficiency)*building.WorkforceEfficiency*building.level;
+                    double efficiency=local.Factions[team].efficiency*Math.Max(building.MinimumFoodEfficiency,building.FoodEfficiency)*building.WorkforceEfficiency*building.level;
                     building.Efficiency=(float)(efficiency/building.level);
                     if(building.definition.housingCapacity>0){colony.housingCapacity+=building.definition.housingCapacity*building.level;colony.housedPopulation+=residents;}
                     if(building.definition.id=="civil_gathering_camp")GatherSupplies(local,installation,building,step*efficiency);
@@ -127,10 +127,10 @@ namespace MassiveArmy.Planetary
                 using(SettlementPerformance.Sample("Logistics"))Logistics.Tick(local,colony,step);Orbitals.Tick(local,colony,step);
                 if(unhoused>0){double demand=unhoused*Settings.populationFoodPerSecond,food=Math.Min(colony.inventory.Get("food"),demand*step);colony.inventory.Spend("food",food);colony.foodDemand+=demand;colony.foodSupplied+=step>0?food/step:demand;}
                 colony.foodBalance=colony.foodSupplied-colony.foodDemand;
-                if(colony.housedPopulation>=colony.population&&colony.housingCapacity>colony.population&&householdsFed&&colony.powerBalance>=0){colony.growthProgress+=step;double interval=Math.Max(1,Settings.populationGrowthSeconds);int arrivals=Math.Min(colony.housingCapacity-colony.population,(int)Math.Min(int.MaxValue,colony.growthProgress/interval));colony.population+=arrivals;colony.growthProgress-=arrivals*interval;using(SettlementPerformance.Sample("Residents")){EnsureResidents(colony);BindHouseholds(local,colony);}}
+                if(growthHousing>0&&colony.powerBalance>=0){colony.growthProgress+=step;double interval=Math.Max(1,Settings.populationGrowthSeconds);int arrivals=Math.Min(growthHousing,(int)Math.Min(int.MaxValue,colony.growthProgress/interval));if(arrivals>0)using(SettlementPerformance.Sample("Residents")){int moved=GrowResidents(local,colony,arrivals);colony.growthProgress-=moved*interval;}}
             }
         }
-        void GrowCrop(SurfaceInstallation installation,PlanetState planet,double step){
+        internal void GrowCrop(SurfaceInstallation installation,PlanetState planet,double step){
             if(string.IsNullOrEmpty(installation.crop))installation.crop=installation.definition.Substring("civil_farm_".Length);
             CropDefinition crop=null;foreach(var item in Catalogue.crops)if(item.id==installation.crop){crop=item;break;}if(crop==null)return;
             installation.soilFertility=Math.Min(1,installation.soilFertility+Settings.soilRecoveryPerSecond*step);
@@ -141,10 +141,13 @@ namespace MassiveArmy.Planetary
             if(installation.soilFertility<.6&&installation.inventory.Get("fertiliser")>=.1*growing){installation.inventory.Spend("fertiliser",.1*growing);installation.soilFertility=Math.Min(1,installation.soilFertility+.01*growing);}
             installation.growth=Math.Min(1,installation.growth+growing/crop.growthSeconds);
             if(installation.growth<1)return;double yield=Math.Max(.2,installation.soilFertility);
-            foreach(var output in crop.harvest)if(installation.inventory.Capacity(output.resource)-installation.inventory.Get(output.resource)<output.amount*yield)return;
-            foreach(var output in crop.harvest)installation.inventory.Deposit(output.resource,output.amount*yield);
+            foreach(var output in crop.harvest)if(installation.inventory.Capacity(output.resource)-installation.inventory.Get(output.resource)<CropHarvest(crop,output,yield))return;
+            foreach(var output in crop.harvest)installation.inventory.Deposit(output.resource,CropHarvest(crop,output,yield));
             installation.soilFertility=Math.Max(0,installation.soilFertility-crop.soilUse);installation.growth=0;installation.planted=false;installation.harvests++;
         }
+        // Retain planting stock before scaling the surplus harvest by soil yield.
+        // Exhausted soil reduces surplus seeds, never consumes the seed line permanently.
+        internal static double CropHarvest(CropDefinition crop,MaterialQuantity output,double yield)=>output.resource=="seeds"?Math.Min(crop.seedCost,output.amount)+Math.Max(0,output.amount-crop.seedCost)*yield:output.amount*yield;
         static SurfaceInstallation FindInstallation(ColonyState colony,long id){foreach(var item in colony.installations)if(item.id==id)return item;return null;}
         public string RecipeFor(int planetId,RtsBuilding building){var colony=Colony(BodyId(planetId),building.team);return colony==null?null:FindInstallation(colony,building.persistentId)?.recipe;}
         public bool SetRecipe(int planetId,RtsBuilding building,string recipeId,int commandingFaction){

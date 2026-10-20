@@ -26,7 +26,7 @@ namespace MassiveArmy
         public bool Upgrading => upgradeTime>0;
         public float UpgradeFraction => upgradeTime>0?upgradeProgress/upgradeTime:0;
         public float Efficiency=1;
-        public float FoodEfficiency=1;
+        public float FoodEfficiency=1,MinimumFoodEfficiency;
         public float WorkforceEfficiency=1;
         public int WorkersAssigned,constructionWorkers;
     }

@@ -36,7 +36,7 @@ namespace MassiveArmy.Planetary
             var d=Catalog.Buildings[id];if(d.terrain!=TerrainRule.Node||d.nodes.Length==0)return false;
             // A usable, unclaimed local prospect must be developed before surveying another.
             foreach(var node in Nodes)if(node.claimedBy<0&&node.remaining>0&&Array.IndexOf(d.nodes,node.kind)>=0&&string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)){
-                var direction=CubeSphere.Decode(node.position);if(Distance(direction,Homes[team])<=Distance(direction,Homes[1-team])&&Validate(d,direction,0,false,team).valid)return false;
+                var direction=CubeSphere.Decode(node.position);if(Distance(direction,Homes[team])<=Distance(direction,Homes[1-team])&&!ResourceSiteCooling(id,team,node.id)&&Validate(d,direction,0,false,team).valid)return false;
             }
             var planet=Civilisation.Planet(fixture.definition.bodyId);var survey=planet.frontierSurveys.Find(s=>s.team==team&&s.resource==id);
             if(survey==null){survey=new FrontierSurvey{team=team,resource=id};planet.frontierSurveys.Add(survey);}

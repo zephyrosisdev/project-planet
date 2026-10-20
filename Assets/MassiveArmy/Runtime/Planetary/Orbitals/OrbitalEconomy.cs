@@ -123,7 +123,7 @@ namespace MassiveArmy.Planetary {
         }
         PlanetDefinition Definition(string body){var state=sim.State.Planet(body);if(state==null)return null;foreach(var d in system.Bodies)if(d.bodyId==state.planetId)return d;return null;}
         internal void Plan(PlanetRtsBase local,int team){
-            if(!local.Factions[team].HasTech("civil_satellites")||!local.AiEconomyReady(team))return;RtsBuilding pad=null;foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&b.definition.id=="civil_launch_pad"){pad=b;break;}
+            if(!local.Factions[team].HasTech("civil_rocketry")||!local.AiEconomyReady(team,false))return;RtsBuilding pad=null;foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&b.definition.id=="civil_launch_pad"){pad=b;break;}
             if(pad==null){if(local.AiCanSpend(team,local.Catalog.Buildings["civil_launch_pad"].cost))local.TryConstructInfrastructure("civil_launch_pad",team);return;}
             if(!pad.Complete||Job(pad.persistentId)!=null)return;if(HasResearchStation(sim.BodyId(local.World.definition.bodyId),team)&&!local.Factions[team].HasTech("civil_orbital_science"))local.Research(pad,"civil_orbital_science");string body=sim.BodyId(local.World.definition.bodyId);bool survey=false,research=false,warehouse=false,dock=false;
             foreach(var a in Assets(body))if(a.faction==team){survey|=a.kind==OrbitalPayloadKind.SurveySatellite;research|=a.kind==OrbitalPayloadKind.ResearchStation;warehouse|=a.kind==OrbitalPayloadKind.Warehouse;dock|=a.kind==OrbitalPayloadKind.DockingStation;}

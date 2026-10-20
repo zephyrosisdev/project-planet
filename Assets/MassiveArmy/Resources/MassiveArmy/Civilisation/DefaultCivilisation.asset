@@ -41,7 +41,7 @@ MonoBehaviour:
   roadTileCost: 1
   roadMaximumStepHeight: 3
   roadSearchBudget: 4096
-  maximumRoadTiles: 32768
+  maximumRoadTiles: 0
   maximumCargoVehicles: 64
   groundCargoSpeed: 12
   airCargoSpeed: 55

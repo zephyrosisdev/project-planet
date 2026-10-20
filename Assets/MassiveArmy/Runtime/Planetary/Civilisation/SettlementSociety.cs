@@ -46,6 +46,19 @@ namespace MassiveArmy.Planetary {
             // Migration is explicit family reunification, rather than an invisible aggregate increment.
             while(c.residents.Count<c.population){HouseholdState h=null;foreach(var family in c.households)if(family.members.Count<6){h=family;break;}if(h==null){h=NewFamily(c,c.households.Count%3);c.households.Add(h);}AddPerson(c,h,18+Random(State.nextId,"arrival")*22);}
         }
+        // Migration uses serviced local vacancies. One delayed food delivery elsewhere
+        // cannot veto the town; newcomers never get assigned to that unfed home.
+        internal int GrowResidents(PlanetRtsBase local,ColonyState c,int requested){
+            int moved=0;
+            for(int i=0;i<requested;i++){
+                HouseholdState family=null;RtsBuilding vacant=null;
+                foreach(var h in c.households){var home=SocietyBuilding(local,h.home);if(h.members.Count<6&&Suitable(home)){family=h;break;}}
+                if(family==null){foreach(var home in local.Buildings)if(Suitable(home)&&!c.households.Exists(h=>h.home==home.persistentId)){vacant=home;break;}
+                    if(vacant==null)break;int tenure=vacant.definition.id=="civil_social_home"?2:vacant.definition.id=="civil_rental_home"?1:0;family=NewFamily(c,tenure);family.home=vacant.persistentId;if(family.tenure==HomeTenure.PrivateRental){ResidentState landlord=null;foreach(var owner in c.residents)if(owner.alive&&owner.age>=18&&(landlord==null||owner.savings>landlord.savings))landlord=owner;family.owner=landlord?.id??0;}c.households.Add(family);}
+                AddPerson(c,family,18+Random(State.nextId,"arrival")*22);c.population++;moved++;
+            }return moved;
+            bool Suitable(RtsBuilding home)=>home!=null&&home.team==c.faction&&!home.removed&&home.Complete&&home.powered&&!home.paused&&!home.roadSuspended&&home.definition.housingCapacity>0&&FindInstallation(c,home.persistentId)?.inventory.Get("food")>=1&&Logistics.Connected(local,home);
+        }
         HouseholdState NewFamily(ColonyState c,int tenure){long id=State.AllocateId();return new HouseholdState{id=id,surname=Surnames[(int)(PlanetResourceProfile.Hash(c.body+":"+id)%(uint)Surnames.Length)],tenure=(HomeTenure)tenure};}
         void AddPerson(ColonyState c,HouseholdState h,double age){
             long id=State.AllocateId();double wealth=Random(h.id,"wealth")*.32+(h.tenure==HomeTenure.OwnerOccupied?.68:h.tenure==HomeTenure.PrivateRental?.34:0);

@@ -28,6 +28,7 @@ namespace MassiveArmy.Planetary {
         readonly Dictionary<(int,SettlementDistrict),PlanningFrontier> planningFrontiers=new Dictionary<(int,SettlementDistrict),PlanningFrontier>();
         readonly Dictionary<(int,string),PlanningFrontier> cropFrontiers=new Dictionary<(int,string),PlanningFrontier>();
         readonly PlanningFrontier[] allFrontiers={new PlanningFrontier(),new PlanningFrontier()};
+        readonly Dictionary<(int,string),int> failedPlanningOffsets=new Dictionary<(int,string),int>();
         readonly Dictionary<(int,string),int> planningCursors=new Dictionary<(int,string),int>();
         readonly List<RtsBuilding> planningAnchors=new List<RtsBuilding>(12);
         readonly List<(Vector3 point,int rotation,float score)> districtCandidates=new List<(Vector3,int,float)>();
@@ -61,7 +62,7 @@ namespace MassiveArmy.Planetary {
                     var port=Grid.Port(Grid.Area(d,p,rotation));var anchorPort=Grid.Port(a);float road=port.face==anchorPort.face?Mathf.Abs(port.x-anchorPort.x)+Mathf.Abs(port.y-anchorPort.y):100;
                     candidates.Add((p,rotation,priority+road*.8f));}
             }
-            candidates.Sort((a,b)=>a.score.CompareTo(b.score));for(int i=0;i<Math.Min(3,candidates.Count);i++){var c=candidates[i];if(ConstructOriented(d,team,c.point,c.rotation))return true;}return false;
+            candidates.Sort((a,b)=>a.score.CompareTo(b.score));var key=(team,d.id);failedPlanningOffsets.TryGetValue(key,out int attemptOffset);for(int i=0;i<Math.Min(3,candidates.Count);i++){var c=candidates[(attemptOffset+i)%candidates.Count];if(ConstructOriented(d,team,c.point,c.rotation)){failedPlanningOffsets[key]=0;return true;}}failedPlanningOffsets[key]=candidates.Count==0?0:(attemptOffset+3)%candidates.Count;return false;
         }
         internal bool BuildSettlementFrontier(string requested,int team){var d=Catalog.Buildings[requested];return CivilianExpansion(d)&&d.terrain!=TerrainRule.Node&&BuildDistrict(d,team);}
         readonly List<(Vector3 point,int rotation,float score)> previewStreetCandidates=new List<(Vector3,int,float)>();
