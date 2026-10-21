@@ -12,6 +12,7 @@ namespace MassiveArmy.Planetary
         readonly SettlementDirector settlementDirector;
         public UniverseState State {get;private set;}
         readonly PlanetSystemRuntime system;readonly Dictionary<int,string> bodyIds=new Dictionary<int,string>();
+        readonly Dictionary<string,string> bodyNames=new Dictionary<string,string>();
         readonly Dictionary<long,SurfaceInstallation> tickInstallations=new Dictionary<long,SurfaceInstallation>();readonly HashSet<long> tickLiveInstallations=new HashSet<long>();
         readonly Dictionary<int,LocalColony> locals=new Dictionary<int,LocalColony>();double accumulated,evaluationTime=-1;public long EconomyTicks {get;private set;}
         public int Revision {get;private set;}
@@ -28,15 +29,17 @@ namespace MassiveArmy.Planetary
                 else node.stableId="g"+State.galaxySeed+"/s"+node.system+"/"+node.kind+"/"+(node.kind==CelestialKind.Star?node.name:"");
             }
             for(int i=0;i<system.Bodies.Length;i++){
-                var definition=system.Bodies[i];var node=galaxy.Nodes[galaxy.NodeFor(definition)];bodyIds.Add(definition.bodyId,node.stableId);
+                var definition=system.Bodies[i];var node=galaxy.Nodes[galaxy.NodeFor(definition)];bodyIds.Add(definition.bodyId,node.stableId);bodyNames.Add(node.stableId,definition.displayName);
                 var profile=PlanetResourceProfile.Generate(node.stableId,i==0,Catalogue,Settings);PlanetArchetype archetype=null;foreach(var item in Catalogue.archetypes)if(item.id==profile.archetype){archetype=item;break;}
                 var environment=new CelestialEnvironment{atmosphere=i==0?definition.hasAtmosphere:archetype.pressure>0,breathable=i==0?definition.breathable:archetype.breathable,pressure=i==0?definition.surfacePressure:archetype.pressure,oxygen=i==0?definition.oxygenLevel:archetype.breathable?.21:0,temperature=archetype.temperature,habitability=archetype.breathable?1:.15};
                 node.composition=profile;node.environment=environment;node.rotationRate=definition.rotationRate;
+                if(i!=0)PlanetWeather.Generate(definition,environment.atmosphere,environment.breathable,(float)environment.pressure,(float)environment.oxygen);
                 State.planets.Add(new PlanetState{body=node.stableId,planetId=definition.bodyId,navigationContext=definition.bodyId,composition=profile,environment=environment});
             }
             for(int team=0;team<2;team++){var faction=new CivilisationFaction{id=team,name=team==0?"Cyan":"Red",autonomous=team==1||system.ActiveWorld.sessionMode==PlanetGameMode.AiTest};State.factions.Add(faction);var home=faction.knowledge.Record(bodyIds[system.Bodies[0].bodyId]);home.level=DiscoveryLevel.Surveyed;home.confidence=1;foreach(var abundance in State.planets[0].composition.abundance)home.resources.Add(new ResourceEstimate{resource=abundance.resource,estimate=abundance.amount,uncertainty=0});}
         }
         public string BodyId(int planetId)=>bodyIds.TryGetValue(planetId,out var id)?id:null;
+        public string BodyName(string body)=>body!=null&&bodyNames.TryGetValue(body,out var name)?name:body;
         public bool Known(int faction,int planetId)=>State.Faction(faction)?.knowledge.Knows(BodyId(planetId))==true;
         public PlanetState Planet(int planetId)=>State.Planet(BodyId(planetId));
         public ColonyState Colony(string body,int faction){foreach(var colony in State.colonies)if(colony.body==body&&colony.faction==faction)return colony;return null;}

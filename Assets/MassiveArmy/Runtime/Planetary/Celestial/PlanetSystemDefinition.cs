@@ -17,15 +17,17 @@ namespace MassiveArmy.Planetary
         public PlanetDefinition[] Generate(PlanetDefinition home)
         {
             int count=Mathf.Clamp(planetCount,1,8);var bodies=new PlanetDefinition[count];bodies[0]=home;
+            int nameSeed=seed^home.terrainSeed;var usedNames=new System.Collections.Generic.HashSet<string>();if(PlanetNames.Placeholder(home.displayName))home.displayName=PlanetNames.Unique(nameSeed,0,usedNames);else usedNames.Add(home.displayName);
             uint state=unchecked((uint)(seed^home.terrainSeed))+0x9e3779b9u;
             uint Next(){state^=state<<13;state^=state>>17;state^=state<<5;return state;}
             float Value()=>(Next()>>8)*(1f/16777216);
             for(int i=1;i<count;i++){
                 var d=Instantiate(home);d.name="Generated planet "+(i+1);d.bodyId=home.bodyId+i;
-                d.displayName="Planet "+(i+1);d.terrainSeed=(int)(Next()&0x7fffffff);
+                d.displayName=PlanetNames.Unique(nameSeed,i,usedNames);d.name=d.displayName;d.terrainSeed=(int)(Next()&0x7fffffff);
                 d.radius=Mathf.Lerp(Mathf.Max(20000,radiusRange.x),Mathf.Max(20000,radiusRange.y),Value());
                 d.terrainHeight=d.radius*.015f;d.oceanHeight=Mathf.Lerp(-200,120,Value());
                 d.gravitationalParameter=9.81*d.radius*d.radius;d.atmosphereHeight=d.radius/12;
+                PlanetWeather.Generate(d);
                 // Disjoint radial shells guarantee separation, irrespective of random longitude.
                 double distance=(Math.Max(spacing,4*Math.Max(home.radius,Math.Max(radiusRange.x,radiusRange.y))))*i;
                 double angle=Value()*Math.PI*2;d.position=home.position.Add(new Double3(Math.Cos(angle)*distance,(Value()-.5)*distance*.25,Math.Sin(angle)*distance));

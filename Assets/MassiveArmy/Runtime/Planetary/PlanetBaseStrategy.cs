@@ -11,6 +11,15 @@ namespace MassiveArmy.Planetary
         public readonly int[] AIDecisions=new int[2];
         public readonly string[] AIActivity={"Starting","Starting"};
         readonly float[] nextThink={2,4};float strategyTime;
+        bool playerAutoPilot;
+        public bool AutoPilotEnabled=>Civilisation?.State.Faction(0)?.autonomous??playerAutoPilot;
+        internal bool BaseAIEnabled(int team)=>Civilisation?.State.Faction(team)?.autonomous??(team==0?playerAutoPilot||fixture.sessionMode==PlanetGameMode.AiTest:fixture.sessionMode!=PlanetGameMode.Swarm);
+        public void SetAutoPilot(bool enabled){
+            if(fixture.sessionMode==PlanetGameMode.AiTest||!fixture.StrategyEnabled||!Buildings.Any(b=>b.team==0&&!b.removed&&b.Complete&&b.definition.id=="command"))return;
+            playerAutoPilot=enabled;if(Civilisation!=null)Civilisation.State.Faction(0).autonomous=enabled;
+            nextThink[0]=strategyTime;AIActivity[0]=enabled?"Developing economy and production":"Manual control";
+            Notice=enabled?"Auto Pilot enabled: AI manages construction, research and production":"Auto Pilot disabled: manual base control";NotifyChanged();
+        }
         public Vector3 TeamOffset(int team,Vector2 metres){var up=Homes[team];var east=Vector3.Cross(Mathf.Abs(up.y)>.95f?Vector3.right:Vector3.up,up).normalized;return (up+(east*metres.x+Vector3.Cross(up,east)*metres.y)/fixture.definition.radius).normalized;}
         void FindEnemyHome(){
             var wanted=Homes[1];for(int attempt=0;attempt<128;attempt++){
@@ -46,8 +55,8 @@ namespace MassiveArmy.Planetary
         }
         static readonly string[] orbitalResearchPath={"civil_industry","civil_rocketry","civil_tracking","civil_refining","civil_satellites","civil_astronomy","civil_spectroscopy","civil_communications","civil_probes","civil_navigation","civil_mining","civil_colonisation","civil_logistics","civil_orbital_construction"};
         int ResearchPriority(string id){int rank=Array.IndexOf(orbitalResearchPath,id);return rank<0?orbitalResearchPath.Length:rank;}
-        void ThinkPlanetAI(float dt){if(!fixture.StrategyEnabled||fixture.sessionMode==PlanetGameMode.Swarm)return;strategyTime+=dt;
-            for(int team=0;team<2;team++){if(team==0&&fixture.sessionMode!=PlanetGameMode.AiTest||strategyTime<nextThink[team])continue;nextThink[team]=strategyTime+4;int cycle=++AIDecisions[team];var f=Factions[team];var owned=Buildings.Where(b=>b.team==team&&!b.removed).ToArray();var command=owned.FirstOrDefault(b=>b.definition.id=="command");if(command==null){AIActivity[team]="Command lost";continue;}bool Has(string id)=>HasProductiveBuilding(id,team);
+        void ThinkPlanetAI(float dt){if(!fixture.StrategyEnabled)return;strategyTime+=dt;
+            for(int team=0;team<2;team++){if(!BaseAIEnabled(team)||strategyTime<nextThink[team])continue;nextThink[team]=strategyTime+4;int cycle=++AIDecisions[team];var f=Factions[team];var owned=Buildings.Where(b=>b.team==team&&!b.removed).ToArray();var command=owned.FirstOrDefault(b=>b.definition.id=="command");if(command==null){AIActivity[team]="Command lost";continue;}bool Has(string id)=>HasProductiveBuilding(id,team);
                 foreach(var b in owned)if(b.Complete&&b.health<b.MaxHealth*.9f)b.repairing=AiCanSpend(team,new ResourceCost{materials=1});
                 bool built=false;AIActivity[team]="Developing economy and production";
                 if(Civilisation==null&&!Has("mine"))built=BuildAI("mine",team,cycle);

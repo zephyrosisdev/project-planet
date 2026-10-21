@@ -27,16 +27,22 @@ namespace MassiveArmy.Planetary
         }
         public StampDefinition[] definitions;
         static PlanetStampLibrary instance;
-        ushort[] heights;Texture2DArray texture,fallbackTexture;GraphicsBuffer fallbackBuffer;
+        // Runtime caches must not participate in Unity's private-field hot-reload serialization.
+        [NonSerialized]ushort[] heights;
+        [NonSerialized]Texture2DArray texture,fallbackTexture;
+        [NonSerialized]GraphicsBuffer fallbackBuffer;
         readonly Dictionary<string,int> kernelCounts=new Dictionary<string,int>();
         public static PlanetStampLibrary Shared=>instance!=null?instance:instance=Resources.Load<PlanetStampLibrary>("MassiveArmy/PlanetStamps/Library");
         public int Count=>definitions.Length;
         float maximumDisplacement=-1;
         public float MaximumDisplacement {get{if(maximumDisplacement>=0)return maximumDisplacement;maximumDisplacement=1;foreach(var d in definitions)maximumDisplacement=Mathf.Max(maximumDisplacement,Mathf.Max(.24f+.72f*(d.heightGain+Mathf.Max(0,d.heightOffset)),.36f+.72f*Mathf.Max(0,-d.heightOffset)));return maximumDisplacement;}}
         void OnValidate(){maximumDisplacement=-1;}
-        void Initialize(){if(heights!=null)return;if(Count<1||Count>16)throw new InvalidOperationException("Use one to sixteen planet stamp definitions.");
-            var asset=Resources.Load<TextAsset>("MassiveArmy/PlanetStamps/Heights");var bytes=asset.bytes;heights=new ushort[bytes.Length/2];Buffer.BlockCopy(bytes,0,heights,0,bytes.Length);Resources.UnloadAsset(asset);
-            if(heights.Length!=Resolution*Resolution*Count)throw new InvalidOperationException("Planet stamp bake does not match the library. Rebuild stamp data.");
+        void Initialize(){if(heights!=null&&heights.Length==Resolution*Resolution*Count)return;if(Count<1||Count>16)throw new InvalidOperationException("Use one to sixteen planet stamp definitions.");
+            var asset=Resources.Load<TextAsset>("MassiveArmy/PlanetStamps/Heights");
+            if(asset==null)throw new InvalidOperationException("Planet stamp bake is missing. Rebuild stamp data.");
+            var bytes=asset.bytes;Resources.UnloadAsset(asset);
+            if(bytes.Length!=Resolution*Resolution*Count*sizeof(ushort))throw new InvalidOperationException("Planet stamp bake does not match the library. Rebuild stamp data.");
+            var loaded=new ushort[bytes.Length/2];Buffer.BlockCopy(bytes,0,loaded,0,bytes.Length);heights=loaded;
         }
         void InitializeGpu(bool enabled){if(kernelCounts.Count==0)foreach(var line in Resources.Load<TextAsset>("MassiveArmy/PlanetStamps/Kernels").text.Split('\n')){var parts=line.Trim().Split(':');if(parts.Length==2)kernelCounts[parts[0]]=int.Parse(parts[1]);}
             if(enabled){Initialize();if(texture==null){texture=new Texture2DArray(Resolution,Resolution,Count,TextureFormat.R16,false,true){name="Canonical planet stamp heightmaps",filterMode=FilterMode.Bilinear,wrapMode=TextureWrapMode.Clamp};for(int i=0;i<Count;i++)texture.SetPixelData(heights,0,i,i*Resolution*Resolution);texture.Apply(false,true);}}

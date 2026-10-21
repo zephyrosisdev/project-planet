@@ -22,6 +22,7 @@ namespace MassiveArmy.Planetary
         public float rotationRate,axialTilt;
         public bool hasAtmosphere=true,breathable=true;
         public float atmosphereHeight=100,surfacePressure=1,oxygenLevel=.21f;
+        public PlanetWeather weather=new PlanetWeather();
         public UniversePosition position;
         public Double3 velocity;
         public double Mass=>gravitationalParameter/6.67430e-11;

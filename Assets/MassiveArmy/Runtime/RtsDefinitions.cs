@@ -123,6 +123,7 @@ namespace MassiveArmy
     public sealed class ResourceNode
     {
         public int id,claimedBy=-1;
+        public int proceduralKey; // Zero for authored starter deposits; otherwise stable seeded cell identity.
         public NodeKind kind;
         public ResourceKind resource;
         public Vector2 position;

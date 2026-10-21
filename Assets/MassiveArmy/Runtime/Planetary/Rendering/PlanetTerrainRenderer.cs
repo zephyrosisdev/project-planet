@@ -15,7 +15,7 @@ namespace MassiveArmy.Planetary
             protected override void Execute(CustomPassContext ctx){
                 if(owner==null||!owner.Ready||ctx.hdCamera.camera!=owner.View)return;
                 CoreUtils.SetRenderTarget(ctx.cmd,ctx.cameraColorBuffer,ctx.cameraDepthBuffer,ClearFlag.None);
-                owner.RenderTerrain(ctx.cmd);
+                owner.RenderTerrain(ctx.cmd);owner.RenderWeather(ctx);
             }
         }
         public PlanetTerrainRenderer(PlanetDevelopment owner){

@@ -14,6 +14,7 @@ namespace MassiveArmy.Planetary
         internal bool IsPreparedForValidation(int index)=>worlds[index]!=null&&worlds[index].Ready;
         public PlanetDevelopment ActiveWorld {get;private set;}
         public Quaternion SunRotation {get;private set;}
+        public double WeatherTime {get;private set;}
         PlanetDevelopment[] worlds;bool[] failed;PlanetDevelopment root;
         public string PreparationError {get;private set;}="";
         public readonly PlanetDistantTerrain DistantTerrain=new PlanetDistantTerrain();
@@ -48,6 +49,7 @@ namespace MassiveArmy.Planetary
         }
         void RefreshDistantBodies(){for(int i=0;i<worlds.Length;i++)if(worlds[i]!=null){var far=new PlanetDefinition[Bodies.Length-1];int k=0;for(int j=0;j<Bodies.Length;j++)if(j!=i)far[k++]=Bodies[j];worlds[i].distantBodies=far;}}
         void Update(){
+            if(ActiveWorld!=null&&ActiveWorld.Ready&&!ActiveWorld.Paused)WeatherTime+=Math.Min(Time.deltaTime,.05)*ActiveWorld.SimulationSpeed;
             if(Galaxy==null||ActiveWorld==null||!ActiveWorld.Ready)return;
             var observer=ActiveWorld.ObserverPosition;var offset=observer.RelativeTo(ActiveWorld.definition.position);
             if(!ActiveWorld.Paused){double step=Math.Min(Time.deltaTime,.05)*ActiveWorld.SimulationSpeed;Galaxy.Publish(Galaxy.Time+step,Bodies);Civilisation?.Advance(step);}

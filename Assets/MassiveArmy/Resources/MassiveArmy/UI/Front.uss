@@ -161,3 +161,13 @@
 
 /* Scroll content and fixed cards keep their natural size in Editor and player. */
 .unity-scroll-view__content-container,.queue-card,.setting-row,.tech-canvas { flex-shrink: 0; }
+
+/* Planetary sessions leave the world clear; the flat battle HUD retains its own layout. */
+.planet-hud .construction { top: 136px; bottom: 12px; }
+.planet-hud .construction-tab { position: absolute; left: 0; top: 150px; width: 34px; min-width: 34px; height: 172px; margin: 0; padding: 4px; font-size: 17px; }
+.planet-hud .settlement-toolbar { position: absolute; right: 12px; top: 136px; width: 160px; }
+.planet-hud .settlement-toolbar .action { min-height: 30px; margin: 2px 0; padding: 4px 8px; font-size: 16px; }
+.planet-hud .context { top: 136px; bottom: 224px; right: 184px; }
+.planet-hud .minimap,.front.compact.planet-hud .minimap { position: absolute; right: 12px; bottom: 12px; width: 320px; height: 160px; overflow: hidden; margin: 0; border-width: 2px; border-color: rgb(25,119,153); }
+.planet-hud .notifications,.front.compact.planet-hud .notifications { top: 100px; left: 12px; right: auto; width: 560px; max-width: 50%; }
+.planet-hud .notifications .notice { font-size: 14px; padding: 4px 8px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

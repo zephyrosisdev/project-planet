@@ -41,6 +41,22 @@ namespace MassiveArmy.EditorTools
                 var pos=new Double3(r,0,0);var vel=new Double3(0,v,0);double dt=1d/60;
                 for(int i=0;i<12000;i++){double radius=pos.Magnitude;var up=pos.Float.normalized;vel+=new Double3(-up*(float)(mu/(radius*radius)))*dt;pos+=vel*dt;}
                 var coast=PlanetOrbit.Calculate(pos,vel,mu);Check(Math.Abs(coast.Periapsis-r)<40&&Math.Abs(coast.Apoapsis-r)<40,"200 seconds of production gravity integration agrees with circular prediction within 40 m");
+                foreach(var axis in new[]{Vector3.up,Vector3.down,new Vector3(.3f,.4f,.5f).normalized}){
+                    var normal=new Double3(axis);normal=normal*(1/normal.Magnitude);var east=Double3.Cross(new Double3(Mathf.Abs(axis.y)>.95f?Vector3.forward:Vector3.up),normal);east=east*(1/east.Magnitude);
+                    double radius=140000,rate=Math.Sqrt(mu/(radius*radius*radius)),sweep=rate*10;
+                    var asset=new OrbitalAssetState{mu=mu,radius=radius,epoch=100,insertion=120,launchOrigin=normal*120020,u=normal*Math.Cos(sweep)+east*Math.Sin(sweep),v=east*Math.Cos(sweep)-normal*Math.Sin(sweep)};
+                    Check((asset.Pose(100).position-asset.launchOrigin).Magnitude<1e-7&&asset.Pose(100).linearVelocity.Magnitude<1e-7,"Ascent starts stationary at its pad on every tested planet face");
+                    double previousRadius=120020;
+                    for(int sample=1;sample<=200;sample++){
+                        double time=100+sample*.1;var point=asset.Pose(time);Check(point.position.Magnitude>=previousRadius-1e-7&&point.position.Magnitude<=radius+1e-7,"Powered ascent gains altitude without cutting through the planet");previousRadius=point.position.Magnitude;
+                        const double step=1e-4;var derivative=(asset.Pose(time+step).position-asset.Pose(time-step).position)*(1/(2*step));Check((derivative-point.linearVelocity).Magnitude<.002,"Reported launch velocity agrees with trajectory derivative, including insertion");
+                    }
+                    var before=asset.Pose(120-1e-5);var inserted=asset.Pose(120);var orbit=PlanetOrbit.Calculate(inserted.position,inserted.linearVelocity,mu);
+                    Check((before.position-inserted.position).Magnitude<.02&&(before.linearVelocity-inserted.linearVelocity).Magnitude<.002,"Insertion preserves continuous position and velocity");
+                    Check(orbit.Valid&&orbit.Bound&&orbit.Eccentricity<1e-10&&orbit.Periapsis>125000,"Inserted payload has a circular bound orbit clear of the surface");
+                    Check((asset.Pose(120+orbit.Period).position-inserted.position).Magnitude<1e-6,"Inserted payload closes its orbit without integration drift");
+                    var saved=JsonUtility.FromJson<OrbitalAssetState>(JsonUtility.ToJson(asset));Check((saved.Pose(110).position-asset.Pose(110).position).Magnitude<1e-7,"Mid-ascent save roundtrip preserves the launch trajectory");
+                }
             }catch(Exception e){report.status="FAIL";report.error=e.ToString();throw;}finally{File.WriteAllText("TestResults/Planetary/OrbitHud/math.json",JsonUtility.ToJson(report,true));}
         }
     }

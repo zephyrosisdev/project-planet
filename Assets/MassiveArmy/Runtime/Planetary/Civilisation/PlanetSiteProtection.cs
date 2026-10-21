@@ -41,7 +41,7 @@ namespace MassiveArmy.Planetary {
             try{valid=Validate(definition,point,rotation,true,team);}finally{placingProtection=null;}
             if(!valid.valid||!fixture.IsFootprintClear(point,FootprintRadius(definition)))return null;
             if(!Factions[team].wallet.Spend(new ResourceCost{research=definition.cost.research}))return null;
-            var building=Create(definition,point,rotation,false,team);building.persistentId=Civilisation.State.AllocateId();var installation=new SurfaceInstallation{id=building.persistentId,definition=id,position=building.position};installation.inventory.Bind(Civilisation.Catalogue);Settlements[team].installations.Add(installation);Civilisation.Planet(fixture.definition.bodyId).surfaceInstallations.Add(installation.id);building.node=valid.node;building.protectionSite=site.original;building.awaitingProjectMaterials=true;
+            var building=Create(definition,point,rotation,false,team);building.persistentId=Civilisation.State.AllocateId();var installation=new SurfaceInstallation{id=building.persistentId,definition=id,position=building.position};installation.inventory.Bind(Civilisation.Catalogue);Settlements[team].installations.Add(installation);Civilisation.Planet(fixture.definition.bodyId).surfaceInstallations.Add(installation.id);building.node=ResolveResourceNode(valid.node);building.protectionSite=site.original;building.awaitingProjectMaterials=true;
             if(building.node>=0)Nodes[building.node].claimedBy=building.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return building;
         }
         internal void TickSiteProtection(){

@@ -5,16 +5,20 @@ namespace MassiveArmy.Planetary
 {
     public sealed partial class PlanetRtsHud {
         bool resourcesView;
-        void OpenResources(){orbitalsView=false;orbitalsView=false;residentsView=false;resourcesView=true;if(civilisationOpen){civilisationOpen=false;}ToggleCivilisation();}
+        void OpenResources(){orbitalsView=false;residentsView=false;resourcesView=true;if(civilisationOpen){civilisationOpen=false;}ToggleCivilisation();}
         bool civilisationOpen;double nextCivilisationRefresh;VisualElement civilisationContent;int inspectedFaction;string inspectedPlanet;
+        DropdownField knownWorldSelector;
         void ToggleCivilisation(){civilisationOpen=!civilisationOpen;technologyOpen=false;var modal=front.Q("modal");modal.Clear();modal.style.display=civilisationOpen?DisplayStyle.Flex:DisplayStyle.None;if(!civilisationOpen)return;
             var panel=new VisualElement();panel.AddToClassList("panel");panel.style.width=1000;panel.style.maxHeight=700;modal.Add(panel);Label(panel,"RESOURCES & SETTLEMENT ECONOMY","heading");
             var actions=new VisualElement();actions.AddToClassList("row");panel.Add(actions);Button(actions,"CLOSE",ToggleCivilisation);Button(actions,"PEOPLE & COUNCIL",()=>{orbitalsView=false;residentsView=true;resourcesView=false;nextCivilisationRefresh=0;});Button(actions,"ALL RESOURCES",()=>{orbitalsView=false;residentsView=false;resourcesView=true;nextCivilisationRefresh=0;});Button(actions,"INDUSTRY & WORLDS",()=>{orbitalsView=false;residentsView=false;resourcesView=false;nextCivilisationRefresh=0;});if(fixture.sessionMode==PlanetGameMode.AiTest){Button(actions,"CYAN",()=>{inspectedFaction=0;nextCivilisationRefresh=0;});Button(actions,"RED",()=>{inspectedFaction=1;nextCivilisationRefresh=0;});Label(panel,"OBSERVER · TRUE UNIVERSE INFORMATION","muted");}else{inspectedFaction=0;Label(panel,"FACTION KNOWLEDGE · undiscovered worlds and enemy inventories remain hidden","muted");}
+            // Keep the selector outside the live ledger, whose rows refresh once a second.
+            knownWorldSelector=new DropdownField("Known worlds"){name="known-worlds"};knownWorldSelector.formatListItemCallback=world.Civilisation.BodyName;knownWorldSelector.formatSelectedValueCallback=world.Civilisation.BodyName;knownWorldSelector.RegisterValueChangedCallback(change=>{inspectedPlanet=change.newValue;nextCivilisationRefresh=0;});panel.Add(knownWorldSelector);
             civilisationContent=new ScrollView();civilisationContent.style.height=570;panel.Add(civilisationContent);nextCivilisationRefresh=0;RefreshCivilisation();
         }
         void RefreshCivilisation(){
             if(!civilisationOpen||civilisationContent==null||world.Civilisation==null||Time.realtimeSinceStartupAsDouble<nextCivilisationRefresh)return;nextCivilisationRefresh=Time.realtimeSinceStartupAsDouble+1;
             var simulation=world.Civilisation;var state=simulation.State;var faction=state.Faction(inspectedFaction);bool observer=fixture.sessionMode==PlanetGameMode.AiTest;float scroll=((ScrollView)civilisationContent).scrollOffset.y;civilisationContent.Clear();
+            knownWorldSelector.style.display=orbitalsView||residentsView||resourcesView?DisplayStyle.None:DisplayStyle.Flex;
             if(orbitalsView){RefreshOrbitals(simulation,scroll);return;}
             if(residentsView){RefreshResidents(simulation,scroll);return;}
             if(resourcesView){RefreshResources(simulation,scroll);return;}
@@ -33,8 +37,8 @@ namespace MassiveArmy.Planetary
             }
             Label(civilisationContent,"PLANETARY KNOWLEDGE","heading");
             var choices=new System.Collections.Generic.List<string>();foreach(var planet in state.planets)if(observer||faction.knowledge.Knows(planet.body))choices.Add(planet.body);if(!choices.Contains(inspectedPlanet))inspectedPlanet=choices.Count>0?choices[0]:null;
-            if(choices.Count>0){var selector=new DropdownField("Known worlds",choices,choices.IndexOf(inspectedPlanet));selector.RegisterValueChangedCallback(change=>{inspectedPlanet=change.newValue;nextCivilisationRefresh=0;});civilisationContent.Add(selector);}
-            foreach(var planet in state.planets){if(planet.body!=inspectedPlanet)continue;var known=faction.knowledge.Find(planet.body);if(!observer&&known==null)continue;Label(civilisationContent,planet.body+" · "+(observer?planet.composition.archetype:known.level+" · confidence "+known.confidence.ToString("P0")),"subheading");
+            bool changed=knownWorldSelector.choices==null||choices.Count!=knownWorldSelector.choices.Count;if(!changed)for(int i=0;i<choices.Count;i++)if(choices[i]!=knownWorldSelector.choices[i]){changed=true;break;}if(changed)knownWorldSelector.choices=choices;if(knownWorldSelector.value!=inspectedPlanet)knownWorldSelector.SetValueWithoutNotify(inspectedPlanet);knownWorldSelector.SetEnabled(choices.Count>0);
+            foreach(var planet in state.planets){if(planet.body!=inspectedPlanet)continue;var known=faction.knowledge.Find(planet.body);if(!observer&&known==null)continue;Label(civilisationContent,simulation.BodyName(planet.body)+" · "+(observer?planet.composition.archetype:known.level+" · confidence "+known.confidence.ToString("P0")),"subheading").name="known-world-details";
                 if(observer)foreach(var abundance in planet.composition.abundance)Label(civilisationContent,abundance.resource+" "+abundance.amount.ToString("P0"),"muted");
                 else foreach(var estimate in known.resources)Label(civilisationContent,estimate.resource+" "+estimate.estimate.ToString("P0")+" ±"+estimate.uncertainty.ToString("P0"),"muted");
             }

@@ -7,17 +7,22 @@ namespace MassiveArmy.Planetary {
     /// <summary>Only the current planet has views. Distant assets have analytic data and no colliders.</summary>
     public sealed class PlanetOrbitalPresentation:IDisposable {
         readonly PlanetDevelopment world;readonly Dictionary<long,OrbitalStationView> views=new Dictionary<long,OrbitalStationView>();
-        readonly Material hull,panel,beacon;readonly Mesh cube;double nextDiscovery;int revision=-1,lastCreationFrame=-1;
-        public PlanetOrbitalPresentation(PlanetDevelopment world){this.world=world;hull=Material("Orbital hull",new Color(.12f,.17f,.21f));panel=Material("Orbital arrays",new Color(.035f,.13f,.3f));beacon=Material("Orbital guidance",new Color(.12f,.9f,.62f));var go=GameObject.CreatePrimitive(PrimitiveType.Cube);go.SetActive(false);cube=UnityEngine.Object.Instantiate(go.GetComponent<MeshFilter>().sharedMesh);ArmyLifetime.Destroy(go);}
+        readonly Material hull,panel,beacon,exhaust;readonly Mesh cube,plume;double nextDiscovery;int revision=-1,lastCreationFrame=-1;
+        public PlanetOrbitalPresentation(PlanetDevelopment world){this.world=world;hull=Material("Orbital hull",new Color(.12f,.17f,.21f));panel=Material("Orbital arrays",new Color(.035f,.13f,.3f));beacon=Material("Orbital guidance",new Color(.12f,.9f,.62f));var go=GameObject.CreatePrimitive(PrimitiveType.Cube);go.SetActive(false);cube=UnityEngine.Object.Instantiate(go.GetComponent<MeshFilter>().sharedMesh);ArmyLifetime.Destroy(go);exhaust=new Material(Shader.Find("HDRP/Unlit")){name="Launch exhaust"};exhaust.SetColor("_UnlitColor",Color.black);exhaust.SetColor("_EmissiveColor",new Color(8,2,.15f));exhaust.SetFloat("_EmissiveExposureWeight",0);plume=BuildPlume();}
         static Material Material(string name,Color color){var m=new Material(Shader.Find("HDRP/Lit")){name=name};m.SetColor("_BaseColor",color);m.SetFloat("_Smoothness",.3f);return m;}
         public int ViewCount=>views.Count;
+        static Mesh BuildPlume(){
+            const int sides=8;var vertices=new Vector3[sides*3];var indices=new int[vertices.Length];
+            for(int i=0;i<sides;i++){float a=i*Mathf.PI*2/sides,b=(i+1)*Mathf.PI*2/sides;int k=i*3;vertices[k]=new Vector3(Mathf.Cos(a),0,Mathf.Sin(a));vertices[k+1]=new Vector3(Mathf.Cos(b),0,Mathf.Sin(b));vertices[k+2]=Vector3.down;indices[k]=k;indices[k+1]=k+1;indices[k+2]=k+2;}
+            var mesh=new Mesh{name="Shared launch plume"};mesh.vertices=vertices;mesh.triangles=indices;mesh.RecalculateNormals();mesh.RecalculateBounds();return mesh;
+        }
         public OrbitalStationView Find(long id)=>views.TryGetValue(id,out var v)?v:null;
         public OrbitalStationView Support(Collider support){if(support==null)return null;foreach(var v in views.Values)if(v.Owns(support))return v;return null;}
         public OrbitalStationView Nearest(Double3 at,out double distance){distance=double.MaxValue;OrbitalStationView best=null;foreach(var v in views.Values){if(!v.Habitable||!v.State.Ready(world.Base.Civilisation.RenderTime))continue;double d=(v.Pose.position-at).Magnitude;if(d<distance){distance=d;best=v;}}return best;}
         public bool NearSegment(Double3 from,Double3 to,double radius){var line=to-from;double length2=line.x*line.x+line.y*line.y+line.z*line.z;foreach(var v in views.Values){if(!v.Habitable)continue;var delta=v.Pose.position-from;double t=length2>0?Math.Clamp((delta.x*line.x+delta.y*line.y+delta.z*line.z)/length2,0,1):0;if((delta-line*t).Magnitude<radius)return true;}return false;}
         public bool Near(Double3 at,double radius){foreach(var v in views.Values)if(v.Habitable&&(v.Pose.position-at).Magnitude<radius)return true;return false;}
         public void Tick(){var sim=world.Base?.Civilisation;if(sim==null)return;
-            if(revision!=sim.Orbitals.Revision||Time.unscaledTimeAsDouble>=nextDiscovery){revision=sim.Orbitals.Revision;nextDiscovery=Time.unscaledTimeAsDouble+1;foreach(var a in sim.Orbitals.Assets(sim.BodyId(world.definition.bodyId)))if(!views.ContainsKey(a.id)){nextDiscovery=0;if(lastCreationFrame!=Time.frameCount){lastCreationFrame=Time.frameCount;views.Add(a.id,new OrbitalStationView(world,a,cube,hull,panel,beacon));}break;}}
+            if(revision!=sim.Orbitals.Revision||Time.unscaledTimeAsDouble>=nextDiscovery){revision=sim.Orbitals.Revision;nextDiscovery=Time.unscaledTimeAsDouble+1;foreach(var a in sim.Orbitals.Assets(sim.BodyId(world.definition.bodyId)))if(!views.ContainsKey(a.id)){nextDiscovery=0;if(lastCreationFrame!=Time.frameCount){lastCreationFrame=Time.frameCount;views.Add(a.id,new OrbitalStationView(world,a,cube,hull,panel,beacon,plume,exhaust));}break;}}
             foreach(var view in views.Values)view.Rebase(sim.RenderTime);
         }
         public int DoorInteraction(Vector3 eye,Vector3 forward,out OrbitalStationView station){foreach(var v in views.Values)if(v.Habitable&&v.DoorVisible(eye,forward)){station=v;return 0;}station=null;return -1;}
@@ -27,15 +32,17 @@ namespace MassiveArmy.Planetary {
                 GUI.color=v.State.faction==0?new Color(.2f,1,.7f):new Color(1,.4f,.3f);GUI.Label(new Rect(screen.x-5,Screen.height-screen.y-8,20,20),"+");GUI.Label(new Rect(screen.x+12,Screen.height-screen.y-12,240,45),v.State.Name+" #"+v.State.id+"\n"+(Math.Sqrt(length2)/1000).ToString("0.0")+" km");
             }GUI.color=Color.white;
         }
-        public void Dispose(){foreach(var v in views.Values)v.Dispose();views.Clear();ArmyLifetime.Destroy(cube);ArmyLifetime.Destroy(hull);ArmyLifetime.Destroy(panel);ArmyLifetime.Destroy(beacon);}
+        public void Dispose(){foreach(var v in views.Values)v.Dispose();views.Clear();ArmyLifetime.Destroy(cube);ArmyLifetime.Destroy(hull);ArmyLifetime.Destroy(panel);ArmyLifetime.Destroy(beacon);ArmyLifetime.Destroy(exhaust);ArmyLifetime.Destroy(plume);}
     }
     public sealed class OrbitalStationView:IDisposable {
         readonly PlanetDevelopment world;readonly GameObject root;readonly Mesh mesh;readonly List<BoxCollider> colliders=new List<BoxCollider>();readonly GameObject door;readonly Mesh guidanceMesh;readonly Renderer guidance;double poseTime=double.NaN;readonly Renderer renderer;readonly Renderer doorRenderer;readonly BoxCollider leaf;readonly List<Light> lights=new List<Light>();VolumeProfile exposure;
+        readonly Mesh plumeMesh;readonly Material exhaustMaterial;Renderer launchExhaust;
         public readonly OrbitalAssetState State;public SpacePose Pose {get;private set;}public bool Habitable=>State.kind!=OrbitalPayloadKind.SurveySatellite;
+        public bool LaunchExhaustVisible=>launchExhaust!=null&&launchExhaust.enabled;
         public Quaternion Rotation=>Pose.rotation;public Vector3 DockPosition=>new Vector3(0,0,-5);
         public GameObject Root=>root;
-        public OrbitalStationView(PlanetDevelopment world,OrbitalAssetState state,Mesh cube,Material hull,Material panel,Material beacon){
-            this.world=world;State=state;root=new GameObject(state.Name+" #"+state.id);root.transform.SetParent(world.transform,false);var shapes=new List<CombineInstance>();var lines=new List<CombineInstance>();
+        public OrbitalStationView(PlanetDevelopment world,OrbitalAssetState state,Mesh cube,Material hull,Material panel,Material beacon,Mesh plume,Material exhaust){
+            this.world=world;State=state;plumeMesh=plume;exhaustMaterial=exhaust;root=new GameObject(state.Name+" #"+state.id);root.transform.SetParent(world.transform,false);var shapes=new List<CombineInstance>();var lines=new List<CombineInstance>();
             void Box(Vector3 centre,Vector3 size,bool collision=true){shapes.Add(new CombineInstance{mesh=cube,transform=Matrix4x4.TRS(centre,Quaternion.identity,size)});if(collision){var c=root.AddComponent<BoxCollider>();c.center=centre;c.size=size;colliders.Add(c);}}
             if(Habitable){
                 void LightAt(Vector3 p){var go=new GameObject("Local station light");go.transform.SetParent(root.transform,false);go.transform.localPosition=p;var light=go.AddComponent<Light>();light.type=LightType.Point;go.AddComponent<HDAdditionalLightData>();light.lightUnit=LightUnit.Lumen;light.intensity=350000;light.range=65;light.color=new Color(.65f,.85f,1);light.shadows=LightShadows.None;light.enabled=false;lights.Add(light);}
@@ -68,6 +75,9 @@ namespace MassiveArmy.Planetary {
         public void Rebase(double time){if(time!=poseTime){poseTime=time;Pose=State.Pose(time);}var position=world.RenderBodyPosition(Pose.position);if(!root.transform.position.Equals(position)||!root.transform.rotation.Equals(Rotation))root.transform.SetPositionAndRotation(position,Rotation);
             double distance=(position-world.View.transform.position).magnitude;float extent=Habitable?280:40;float pixels=extent*world.View.pixelHeight/(2*Mathf.Tan(world.View.fieldOfView*Mathf.Deg2Rad*.5f)*(float)Math.Max(1,distance));
             bool visible=world.ResidentActive&&pixels>=2;if(renderer.enabled!=visible)renderer.enabled=visible;if(guidance!=null&&guidance.enabled!=visible)guidance.enabled=visible;bool solid=visible&&distance<1000&&State.Ready(time);foreach(var c in colliders)if(c.enabled!=solid)c.enabled=solid;foreach(var light in lights){bool lit=solid&&distance<200;if(light.enabled!=lit)light.enabled=lit;}
+            bool launching=visible&&time>=State.epoch&&!State.Ready(time);
+            if(launching&&launchExhaust==null){var go=new GameObject("Powered launch exhaust");go.transform.SetParent(root.transform,false);go.transform.localPosition=new Vector3(0,Habitable?-13:-3,0);go.AddComponent<MeshFilter>().sharedMesh=plumeMesh;launchExhaust=go.AddComponent<MeshRenderer>();launchExhaust.sharedMaterial=exhaustMaterial;launchExhaust.shadowCastingMode=ShadowCastingMode.Off;launchExhaust.receiveShadows=false;}
+            if(launchExhaust!=null){launchExhaust.enabled=launching;if(launching){float pulse=1+.06f*Mathf.Sin((float)((time-State.epoch)*37));launchExhaust.transform.localScale=Habitable?new Vector3(12,110*pulse,12):new Vector3(2,24*pulse,2);}}
             if(door!=null){door.transform.localPosition=new Vector3(State.airlockOpen?45.5f:41,-8.15f,98);doorRenderer.enabled=visible;leaf.enabled=solid&&!State.airlockOpen;}
         }
         public void Dispose(){ArmyLifetime.Destroy(root);ArmyLifetime.Destroy(mesh);ArmyLifetime.Destroy(guidanceMesh);ArmyLifetime.Destroy(exposure);}

@@ -96,6 +96,6 @@ namespace MassiveArmy.Planetary {
             }
         }
         bool ConstructOriented(BuildingDefinition d,int team,Vector3 direction,int rotation){direction=SnapBuilding(d,direction,rotation);var valid=Validate(d,direction,rotation,true,team);if(!valid.valid||!fixture.IsFootprintClear(direction,FootprintRadius(d))||!ConstructionCost(team,direction,d.cost,true))return false;
-            var b=Create(d,direction,rotation,false,team);b.node=valid.node;Civilisation?.SponsorProject(this,b);if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
+            var b=Create(d,direction,rotation,false,team);b.node=ResolveResourceNode(valid.node);Civilisation?.SponsorProject(this,b);if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
     }
 }

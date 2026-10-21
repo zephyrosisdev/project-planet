@@ -27,6 +27,8 @@ namespace MassiveArmy.Planetary
 
         public string ModeStatus=>sessionMode.ToString()+" · Radius "+(definition!=null?(definition.radius/1000).ToString("0.#"):"6")+" km · "+(encounter?.Status??"Planetary base operations");
 
+        PlanetWeatherRenderer weatherRenderer;
+        internal PlanetWeatherRenderer WeatherForValidation=>weatherRenderer;
         PlanetEncounter encounter;PlanetLighting lighting;PlanetSpacecraft spacecraft;PlanetHeadquartersHud headquartersHud;
         internal PlanetHeadquartersHud HeadquartersForValidation=>headquartersHud;
 
@@ -206,7 +208,7 @@ namespace MassiveArmy.Planetary
             if(System.Array.IndexOf(launchArgs,"-planet-deform-terrain")>=0)deformTerrainOnNuke=true;
             if(System.Array.IndexOf(launchArgs,"-planet-no-deform-terrain")>=0)deformTerrainOnNuke=false;
 
-            StrategyEnabled=true;foreach(var arg in launchArgs)if((arg.EndsWith("-validation")&&arg!="-planet-gameplay-validation"&&arg!="-planet-menu-validation"&&arg!="-planet-ship-validation"&&arg!="-planet-landing-validation"&&arg!="-planet-hq-terrain-validation"&&arg!="-planet-system-validation"&&arg!="-galaxy-validation"&&arg!="-civilisation-validation"&&arg!="-planet-economy-ai-validation"&&arg!="-planet-household-validation"&&arg!="-planet-orbital-validation")||arg=="-planet-benchmark"||arg=="-planet-fixture")StrategyEnabled=false;
+            StrategyEnabled=true;foreach(var arg in launchArgs)if((arg.EndsWith("-validation")&&arg!="-planet-weather-validation"&&arg!="-planet-gameplay-validation"&&arg!="-planet-menu-validation"&&arg!="-planet-ship-validation"&&arg!="-planet-landing-validation"&&arg!="-planet-hq-terrain-validation"&&arg!="-planet-system-validation"&&arg!="-galaxy-validation"&&arg!="-civilisation-validation"&&arg!="-planet-economy-ai-validation"&&arg!="-planet-household-validation"&&arg!="-planet-orbital-validation")||arg=="-planet-benchmark"||arg=="-planet-fixture")StrategyEnabled=false;
 
             if(System.Array.IndexOf(launchArgs,"-planet-fixture")>=0||System.Array.IndexOf(launchArgs,"-planet-benchmark")>=0||System.Array.IndexOf(launchArgs,"-planet-smoke")>=0)configuredRadius=0;
 
@@ -244,15 +246,15 @@ namespace MassiveArmy.Planetary
             if(configuredRadius>0){if(!ownsDefinition){definition=Instantiate(definition);ownsDefinition=true;}definition.radius=configuredRadius;definition.gravitationalParameter=9.81*definition.radius*definition.radius;navigationResolution=Mathf.Clamp(Mathf.CeilToInt(definition.radius/15.625f),32,128);}
 
             var startingHome=new Vector3(1,.12f,1.3f).normalized;
-            if(configuredRadius>=PlanetDefinition.RegionalNavigationRadius&&System.Array.IndexOf(launchArgs,"-planet-interest-validation")<0&&System.Array.IndexOf(launchArgs,"-planet-crowd-validation")<0){if(SystemRuntime==null){definition.terrainHeight=definition.radius>=20000?1800:240;definition.oceanHeight=-35;}if(definition.radius>=20000)definition.atmosphereHeight=Mathf.Max(10000,definition.atmosphereHeight);var home=startingHome;
+            if(configuredRadius>=PlanetDefinition.RegionalNavigationRadius&&System.Array.IndexOf(launchArgs,"-planet-interest-validation")<0&&System.Array.IndexOf(launchArgs,"-planet-crowd-validation")<0){if(SystemRuntime==null){definition.terrainHeight=definition.radius>=20000?1800:240;definition.oceanHeight=-35;}if(definition.radius>=20000&&SystemRuntime==null)definition.atmosphereHeight=Mathf.Max(10000,definition.atmosphereHeight);var home=startingHome;
                 if(definition.radius>=20000){
                     if(DeferredInitialization){bool found=false;foreach(var candidate in PlanetStartingRegion.Candidates(definition,startingHome)){if(PlanetStartingRegion.ConnectedPlain(definition,candidate)){home=candidate;found=true;break;}yield return null;}if(!found)throw new System.InvalidOperationException("No connected dry starting region found");}
                     else home=PlanetStartingRegion.Select(definition,startingHome);
                 }
                 startingHome=home;var right=Vector3.Cross(Vector3.up,home).normalized;var enemy=(home+right*(4500/definition.radius)).normalized;
-                if(StrategyEnabled&&sessionMode==PlanetGameMode.AiTest&&(SystemRuntime?.Civilisation==null||SystemRuntime.Civilisation.IsHome(definition.bodyId))){bool found=false;int work=0;
+                if(StrategyEnabled&&sessionMode!=PlanetGameMode.Swarm&&(SystemRuntime?.Civilisation==null||SystemRuntime.Civilisation.IsHome(definition.bodyId))){bool found=false;int work=0;
                     foreach(var candidate in PlanetStartingRegion.OppositeCandidates(definition,home)){if(PlanetStartingRegion.ExpansionPlain(definition,candidate)){enemy=candidate;found=true;break;}if(DeferredInitialization&&++work%16==0)yield return null;}
-                    if(!found)throw new System.InvalidOperationException("No dry mainland found opposite the first AI base");OpposingHome=enemy;
+                    if(!found)throw new System.InvalidOperationException("No dry mainland found opposite the first base");OpposingHome=enemy;
                 }
                 definition.Edits.PrepareStartingAreas(home,enemy);}
             if(System.Array.IndexOf(launchArgs,"-planet-interest-relief")>=0){definition.terrainHeight=1800;definition.oceanHeight=-35;var right=Vector3.Cross(Vector3.up,startingHome).normalized;definition.Edits.PrepareStartingAreas(startingHome,(startingHome+right*(4500/definition.radius)).normalized);}
@@ -320,7 +322,7 @@ namespace MassiveArmy.Planetary
 
             if(cbt!=null&&System.Array.IndexOf(args,"-planet-terrain-debug")>=0){showTerrainTriangles=true;terrainMaterial.EnableKeyword("PLANET_CBT_DEBUG");}
 
-            terrainRenderer=new PlanetTerrainRenderer(this);flightHudRenderer=new PlanetFlightHudRenderer(this);terrainMaterial.SetColor("_TintOverride",Color.clear);scaledRenderer=new ScaledSpaceRenderer(biomeColours);
+            terrainRenderer=new PlanetTerrainRenderer(this);flightHudRenderer=new PlanetFlightHudRenderer(this);terrainMaterial.SetColor("_TintOverride",Color.clear);scaledRenderer=new ScaledSpaceRenderer(biomeColours);if(System.Array.IndexOf(System.Environment.GetCommandLineArgs(),"-planet-weather-control")<0)weatherRenderer=new PlanetWeatherRenderer(this);
 
             if(System.Array.IndexOf(args,"-planet-system-baseline")>=0){validationDistantBody=ScriptableObject.CreateInstance<PlanetDefinition>();validationDistantBody.bodyId=2;validationDistantBody.radius=10000000;validationDistantBody.position=definition.position.Add(new Double3(-40000000,10000000,-20000000));distantBodies=new[]{validationDistantBody};}
             if(SystemRuntime==null&&(distantBodies==null||distantBodies.Length==0)&&System.Array.IndexOf(args,"-planet-single-body")<0){
@@ -457,7 +459,7 @@ namespace MassiveArmy.Planetary
 
             bool interact=keyboard!=null&&keyboard.fKey.wasPressedThisFrame;bool rts=keyboard!=null&&keyboard.tabKey.wasPressedThisFrame;
 
-            if(modes.Mode==PlayerControlMode.RTS){bool input=rig.InputEnabled;rig.InputEnabled=input&&!(hud?.ModalOpen??false)&&!(hud?.TextFocused??false);rig.Step();rig.InputEnabled=input;}Orbitals?.Tick();spacecraft?.StepUnpiloted(SimulationDelta);if(IsPiloting)spacecraft.Step(Time.deltaTime);else if(IsFirstPerson){spacecraft?.Rebase();Base?.Rebase();Physics.SyncTransforms();if(AutomaticPlayerStep)player.Step(Time.deltaTime);Orbitals?.Tick();}spacecraft?.Rebase();Base?.Rebase();Orbitals?.Tick();if(IsFirstPerson&&spacecraft!=null){Physics.SyncTransforms();shipInteraction=spacecraft.FindInteraction(view.transform.position,view.transform.forward);}if(rts)SetFirstPerson(false);else if(interact)Interact();encounter?.UpdatePresentation();spacecraft?.StepWeapons(SimulationDelta);var mouse=Mouse.current;
+            if(modes.Mode==PlayerControlMode.RTS){bool input=rig.InputEnabled;rig.InputEnabled=input&&!(hud?.ModalOpen??false)&&!(hud?.TextFocused??false);rig.Step(Mouse.current!=null&&(hud?.Blocks(Mouse.current.position.ReadValue())??false));rig.InputEnabled=input;}Orbitals?.Tick();spacecraft?.StepUnpiloted(SimulationDelta);if(IsPiloting)spacecraft.Step(Time.deltaTime);else if(IsFirstPerson){spacecraft?.Rebase();Base?.Rebase();Physics.SyncTransforms();if(AutomaticPlayerStep)player.Step(Time.deltaTime);Orbitals?.Tick();}spacecraft?.Rebase();Base?.Rebase();Orbitals?.Tick();if(IsFirstPerson&&spacecraft!=null){Physics.SyncTransforms();shipInteraction=spacecraft.FindInteraction(view.transform.position,view.transform.forward);}if(rts)SetFirstPerson(false);else if(interact)Interact();encounter?.UpdatePresentation();spacecraft?.StepWeapons(SimulationDelta);var mouse=Mouse.current;
 
             bool placing=Base!=null&&(Base.Placing!=null||Base.RoadPlacing);
 
@@ -521,7 +523,13 @@ namespace MassiveArmy.Planetary
 
             else{cmd.DrawProcedural(Matrix4x4.identity,terrainMaterial,pass,MeshTopology.Triangles,36*renderResolution*renderResolution,1,landProperties);cmd.DrawProcedural(Matrix4x4.identity,terrainMaterial,pass,MeshTopology.Triangles,36*renderResolution*renderResolution,1,oceanProperties);}
 
-            settlementRenderer?.Draw(cmd);scaledRenderer?.Draw(cmd);
+            settlementRenderer?.Draw(cmd);
+        }
+
+        internal void RenderWeather(UnityEngine.Rendering.HighDefinition.CustomPassContext ctx){if(weatherRenderer!=null)weatherRenderer.Draw(ctx,scaledRenderer);else scaledRenderer?.Draw(ctx.cmd);}
+        internal bool TryWeatherCabin(out Vector3 eye,out Quaternion worldToCabin){
+            eye=Vector3.zero;worldToCabin=Quaternion.identity;if(spacecraft==null)return false;
+            eye=spacecraft.RenderToLocal(view.transform.position);worldToCabin=Quaternion.Inverse(spacecraft.Rotation);return spacecraft.PressurizedAt(eye);
         }
 
         void OnGUI()
@@ -560,12 +568,12 @@ namespace MassiveArmy.Planetary
         }
         internal void SetResidentActive(bool value){
             if(ResidentActive==value)return;ResidentActive=value;accumulator=0;
-            if(!value){flightHudRenderer?.SetActive(false);spacecraft?.SetActive(false);lighting?.Dispose();lighting=null;}
+            if(!value){weatherRenderer?.ReleaseView();flightHudRenderer?.SetActive(false);spacecraft?.SetActive(false);lighting?.Dispose();lighting=null;}
             HideResidentChildren();
             if(value&&Ready){lighting=new PlanetLighting(view,transform,rig.FocusDirection);if(SystemRuntime!=null){lighting.Sun.transform.rotation=SystemRuntime.SunRotation;lighting.Update();}}
         }
 
-        void OnDestroy(){Orbitals?.Dispose();settlementRenderer?.Dispose();headquartersHud?.Dispose();spacecraft?.Dispose();terrainRenderer?.Dispose();flightHudRenderer?.Dispose();lighting?.Dispose();encounter?.Dispose();resourceDecals?.Dispose();placementProbe?.Dispose();hud?.Dispose();Base?.Dispose();catalogRenderer?.Dispose();archetypes?.Dispose();traits?.Dispose();buildingFootprints?.Dispose();commands?.Dispose();player?.Dispose();streamed?.Dispose();cbt?.Dispose();scaledRenderer?.Dispose();navigation?.Dispose();costs?.Dispose();units?.Dispose();arguments?.Dispose();biomeColours?.Dispose();ArmyLifetime.Destroy(movement);TerrainSurfaceLibrary.Unbind(terrainMaterial);ArmyLifetime.Destroy(terrainMaterial);ArmyLifetime.Destroy(unitMaterial);ArmyLifetime.Destroy(tank);ArmyLifetime.Destroy(validationDistantBody);if(ownsDefinition)ArmyLifetime.Destroy(definition);if(view!=null)ArmyLifetime.Destroy(view.gameObject);}
+        void OnDestroy(){weatherRenderer?.Dispose();Orbitals?.Dispose();settlementRenderer?.Dispose();headquartersHud?.Dispose();spacecraft?.Dispose();terrainRenderer?.Dispose();flightHudRenderer?.Dispose();lighting?.Dispose();encounter?.Dispose();resourceDecals?.Dispose();placementProbe?.Dispose();hud?.Dispose();Base?.Dispose();catalogRenderer?.Dispose();archetypes?.Dispose();traits?.Dispose();buildingFootprints?.Dispose();commands?.Dispose();player?.Dispose();streamed?.Dispose();cbt?.Dispose();scaledRenderer?.Dispose();navigation?.Dispose();costs?.Dispose();units?.Dispose();arguments?.Dispose();biomeColours?.Dispose();ArmyLifetime.Destroy(movement);TerrainSurfaceLibrary.Unbind(terrainMaterial);ArmyLifetime.Destroy(terrainMaterial);ArmyLifetime.Destroy(unitMaterial);ArmyLifetime.Destroy(tank);ArmyLifetime.Destroy(validationDistantBody);if(ownsDefinition)ArmyLifetime.Destroy(definition);if(view!=null)ArmyLifetime.Destroy(view.gameObject);}
 
     }
 

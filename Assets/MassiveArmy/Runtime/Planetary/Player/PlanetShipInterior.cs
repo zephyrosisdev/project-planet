@@ -11,6 +11,10 @@ namespace MassiveArmy.Planetary
         readonly Dictionary<Material,List<CombineInstance>> batches=new Dictionary<Material,List<CombineInstance>>();int interiorFrame=-1;
         Double3 rampPosition;Quaternion rampRotation;bool rampPrepared;VolumeProfile cabinExposure;Material window;Transform ramp;public static readonly Vector3 PilotEye=new Vector3(0,-1.5f,31);
         public static readonly Vector3 PilotExit=new Vector3(1.8f,-4,27);
+        // Outer extents of the two connected hull sections built below. Weather begins
+        // outside these shells when the observer occupies a pressurized compartment.
+        internal static readonly Bounds WeatherAft=new Bounds(new Vector3(0,-1,-14.125f),new Vector3(52,7,48.75f));
+        internal static readonly Bounds WeatherBridge=new Bounds(new Vector3(0,-1,24),new Vector3(19,7,29));
         public bool PressurizedAt(Vector3 local)=>InteriorContains(local)&&(local.z<-31?hatches[0].fraction<.01f:hatches[0].fraction<.01f||hatches[1].fraction<.01f);
         public bool Sealed=>hatches.TrueForAll(h=>h.fraction<.01f);
         public int DoorCount=>hatches.Count;

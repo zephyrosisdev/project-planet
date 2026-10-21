@@ -11,11 +11,24 @@ namespace MassiveArmy.Planetary {
         public bool Ready(double time)=>time>=insertion;
         public SpacePose Pose(double time){
             double rate=Math.Sqrt(mu/(radius*radius*radius)),angle=Math.IEEERemainder(rate*Math.Max(0,time-insertion),Math.PI*2);
+            double altitudeRadius=radius,climb=0;
+            if(time<insertion){
+                // Powered, time-compressed ascent. Polar interpolation stays outside the surface;
+                // its derivative reaches circular speed continuously at engine cutoff.
+                double duration=Math.Max(.001,insertion-epoch),t=Math.Clamp((time-epoch)/duration,0,1);
+                double startAngle=Math.Atan2(Dot(launchOrigin,v),Dot(launchOrigin,u));
+                double t2=t*t,t3=t2*t,s=t3*(10+t*(-15+6*t));
+                angle=startAngle*(1-3*t2+2*t3)+rate*duration*(t3-t2);
+                double orbitRate=rate;
+                rate=(startAngle*(-6*t+6*t2)+orbitRate*duration*(3*t2-2*t))/duration;
+                double startRadius=launchOrigin.Magnitude;
+                altitudeRadius=startRadius+(radius-startRadius)*s;
+                climb=(radius-startRadius)*30*t2*(1-t)*(1-t)/duration;
+            }
             var radial=u*Math.Cos(angle)+v*Math.Sin(angle);var tangent=v*Math.Cos(angle)-u*Math.Sin(angle);
-            var position=radial*radius;var velocity=tangent*(radius*rate);
-            if(time<insertion){double t=Math.Clamp((time-epoch)/Math.Max(.001,insertion-epoch),0,1),s=t*t*(3-2*t);position=launchOrigin+(u*radius-launchOrigin)*s;velocity=(u*radius-launchOrigin)*(6*t*(1-t)/Math.Max(.001,insertion-epoch));}
-            return new SpacePose{position=position,linearVelocity=velocity,rotation=Quaternion.LookRotation(tangent.Float,radial.Float),angularVelocity=Double3.Cross(u,v).Float*(float)rate};
+            return new SpacePose{position=radial*altitudeRadius,linearVelocity=radial*climb+tangent*(altitudeRadius*rate),rotation=Quaternion.LookRotation(tangent.Float,radial.Float),angularVelocity=Double3.Cross(u,v).Float*(float)rate};
         }
+        static double Dot(Double3 a,Double3 b)=>a.x*b.x+a.y*b.y+a.z*b.z;
         public string Name=>kind==OrbitalPayloadKind.SurveySatellite?"Survey satellite":kind==OrbitalPayloadKind.ResearchStation?"Orbital research station":kind==OrbitalPayloadKind.Warehouse?"Orbital warehouse":"Docking station";
         public double Capacity=>kind==OrbitalPayloadKind.Warehouse?5000:kind==OrbitalPayloadKind.DockingStation?1000:0;
     }
@@ -69,8 +82,10 @@ namespace MassiveArmy.Planetary {
                 // Paid hardware survives as a paused order if its pad is destroyed; there is no free relaunch.
                 if(pad==null||pad.removed||!pad.Complete||pad.paused||!pad.powered||pad.roadSuspended||pad.Efficiency<=0)continue;
                 j.progress=Math.Min(j.seconds,j.progress+seconds*pad.Efficiency);if(j.progress+1e-9<j.seconds)continue;
-                var d=local.World.definition;var up=CubeSphere.Decode(pad.position).normalized;var normal=new Double3(up);normal=normal*(1/normal.Magnitude);var east=Double3.Cross(new Double3(Mathf.Abs(up.y)>.95f?Vector3.forward:Vector3.up),normal);east=east*(1/east.Magnitude);
-                var a=new OrbitalAssetState{id=sim.State.AllocateId(),launchPad=j.pad,body=j.body,faction=j.faction,kind=j.kind,radius=d.radius+Math.Max(20000,d.ReliefBound+5000),mu=d.gravitationalParameter,u=normal,v=east,launchOrigin=new Double3(local.World.Surface.GetSurfacePosition(up,20)),epoch=sim.SimulationTime,insertion=sim.SimulationTime+20,lastAccounted=sim.SimulationTime+20};
+                var d=local.World.definition;var up=CubeSphere.Decode(pad.position).normalized;var launchOrigin=new Double3(local.World.Surface.GetSurfacePosition(up,20));var normal=launchOrigin*(1/launchOrigin.Magnitude);var east=Double3.Cross(new Double3(Mathf.Abs(up.y)>.95f?Vector3.forward:Vector3.up),normal);east=east*(1/east.Magnitude);
+                double radius=d.radius+Math.Max(20000,Math.Max(d.ReliefBound,d.oceanHeight)+5000);
+                double sweep=Math.Sqrt(d.gravitationalParameter/(radius*radius*radius))*10;
+                var a=new OrbitalAssetState{id=sim.State.AllocateId(),launchPad=j.pad,body=j.body,faction=j.faction,kind=j.kind,radius=radius,mu=d.gravitationalParameter,u=normal*Math.Cos(sweep)+east*Math.Sin(sweep),v=east*Math.Cos(sweep)-normal*Math.Sin(sweep),launchOrigin=launchOrigin,epoch=sim.SimulationTime,insertion=sim.SimulationTime+20,lastAccounted=sim.SimulationTime+20};
                 Register(a);list.RemoveAt(i);sim.State.orbitalLaunches.Remove(j);padJobs.Remove(j.pad);Revision++;local.NotifyChanged();
             }
         }

@@ -40,20 +40,9 @@ namespace MassiveArmy.Planetary
             }
             var planet=Civilisation.Planet(fixture.definition.bodyId);var survey=planet.frontierSurveys.Find(s=>s.team==team&&s.resource==id);
             if(survey==null){survey=new FrontierSurvey{team=team,resource=id};planet.frontierSurveys.Add(survey);}
-            string element=d.extractedResource??"";string abundance=element.Length>0?element:d.nodes[0]==NodeKind.Oil?"hydrogen":d.nodes[0]==NodeKind.RareEarth?"rare_earth":d.nodes[0]==NodeKind.Uranium?"uranium":"iron";
-            if(planet.composition.Get(abundance)<=0)return false;
-            var home=Homes[team];var east=Vector3.Cross(Mathf.Abs(home.y)>.95f?Vector3.right:Vector3.up,home).normalized;var north=Vector3.Cross(home,east);
-            for(int work=0;work<8;work++){
-                int index=survey.cursor++;double phase=PlanetResourceProfile.Random(fixture.definition.terrainSeed+":"+team+":"+id)*Math.PI*2;double bearing=index*2.399963229728653+phase,arc=(1800+Math.Sqrt(index)*140)/fixture.definition.radius;
-                var direction=(home*(float)Math.Cos(arc)+(east*(float)Math.Cos(bearing)+north*(float)Math.Sin(bearing))*(float)Math.Sin(arc)).normalized;
-                if(surface.SampleHeight(direction)<fixture.definition.oceanHeight+.2f||Distance(direction,Homes[team])>Distance(direction,Homes[1-team]))continue;
-                bool clear=true;foreach(var existing in Nodes)if(Distance(direction,CubeSphere.Decode(existing.position))<60){clear=false;break;}if(!clear)continue;
-                float richness=(float)planet.composition.LocalAbundance(abundance,direction,fixture.definition.terrainSeed);float capacity=Civilisation.Settings.depositCapacity*Mathf.Max(.1f,richness);
-                var node=new ResourceNode{id=Nodes.Count,kind=d.nodes[0],resource=d.nodes[0]==NodeKind.Oil?ResourceKind.Fuel:d.nodes[0]==NodeKind.RareEarth?ResourceKind.RareElements:d.nodes[0]==NodeKind.Uranium?ResourceKind.Isotopes:ResourceKind.Materials,elementId=element,position=CubeSphere.Encode(direction),capacity=capacity,remaining=capacity,quality=richness,rateMultiplier=Mathf.Max(Civilisation.Settings.geologicalMinimumEfficiency,richness*2)};
-                Nodes.Add(node);if(!Validate(d,direction,0,false,team).valid){Nodes.RemoveAt(Nodes.Count-1);continue;}
-                planet.frontierDeposits.Add(node);NotifyChanged();return true;
-            }return false;
+            return Natural.Survey(d,team,survey);
         }
+
         public bool TryConstructInfrastructure(string id,int team){
             if(!Catalog.Buildings.ContainsKey(id)||team<0||team>=Factions.Length)return false;return BuildAI(id,team,AIDecisions[team]);
         }

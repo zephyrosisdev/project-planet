@@ -44,6 +44,7 @@ namespace MassiveArmy.Planetary
             double Value()=>(Next()>>8)/16777216.0;
             int systems=Mathf.Clamp(settings.starSystems,2,256),perSystem=Mathf.Clamp(settings.planetsPerSystem,1,6);
             var nodes=new List<CelestialBody>();var defs=new List<PlanetDefinition>();var indices=new List<int>();
+            int nameSeed=settings.seed^local.seed^home.terrainSeed;var usedNames=new HashSet<string>();string homeName=PlanetNames.Placeholder(home.displayName)?null:home.displayName;if(homeName!=null)usedNames.Add(homeName);
             nodes.Add(new CelestialBody{id=0,name="Galactic black hole",kind=CelestialKind.BlackHole,mu=Math.Max(1e16,settings.blackHoleMu),radius=Math.Max(1000,2*settings.blackHoleMu/(299792458.0*299792458.0))});
             SystemNodes=new int[systems];systemSources=new int[systems][];systemMass=new double[systems];systemExtent=new double[systems];
             for(int s=0;s<systems;s++){
@@ -66,7 +67,8 @@ namespace MassiveArmy.Planetary
                 for(int p=0;p<perSystem;p++){
                     int pi=defs.Count,index=nodes.Count;var d=s==0&&p==0?home:UnityEngine.Object.Instantiate(home);
                     if(pi!=0){d.bodyId=home.bodyId+pi;d.terrainSeed=(int)(Next()&0x7fffffff);d.radius=Mathf.Lerp(Mathf.Max(20000,local.radiusRange.x),Mathf.Max(20000,local.radiusRange.y),(float)Value());d.terrainHeight=d.radius*.015f;d.oceanHeight=Mathf.Lerp(-200,120,(float)Value());d.gravitationalParameter=9.81*d.radius*d.radius;d.atmosphereHeight=d.radius/12;}
-                    d.displayName=pi==0?home.displayName:("S"+s+" · Planet "+(p+1));d.name=d.displayName;
+                    if(pi!=0)PlanetWeather.Generate(d);
+                    d.displayName=pi==0&&homeName!=null?homeName:PlanetNames.Unique(nameSeed,pi,usedNames);d.name=d.displayName;
                     double a=first*Math.Pow(1.7,p),e=p==0?0:Value()*.12;
                     // Circumbinary planets orbit the common barycentre, outside the binary separation.
                     nodes.Add(new CelestialBody{id=index,parent=bary,system=s,planet=pi,name=d.displayName,kind=CelestialKind.Planet,mu=d.gravitationalParameter,radius=d.radius,semiMajor=a,eccentricity=e,meanMotion=Math.Sqrt(total/(a*a*a)),phase=pi==0?Math.Atan2(-1.3,-1):Value()*Math.PI*2,plane=Quaternion.Euler((float)(Value()-.5)*8,0,(float)(Value()-.5)*8)});

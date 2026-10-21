@@ -19,6 +19,8 @@ namespace MassiveArmy.Planetary
         public RtsFaction Faction=>Factions[0];
         public readonly Vector3[] Homes=new Vector3[2];
         public readonly List<RtsBuilding> Buildings=new List<RtsBuilding>();
+        public PlanetProceduralResources Natural {get;private set;}
+        internal int ResolveResourceNode(int id)=>id>=-1?id:Natural.Materialize(-id-1)?.id??-1;
         public readonly List<ResourceNode> Nodes=new List<ResourceNode>();
         public RtsBuilding Selected {get;private set;}
         public BuildingDefinition Placing {get;private set;}
@@ -44,7 +46,7 @@ namespace MassiveArmy.Planetary
             bool starter=Civilisation==null||Civilisation.IsHome(fixture.definition.bodyId);if(starter){Seed("command",new Vector2(-65,-55));Seed("barracks",new Vector2(30,-75));Seed("light_depot",new Vector2(90,-30));Seed("solar",new Vector2(-90,15));if(Civilisation!=null){Seed("civil_warehouse",new Vector2(-10,40));SeedFamilyHomes(0);}}else foreach(var faction in Factions)faction.wallet.Stock=new ResourceCost();
             SeedResourceNodes(0);
             if(starter&&fixture.StrategyEnabled&&fixture.sessionMode!=PlanetGameMode.Swarm){FindEnemyHome();Seed("command",new Vector2(-65,-55),1);Seed("barracks",new Vector2(30,-75),1);Seed("light_depot",new Vector2(90,-30),1);Seed("solar",new Vector2(-90,15),1);if(Civilisation!=null){Seed("civil_warehouse",new Vector2(-10,40),1);SeedFamilyHomes(1);}SeedResourceNodes(1);}
-            InitializeGeology();Civilisation?.Attach(this,fixture.definition.bodyId);
+            InitializeGeology();Natural=new PlanetProceduralResources(this,fixture.definition);Civilisation?.Attach(this,fixture.definition.bodyId);
             Selected=Buildings.FirstOrDefault();fixture.RefreshBuildingCosts(Buildings);Rebase();
         }
         public Vector3 Offset(Vector2 metres)=> (anchor+(right*metres.x+forward*metres.y)/fixture.definition.radius).normalized;
@@ -81,7 +83,7 @@ namespace MassiveArmy.Planetary
             if(d.terrain==TerrainRule.Coast){if(!land||!water)return new PlacementResult(false,"Requires a coastline");}
             else if(water)return new PlacementResult(false,"Footprint must be on dry land");
             if(max-min>8)return new PlacementResult(false,"Footprint slope is too steep");
-            if(d.terrain==TerrainRule.Node){foreach(var node in Nodes)if(node.claimedBy<0&&node.remaining>0&&!RecoveryNodeReserved(node.id,team)&&Array.IndexOf(d.nodes,node.kind)>=0&&string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)&&Distance(direction,CubeSphere.Decode(node.position))<12)return new PlacementResult(true,"",node.id);return new PlacementResult(false,"Requires a matching unclaimed resource deposit");}
+            if(d.terrain==TerrainRule.Node){foreach(var node in Nodes)if(node.claimedBy<0&&node.remaining>0&&!RecoveryNodeReserved(node.id,team)&&Array.IndexOf(d.nodes,node.kind)>=0&&string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)&&Distance(direction,CubeSphere.Decode(node.position))<12)return new PlacementResult(true,"",node.id);var natural=Natural?.At(direction,d);if(natural!=null&&natural.claimedBy<0&&natural.remaining>0)return new PlacementResult(true,"",-natural.proceduralKey-1);return new PlacementResult(false,"Requires a matching unclaimed resource deposit");}
             return new PlacementResult(true,"");
         }
         static float FootprintRadius(BuildingDefinition d)=>Mathf.Sqrt(d.footprintWidth*d.footprintWidth+d.footprintDepth*d.footprintDepth)*4;
@@ -99,7 +101,7 @@ namespace MassiveArmy.Planetary
         public void CancelPlacement(){Placing=null;if(ghost!=null)constructionPoses.Remove(ghost.transform);ArmyLifetime.Destroy(ghost);ghost=null;Revision++;}
         public void Preview(Vector3 direction){if(ghost==null)return;if(!manualPlacementRotation&&Civilisation!=null){int rotation=PlacementRotation;AlignResidentialPreview(Placing,ref direction,ref rotation);PlacementRotation=rotation;}direction=SnapBuilding(Placing,direction,PlacementRotation);ghostDirection=direction;PlaceTransform(ghost.transform,Placing,direction,PlacementRotation);var valid=Validate(Placing,direction,PlacementRotation);ghostMaterial.SetColor("_Tint",valid.valid?new Color(.05f,1,.3f,.35f):new Color(1,.08f,.04f,.35f));Notice=valid.valid?"Click to construct "+Placing.name:valid.reason;}
         public bool Construct(Vector3 direction){if(Placing==null)return false;if(!manualPlacementRotation&&Civilisation!=null){int rotation=PlacementRotation;AlignResidentialPreview(Placing,ref direction,ref rotation);PlacementRotation=rotation;}direction=SnapBuilding(Placing,direction,PlacementRotation);var valid=Validate(Placing,direction,PlacementRotation);if(!valid.valid){Notice=valid.reason;return false;}
-            var d=Placing;if(!fixture.IsFootprintClear(direction,FootprintRadius(d))){Notice="Units occupy this footprint";return false;}if(!ConstructionCost(0,direction,d.cost,true))return false;var b=Create(d,direction,PlacementRotation);b.node=valid.node;if(b.node>=0)Nodes[b.node].claimedBy=b.index;Selected=b;CancelPlacement();fixture.RefreshBuildingCosts(Buildings);Rebase();Notice="Constructing "+d.name;return true;}
+            var d=Placing;if(!fixture.IsFootprintClear(direction,FootprintRadius(d))){Notice="Units occupy this footprint";return false;}if(!ConstructionCost(0,direction,d.cost,true))return false;var b=Create(d,direction,PlacementRotation);b.node=ResolveResourceNode(valid.node);if(b.node>=0)Nodes[b.node].claimedBy=b.index;Selected=b;CancelPlacement();fixture.RefreshBuildingCosts(Buildings);Rebase();Notice="Constructing "+d.name;return true;}
         public bool Pick(Vector2 pixel){var ray=fixture.View.ScreenPointToRay(pixel);var centre=fixture.PlanetRenderCentre;float best=float.MaxValue;RtsBuilding picked=null;
             foreach(var b in Buildings){if(b.removed)continue;var p=fixture.RenderBodyPosition(surface.GetSurfacePositionPrecise(CubeSphere.Decode(b.position)));float t=Vector3.Dot(p-ray.origin,ray.direction);if(t<0||t>=best)continue;float radius=FootprintRadius(b.definition);if((ray.GetPoint(t)-p).sqrMagnitude>radius*radius)continue;
                 // Reject infrastructure on the opposite side of the planet.
@@ -141,7 +143,7 @@ namespace MassiveArmy.Planetary
                 if(Buildings.Any(other=>Distance(candidate,CubeSphere.Decode(other.position))<FootprintRadius(other.definition)+d.radius+4))continue;if(fixture.TrySpawnUnit(Catalog.TypeIndex(d.id),candidate,b.team))return true;}return false;}
         void PlaceTransform(Transform transform,BuildingDefinition d,Vector3 direction,int rotation)=>PlaceConstruction(transform,d,direction,rotation);
         public void Rebase()=>RebaseInfrastructure();
-        public void Dispose(){CancelPlacement();DisposeBuildingViews();ArmyLifetime.Destroy(root);ArmyLifetime.Destroy(nodeMaterial);ArmyLifetime.Destroy(ghostMaterial);aim.Dispose();}
+        public void Dispose(){Natural?.Dispose();CancelPlacement();DisposeBuildingViews();ArmyLifetime.Destroy(root);ArmyLifetime.Destroy(nodeMaterial);ArmyLifetime.Destroy(ghostMaterial);aim.Dispose();}
     }
 }
 

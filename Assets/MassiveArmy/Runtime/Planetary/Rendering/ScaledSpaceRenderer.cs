@@ -8,6 +8,8 @@ namespace MassiveArmy.Planetary
     public sealed class ScaledSpaceRenderer : IDisposable
     {
         readonly Material material;PlanetDistantTerrain ownPreviews;
+        internal int VisibleCount {get;private set;}
+        internal PlanetDefinition VisibleBody(int index)=>nearest[index];
         readonly List<MaterialPropertyBlock> blocks=new List<MaterialPropertyBlock>();readonly List<int> counts=new List<int>();
         readonly PlanetDefinition[] nearest=new PlanetDefinition[16];readonly double[] distances=new double[16];
         public ScaledSpaceRenderer(GraphicsBuffer colours){material=new Material(Resources.Load<Shader>("MassiveArmy/PlanetScaledBody"));material.SetBuffer("_BiomeColours",colours);material.SetInteger("_BodyDebug",Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-preview-debug")>=0?1:0);Resources.Load<TerrainSurfaceLibrary>("MassiveArmy/TerrainArt/SurfaceLibrary").Bind(material);}
@@ -23,6 +25,7 @@ namespace MassiveArmy.Planetary
                 int at=0;while(at<used&&distances[at]<distance)at++;if(at>=budget)continue;
                 used=Math.Min(budget,used+1);for(int k=used-1;k>at;k--){nearest[k]=nearest[k-1];distances[k]=distances[k-1];}nearest[at]=body;distances[at]=distance;
             }
+            VisibleCount=used;
             for(int i=0;i<used;i++){
                 var body=nearest[i];
                 var preview=previews.Get(body);var visual=ScaledSpace.Project(body.position,observer,body.radius);

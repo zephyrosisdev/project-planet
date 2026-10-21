@@ -25,7 +25,7 @@ namespace MassiveArmy.Planetary {
                         else if(reason.StartsWith("No dry",StringComparison.Ordinal)&&++building.roadFailures>=3){building.roadSuspended=true;building.roadRetryAfter=civilisation.SimulationTime+60;local.NotifyChanged();}
                         faction.reason=extended?reason:building.definition.name+": "+reason;if(team==0)local.Notice=faction.reason;}
                 }
-                if(!faction.autonomous||local.World.sessionMode==PlanetGameMode.Swarm)continue;
+                if(!faction.autonomous)continue;
                 civilisation.Orbitals.Plan(local,team);
                 bool Build(string id){var definition=local.Catalog.Buildings[id];faction.reason="Constructing "+definition.name;if(local.TryConstructInfrastructure(id,team))return true;
                     bool expanded=definition.terrain==TerrainRule.Node?local.ExpandForDeposit(id,team)||local.SurveyFrontierDeposit(id,team):local.BuildSettlementFrontier(id,team);
