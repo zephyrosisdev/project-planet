@@ -15,6 +15,8 @@ Shader "MassiveArmy/Planet weather" {
  float4 _WeatherFullSize,_WeatherHalfSize,_WeatherView,_WeatherBounds,_WeatherAtmosphere,_WeatherCloud,_WeatherWind,_WeatherDepthProjection;
  float3 _WeatherRight,_WeatherUp,_WeatherForward,_WeatherCentre,_WeatherSun,_WeatherAirColour,_WeatherCloudColour;
  float _WeatherRadius,_WeatherLocal,_WeatherNoiseLod;
+ Texture3D<float> _WeatherLightCache;SamplerState sampler_WeatherLightCache;
+ float4 _WeatherLighting;float3 _WeatherSunColour;
  float4 _WeatherCabinEye;float4x4 _WeatherWorldToCabin;
  float3 _WeatherAftMin,_WeatherAftMax,_WeatherBridgeMin,_WeatherBridgeMax;
  struct V {float4 position:SV_POSITION;float2 ndc:TEXCOORD0;};
@@ -53,11 +55,35 @@ Shader "MassiveArmy/Planet weather" {
   return 0;
  }
  bool Sphere(float3 ray,float radius,out float2 range){float along=dot(ray,_WeatherCentre);float3 side=_WeatherCentre-ray*along;float disc=radius*radius-dot(side,side);range=0;if(disc<0)return false;float root=sqrt(disc);range=float2(along-root,along+root);return range.y>0;}
- float Noise(float3 p){return _WeatherNoise.SampleLevel(sampler_WeatherNoise,p/64,_WeatherNoiseLod);}
- float3 WeatherPoint(float3 p){return float3(p.x*_WeatherWind.y-p.z*_WeatherWind.x,p.y,p.x*_WeatherWind.x+p.z*_WeatherWind.y);}
- float Coverage(float3 up){float3 p=WeatherPoint(up);float3 offset=float3(_WeatherWind.z,_WeatherWind.w,11.3);float n=Noise(p*8.2+offset)*.5+Noise(p*18.1+offset)*.3+Noise(p*41.7+offset)*.2;float threshold=lerp(.76,.24,_WeatherCloud.x);return smoothstep(threshold-.055,threshold+.055,n);}
+ #include "PlanetWeatherDensity.hlsl"
  float Day(float3 p){float r=length(p),horizon=-sqrt(saturate(1-1/(r*r)));return smoothstep(horizon-.025,horizon+.055,dot(p/r,_WeatherSun));}
- float3 CloudLight(float3 p,float layer,float3 ray){float sun=Day(p)*(.16+.84*saturate(dot(normalize(p),_WeatherSun))),mu=saturate(dot(ray,_WeatherSun));return _WeatherCloudColour*(.018+sun*(.35+1.25*saturate(layer)))*(1+pow(mu,12)*.55);}
+ float CloudOpticalDepth(float3 p){
+  float radius=length(p),layer=saturate((radius-1-_WeatherAtmosphere.z)/_WeatherAtmosphere.w);float3 up=p/radius;
+  [branch]if(_WeatherLighting.z>.5){float3 uv=float3(atan2(up.z,up.x)/6.283185307+.5,asin(clamp(up.y,-1,1))/3.141592654+.5,(layer*7+.5)/8);return _WeatherLightCache.SampleLevel(sampler_WeatherLightCache,uv,0);}
+  return Coverage(up)*.58*_WeatherCloud.y*_WeatherAtmosphere.w*(1-layer)/max(.12,dot(up,_WeatherSun));
+ }
+ float3 CloudLight(float3 p,float layer,float3 ray){
+  float day=Day(p),sun=day*(.16+.84*saturate(dot(normalize(p),_WeatherSun))),mu=dot(ray,_WeatherSun);
+  float3 simple=_WeatherCloudColour*(.018+sun*(.35+1.25*saturate(layer)))*(1+pow(saturate(mu),12)*.55);
+  [branch]if(_WeatherLighting.x<=0)return simple;
+  float tau=CloudOpticalDepth(p),direct=exp(-tau);
+  // Forward scattering plus a broad, attenuated multiple-scattering approximation.
+  float phase=.5775/pow(max(.1225,1.4225-1.3*mu),1.5);
+  float multiple=.45*(1-exp(-tau*.7))*exp(-tau*.16);
+  float energy=direct*(.45+.55*min(4,phase))+multiple;
+  float3 scattered=_WeatherCloudColour*(.018+_WeatherSunColour*day*(.10+energy*1.15));
+  return lerp(simple,scattered,_WeatherLighting.x);
+ }
+ float GroundCloudShadow(float3 ray,float stop){
+  [branch]if(_WeatherLighting.y<=0||_WeatherCloud.w<.5||stop>1e15)return 0;
+  // Exclude sealed cabin walls, preserving exterior shadows through its windows.
+  if(_WeatherCabinEye.w>.5&&stop<=CabinExit(ray)+.1)return 0;
+  float3 p=ray*(stop/_WeatherRadius)-_WeatherCentre;float radius=length(p),bottom=1+_WeatherAtmosphere.z;
+  if(radius<.98||radius>=bottom+_WeatherAtmosphere.w)return 0;
+  float day=saturate(dot(p/radius,_WeatherSun)*5);if(day<=0)return 0;
+  if(radius<bottom){float2 enter;if(!WeatherSphereFrom(p,_WeatherSun,bottom,enter))return 0;p+=_WeatherSun*max(0,enter.y);}
+  return _WeatherLighting.y*day*(1-exp(-CloudOpticalDepth(p)));
+ }
  float4 Air(float3 ray,float start,float end){
   float step=(end-start)/6,transmission=1;float3 colour=0;float scale=max(.00001,_WeatherAtmosphere.x*.18);
   [unroll]for(int i=0;i<6;i++){float3 p=ray*(start+(i+.5)*step)-_WeatherCentre;float altitude=max(0,length(p)-1);float density=exp(-altitude/scale);float a=1-exp(-density*step/scale*_WeatherAtmosphere.y*.32);
@@ -68,14 +94,22 @@ Shader "MassiveArmy/Planet weather" {
  float4 Clouds(float3 ray,float begin,float stop,float jitter){
   if(_WeatherCloud.w<.5)return 0;float bottom=1+_WeatherAtmosphere.z,top=bottom+_WeatherAtmosphere.w;float2 outer,inner;
   if(!Sphere(ray,top,outer))return 0;float start=max(begin,outer.x),end=min(stop,outer.y);
-  if(Sphere(ray,bottom,inner)){if(inner.x>start)end=min(end,inner.x);else if(inner.y>start)start=inner.y;}
   if(end<=start)return 0;
-  float middle=(start+end)*.5;float3 middlePoint=ray*middle-_WeatherCentre,up=normalize(middlePoint);float mask=Coverage(up);float distance=end-start;
+  // A ray can cross cloud, empty space below its base, then cloud again.
+  // Keep both cloud intervals: dropping the second creates a circular cutoff
+  // at the inner sphere's silhouette when the camera enters the cloud base.
+  float gapStart=end,gapEnd=end;
+  if(Sphere(ray,bottom,inner)){gapStart=clamp(inner.x,start,end);gapEnd=clamp(inner.y,start,end);}
+  float first=gapStart-start,gap=gapEnd-gapStart,distance=end-start-gap;
+  if(distance<=0)return 0;
+  // Pack the occupied path into the same twelve samples, skipping the gap.
+  float middlePath=distance*.5,middle=start+middlePath+(middlePath>=first?gap:0);
+  float3 middlePoint=ray*middle-_WeatherCentre,up=normalize(middlePoint);float mask=Coverage(up);
   float farAlpha=1-exp(-mask*_WeatherCloud.y*distance*.58);float4 farCloud=float4(CloudLight(middlePoint,.65,ray)*farAlpha,farAlpha);
   [branch]if(_WeatherCloud.z<=.001)return farCloud;
   float transmission=1,step=distance/12;float3 colour=0;
   [loop]for(int i=0;i<12;i++){
-   float t=start+(i+jitter)*step;float3 p=ray*t-_WeatherCentre;float layer=saturate((length(p)-bottom)/_WeatherAtmosphere.w);
+   float path=(i+jitter)*step,t=start+path+(path>=first?gap:0);float3 p=ray*t-_WeatherCentre;float layer=saturate((length(p)-bottom)/_WeatherAtmosphere.w);
    float vertical=smoothstep(0,.18,layer)*(1-smoothstep(.65,1,layer));
    float cover=Coverage(normalize(p));if(cover<.001||vertical<.001)continue;float3 detail=WeatherPoint(p)*_WeatherRadius/350+float3(_WeatherWind.z,_WeatherWind.w,0);
    float erosion=Noise(detail)*.65+Noise(detail*2.1)*.35;float density=saturate(cover-erosion*.42*_WeatherCloud.z)*vertical;
@@ -89,9 +123,12 @@ Shader "MassiveArmy/Planet weather" {
   int2 pixel=clamp(int2(i.position.xy*2),int2(0,0),int2(_WeatherFullSize.xy)-1);float forward=max(.001,dot(ray,_WeatherForward));
   float rawLocal=_WeatherLocalDepth.Load(int3(pixel,0));float stop=NearDepth(int2(i.position.xy))/forward;
   {float raw=SceneDepth(pixel);if(HasDepth(raw)&&abs(raw-rawLocal)>1e-10){float scaled=Eye(raw)/forward;float physical=scaled<10000?10000*scaled/max(.0001,10000-scaled):1e20;stop=min(stop,physical);}}
-  end=min(end,stop/_WeatherRadius);float2 ground;if(Sphere(ray,1,ground)&&ground.x>0)end=min(end,ground.x);if(end<=start)return 0;
+  float shadow=GroundCloudShadow(ray,stop);
+  end=min(end,stop/_WeatherRadius);float2 ground;if(Sphere(ray,1,ground)&&ground.x>0)end=min(end,ground.x);if(end<=start)return float4(0,0,0,shadow);
   uint key=(uint)pixel.x*1973u+(uint)pixel.y*9277u+89173u;key^=key>>16;key*=0x7feb352du;key^=key>>15;float jitter=(key&65535u)/65536.0;
-  float4 air=Air(ray,start,end),cloud=Clouds(ray,start,end,jitter);return cloud+air*(1-cloud.a);
+  float4 air=Air(ray,start,end),cloud=Clouds(ray,start,end,jitter),result=cloud+air*(1-cloud.a);
+  // The soft shadow attenuates the opaque scene before atmospheric scattering.
+  result.a+=shadow*(1-result.a);return result;
  }
  float4 Composite(V i):SV_Target{
   int2 pixel=int2(i.position.xy);float current=Eye(_WeatherLocalDepth.Load(int3(pixel,0)));float2 hp=(pixel+.5)*.5-.5;int2 base=(int2)floor(hp);float2 f=frac(hp);float4 colour=0;float total=0;

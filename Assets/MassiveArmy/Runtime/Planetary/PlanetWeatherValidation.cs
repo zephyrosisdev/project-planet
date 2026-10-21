@@ -21,13 +21,65 @@ namespace MassiveArmy.Planetary
         void Render(){RenderPipeline.SubmitRenderRequest(world.View,new RenderPipeline.StandardRequest{destination=target});var fence=AsyncGPUReadback.Request(target,0,0,1,0,1,0,1,TextureFormat.RGBA32);fence.WaitForCompletion();if(fence.hasError)throw new InvalidOperationException("Weather render fence failed");}
         Color32[] Capture(string name){Render();var previous=RenderTexture.active;RenderTexture.active=target;var image=new Texture2D(target.width,target.height,TextureFormat.RGB24,false);image.ReadPixels(new Rect(0,0,target.width,target.height),0,0);image.Apply();File.WriteAllBytes(Path.Combine(output,name+".png"),image.EncodeToPNG());Destroy(image);Graphics.Blit(target,small);RenderTexture.active=small;var preview=new Texture2D(small.width,small.height,TextureFormat.RGBA32,false);preview.ReadPixels(new Rect(0,0,small.width,small.height),0,0);preview.Apply();var data=preview.GetPixels32();Destroy(preview);RenderTexture.active=previous;return data;}
         static int Difference(Color32[] a,Color32[] b){int count=0;for(int i=0;i<a.Length;i++)if(Math.Abs(a[i].r-b[i].r)+Math.Abs(a[i].g-b[i].g)+Math.Abs(a[i].b-b[i].b)>12)count++;return count;}
+        void CloudBaseTransition(){
+            // Isolate shell geometry from terrain, lighting and noise. An almost tangent
+            // ray must retain cloud beyond the empty region below the spherical base.
+            var material=new Material(Resources.Load<Shader>("MassiveArmy/PlanetWeather"));
+            var noise=new Texture3D(2,2,2,TextureFormat.RFloat,false);noise.SetPixels(Enumerable.Repeat(Color.white,8).ToArray());noise.Apply();
+            var depth=new Texture2D(8,8,TextureFormat.RFloat,false);depth.SetPixels(new Color[64]);depth.Apply();
+            var result=new RenderTexture(8,8,0,RenderTextureFormat.ARGBFloat);result.Create();var read=new Texture2D(8,8,TextureFormat.RGBAFloat,false);
+            var previous=RenderTexture.active;
+            try{
+                material.SetTexture("_WeatherNoise",noise);material.SetTexture("_WeatherLocalDepth",depth);material.SetTexture("_WeatherSceneDepth",depth);
+                material.SetVector("_WeatherFullSize",new Vector4(8,8,.125f,.125f));material.SetVector("_WeatherBounds",new Vector4(-1,-1,1,1));material.SetVector("_WeatherView",new Vector4(1,1,1,0));
+                material.SetVector("_WeatherRight",Vector3.zero);material.SetVector("_WeatherUp",Vector3.zero);material.SetVector("_WeatherCabinEye",Vector4.zero);
+                material.SetVector("_WeatherSun",Vector3.up);material.SetVector("_WeatherCloudColour",Vector3.one);material.SetVector("_WeatherWind",new Vector4(0,1,0,0));material.SetFloat("_WeatherRadius",120000);
+                const float bottom=1.018333333f,thickness=.013333333f;
+                material.SetVector("_WeatherAtmosphere",new Vector4(.083333333f,0,bottom-1,thickness));material.SetVector("_WeatherCloud",new Vector4(1,8,1,1));
+                foreach(float height in new[]{20f,60f,300f}){
+                    float eye=bottom+height/120000;material.SetVector("_WeatherCentre",new Vector3(0,-eye,0));float[] alpha=new float[2];
+                    for(int side=0;side<2;side++){
+                        float impact=bottom+(side==0?-1:1)*.000001f,x=impact/eye;var ray=new Vector3(x,-Mathf.Sqrt(1-x*x),0);material.SetVector("_WeatherForward",ray);
+                        RenderTexture.active=result;GL.Clear(false,true,Color.clear);material.SetPass(1);Graphics.DrawProceduralNow(MeshTopology.Triangles,6);
+                        // All pixels use the same ray; average their stable jitter phases
+                        // to compare the bounded stochastic march with the dense integral.
+                        read.ReadPixels(new Rect(0,0,8,8),0,0);read.Apply();alpha[side]=read.GetPixels().Average(c=>c.a);
+                        // Independent dense integration includes zero density below the base,
+                        // rather than repeating the shader's interval-selection algorithm.
+                        double along=eye*-ray.y,disc=(bottom+thickness)*(bottom+thickness)-eye*eye+along*along,end=along+Math.Sqrt(disc),sum=0;
+                        const int steps=20000;for(int i=0;i<steps;i++){double t=(i+.5)*end/steps,layer=(Math.Sqrt(eye*eye+t*t-2*t*along)-bottom)/thickness;double lo=Math.Clamp(layer/.18,0,1),hi=Math.Clamp((layer-.65)/.35,0,1);sum+=.58*lo*lo*(3-2*lo)*(1-hi*hi*(3-2*hi))*end/steps;}
+                        double expected=1-Math.Exp(-8*sum);Check(Math.Abs(alpha[side]-expected)<.015,"Cloud-base tangent at "+height+" m, side "+side+" agrees with dense shell integration (alpha "+alpha[side]+", expected "+expected+")");
+                    }
+                    Check(Math.Abs(alpha[0]-alpha[1])<.01,"Cloud base has no circular opacity cutoff at "+height+" m above its lower boundary");
+                }
+            }finally{RenderTexture.active=previous;result.Release();Destroy(result);Destroy(read);Destroy(depth);Destroy(noise);Destroy(material);}
+        }
         Color32[] ReadColour(){var read=AsyncGPUReadback.Request(target,0,TextureFormat.RGBA32);read.WaitForCompletion();if(read.hasError)throw new InvalidOperationException("First-person colour readback failed");return read.GetData<Color32>().ToArray();}
+        IEnumerator CloudLighting(PlanetWeatherRenderer renderer){
+            var weather=world.definition.weather;float haze=weather.haze,coverage=weather.coverage,pitch=world.Rig.Pitch,distance=world.Rig.Distance;var rotation=world.LightingForValidation.Sun.transform.rotation;
+            weather.haze=0;weather.coverage=1;world.Rig.Pitch=90;world.Rig.Distance=1500;world.Rig.RefreshPose();yield return null;
+            var sun=world.LightingForValidation.Sun;var up=world.Rig.FocusDirection;sun.transform.rotation=Quaternion.LookRotation(-up,Mathf.Abs(up.y)<.95f?Vector3.up:Vector3.right);
+            renderer.ShadowsEnabled=false;var control=Capture("terrain-shadow-control");renderer.ShadowsEnabled=true;var shadow=Capture("terrain-cloud-shadow");
+            int darker=0;for(int i=0;i<control.Length;i++)if(control[i].r+control[i].g+control[i].b-shadow[i].r-shadow[i].g-shadow[i].b>2)darker++;
+            Check(darker>1000,"Star-lit terrain receives a subtle cloud shadow (darker preview pixels: "+darker+")");
+            var light=AsyncGPUReadback.Request(renderer.LightForValidation,0);light.WaitForCompletion();Check(!light.hasError,"Cloud sunlight cache readback succeeds");var values=light.GetData<float>();
+            int varied=0;for(int i=0;i<128*64;i++)if(values[i]>values[7*128*64+i]+.05f&&values[i]<15)varied++;
+            Check(varied>1000,"Sunlight optical depth varies through the cloud interior and decreases toward its lit top");
+            sun.transform.rotation=Quaternion.LookRotation(up,Mathf.Abs(up.y)<.95f?Vector3.up:Vector3.right);
+            renderer.ShadowsEnabled=false;var nightControl=Capture("night-shadow-control");renderer.ShadowsEnabled=true;var night=Capture("night-no-cloud-shadow");Check(Difference(nightControl,night)==0,"Cloud shadows do not darken the planet's unlit side");
+            sun.transform.rotation=rotation;weather.coverage=coverage;weather.haze=haze;world.Rig.Pitch=pitch;world.Rig.Distance=distance;world.Rig.RefreshPose();yield return null;
+            renderer.ShadowsEnabled=false;renderer.ScatteringEnabled=false;var simple=Capture("cloud-lighting-control");renderer.ScatteringEnabled=true;var scattered=Capture("cloud-internal-scattering");
+            Check(Difference(simple,scattered)>1000,"Internal attenuation and scattering change the visible cloud lighting");renderer.ShadowsEnabled=true;
+        }
         void CheckNearSolids(string name,PlanetWeatherRenderer renderer,float limit){
             // Compare geometry occlusion without bloom spreading exterior cloud light
             // over an otherwise correctly occluded cockpit silhouette.
             var hd=world.View.GetComponent<HDAdditionalCameraData>();var savedSettings=hd.renderingPathCustomFrameSettings;var savedMask=hd.renderingPathCustomFrameSettingsOverrideMask;
             hd.renderingPathCustomFrameSettingsOverrideMask.mask[(uint)FrameSettingsField.Postprocess]=true;hd.renderingPathCustomFrameSettings.SetEnabled(FrameSettingsField.Postprocess,false);
-            renderer.Enabled=false;Capture(name+"-control");var control=ReadColour();renderer.Enabled=true;Capture(name+"-weather");var weather=ReadColour();
+            // Exterior walls can legitimately receive a cloud shadow. Keep shadows
+            // enabled inside a sealed ship to exercise the cabin exclusion as well.
+            bool shadows=renderer.ShadowsEnabled;if(!world.TryWeatherCabin(out _,out _))renderer.ShadowsEnabled=false;
+            renderer.Enabled=false;Capture(name+"-control");var control=ReadColour();renderer.Enabled=true;Capture(name+"-weather");var weather=ReadColour();renderer.ShadowsEnabled=shadows;
             var read=AsyncGPUReadback.Request(renderer.DepthForValidation,0);read.WaitForCompletion();Check(!read.hasError,"First-person depth readback succeeds");var depth=read.GetData<float>();var projection=GL.GetGPUProjectionMatrix(world.View.projectionMatrix,true);int samples=0,changed=0;
             for(int y=4;y<1436;y+=4)for(int x=4;x<2556;x+=4){int i=y*2560+x;float raw=depth[i];if(raw<=0)continue;float metres=Mathf.Abs(projection.m23/(raw+projection.m22));if(metres>limit)continue;
                 if(Mathf.Abs(depth[i-2]-raw)>raw*.01f||Mathf.Abs(depth[i+2]-raw)>raw*.01f||Mathf.Abs(depth[i-5120]-raw)>raw*.01f||Mathf.Abs(depth[i+5120]-raw)>raw*.01f)continue;
@@ -56,7 +108,8 @@ namespace MassiveArmy.Planetary
             var material=new Material(Resources.Load<Shader>("MassiveArmy/Structure"));material.SetColor("_Tint",new Color(.8f,.05f,.03f));cube.GetComponent<Renderer>().sharedMaterial=material;
             cube.transform.SetPositionAndRotation(world.View.transform.position+world.View.transform.forward*50,world.View.transform.rotation);cube.transform.localScale=new Vector3(20,20,2);
             float haze=world.definition.weather.haze;world.definition.weather.haze=0;
-            renderer.Enabled=false;var control=Capture("foreground-control");renderer.Enabled=true;var weather=Capture("foreground-weather");int changed=0;
+            bool shadows=renderer.ShadowsEnabled;renderer.ShadowsEnabled=false;
+            renderer.Enabled=false;var control=Capture("foreground-control");renderer.Enabled=true;var weather=Capture("foreground-weather");renderer.ShadowsEnabled=shadows;int changed=0;
             var depth=AsyncGPUReadback.Request(renderer.DepthForValidation,0);depth.WaitForCompletion();bool depthReadSucceeded=!depth.hasError;var values=depth.GetData<float>();var projection=GL.GetGPUProjectionMatrix(world.View.projectionMatrix,true);
             float raw=values[720*2560+1280],metres=Mathf.Abs(projection.m23/(raw+projection.m22));
             File.WriteAllText(Path.Combine(output,"foreground-depth.txt"),"Source dimension: "+renderer.DepthDimensionForValidation+"\nForeground depth: "+metres+" metres\nRaw depth: "+raw);
@@ -70,6 +123,7 @@ namespace MassiveArmy.Planetary
             float deadline=Time.realtimeSinceStartup+120;while(!world.Ready){Check(Time.realtimeSinceStartup<deadline,"Planet initialization remains bounded");yield return null;}world.Paused=true;world.Rig.InputEnabled=false;
             target=new RenderTexture(2560,1440,24,RenderTextureFormat.ARGBHalf);target.Create();small=new RenderTexture(320,180,0,RenderTextureFormat.ARGB32);small.Create();world.View.enabled=false;world.View.targetTexture=target;
             var definition=world.definition;var renderer=world.WeatherForValidation;Check(renderer!=null,"Viewed world owns a bounded weather renderer");
+            CloudBaseTransition();
             var clouds=new HashSet<PlanetCloudSystem>();int airless=0;var probe=ScriptableObject.CreateInstance<PlanetDefinition>();
             for(int i=0;i<96;i++){probe.terrainSeed=i*7919;PlanetWeather.Generate(probe);string first=JsonUtility.ToJson(probe.weather);PlanetWeather.Generate(probe);Check(first==JsonUtility.ToJson(probe.weather),"Planet weather seed is repeatable: "+i);clouds.Add(probe.weather.clouds);if(!probe.hasAtmosphere){airless++;Check(!probe.weather.HasClouds&&probe.surfacePressure==0,"Airless planets have no cloud layer or pressure");}}
             Destroy(probe);Check(airless>0&&clouds.Count==4,"Generation includes airless, clear, scattered, broken and overcast worlds");
@@ -82,6 +136,7 @@ namespace MassiveArmy.Planetary
             definition.weather.clouds=PlanetCloudSystem.Overcast;definition.weather.coverage=1;definition.weather.Layer(definition,out float bottom,out float thickness);float altitude=bottom+thickness*.5f;
             world.Rig.Pitch=25;world.Rig.Distance=Mathf.Max(10,(altitude-world.Rig.Surface.SampleHeight(world.Rig.FocusDirection))/Mathf.Sin(25*Mathf.Deg2Rad));world.Rig.RefreshPose();for(int i=0;i<20;i++)yield return null;
             var inside=Capture("inside-volumetric-clouds");Check(renderer.VolumetricBodies>0,"Flying into a cloud layer uses volumetric integration");renderer.Enabled=false;var without=Capture("inside-control");report.insidePixels=Difference(inside,without);Check(report.insidePixels>3000,"Cloud volume surrounds the camera and attenuates the ground view");renderer.Enabled=true;
+            var cloudLighting=CloudLighting(renderer);while(cloudLighting.MoveNext())yield return cloudLighting.Current;
             var occlusion=ForegroundOcclusion(renderer);while(occlusion.MoveNext())yield return occlusion.Current;
             var character=CharacterOcclusion(renderer);while(character.MoveNext())yield return character.Current;
             var deltas=new List<double>();for(int i=0;i<80;i++){renderer.Enabled=false;timer.Restart();Render();double off=timer.Elapsed.TotalMilliseconds;renderer.Enabled=true;timer.Restart();Render();double on=timer.Elapsed.TotalMilliseconds;if(i>=20)deltas.Add(Math.Max(0,on-off));yield return null;}

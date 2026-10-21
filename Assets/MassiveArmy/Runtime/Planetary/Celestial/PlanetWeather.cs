@@ -9,6 +9,7 @@ namespace MassiveArmy.Planetary
         [Range(0,1)]public float coverage=.52f;
         [Min(0)]public float cloudAltitude=2200,cloudThickness=1600,windSpeed=25;
         [Range(.1f,3)]public float cloudDensity=1;
+        [Range(0,1)]public float lightScattering=.85f,cloudShadowStrength=.18f;
         [Range(.05f,2)]public float haze=.45f;
         public Color atmosphereColour=new Color(.18f,.4f,.85f),cloudColour=new Color(.95f,.97f,1);
         public bool HasClouds=>clouds!=PlanetCloudSystem.None&&coverage>0&&cloudThickness>0;

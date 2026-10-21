@@ -1,0 +1,22 @@
+#pragma kernel BuildLight
+Texture3D<float> _WeatherNoise;SamplerState sampler_WeatherNoise;
+RWTexture3D<float> _WeatherLightWrite;
+float4 _WeatherAtmosphere,_WeatherCloud,_WeatherWind;
+float _WeatherRadius,_WeatherNoiseLod;
+float3 _WeatherSun;
+#include "PlanetWeatherDensity.hlsl"
+// One bounded, low-frequency optical-depth field for the resident planet.
+// Trilinear filtering makes terrain shadows soft; no screen-sized light march.
+[numthreads(8,8,1)]void BuildLight(uint3 id:SV_DispatchThreadID){
+ float longitude=((id.x+.5)/128-.5)*6.283185307,latitude=((id.y+.5)/64-.5)*3.141592654;
+ float3 up=float3(cos(latitude)*cos(longitude),sin(latitude),cos(latitude)*sin(longitude));
+ float bottom=1+_WeatherAtmosphere.z,top=bottom+_WeatherAtmosphere.w;
+ float3 p=up*(bottom+_WeatherAtmosphere.w*(id.z/7.0));float2 ground,outer,inner;
+ if(WeatherSphereFrom(p,_WeatherSun,1,ground)&&ground.x>0){_WeatherLightWrite[id]=16;return;}
+ if(!WeatherSphereFrom(p,_WeatherSun,top,outer)){_WeatherLightWrite[id]=0;return;}
+ float start=max(0,outer.x),end=max(start,outer.y),gapStart=end,gapEnd=end;
+ if(WeatherSphereFrom(p,_WeatherSun,bottom,inner)){gapStart=clamp(inner.x,start,end);gapEnd=clamp(inner.y,start,end);}
+ float first=gapStart-start,gap=gapEnd-gapStart,distance=end-start-gap,tau=0;
+ [unroll]for(int i=0;i<6;i++){float path=(i+.5)*distance/6,t=start+path+(path>=first?gap:0);tau+=CloudDensity(p+_WeatherSun*t)*distance/6;}
+ _WeatherLightWrite[id]=min(16,tau*_WeatherCloud.y);
+}
