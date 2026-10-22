@@ -1,0 +1,15 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ead13eaa6d01594fb85b7e3163c9cfe, type: 3}
+  m_Name: Selection
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.RtsModelSelection
+  catalogue: {fileID: 11400000, guid: 4a73ce8621b983245a21c0d3cabfce6d, type: 2}

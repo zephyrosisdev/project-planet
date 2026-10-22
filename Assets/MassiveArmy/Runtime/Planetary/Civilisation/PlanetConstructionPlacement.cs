@@ -23,7 +23,7 @@ namespace MassiveArmy.Planetary
             Grid.WarpAxes(area,out var x,out var z,out float plane);var scale=ModelScale(definition);
             foreach(var renderer in pose.renderers){renderer.GetPropertyBlock(properties);properties.SetVector("_ConstructionPlane",new Vector4(plane,pose.foundation,1,0));properties.SetVector("_ConstructionX",x);properties.SetVector("_ConstructionZ",z);properties.SetVector("_ConstructionScale",scale);renderer.SetPropertyBlock(properties);
                 var source=renderer.GetComponent<MeshFilter>().sharedMesh.bounds;var warpedBounds=WarpBounds(source,scale,x,z,plane,pose.foundation);var inverseScale=new Vector3(1/scale.x,1/scale.y,1/scale.z);renderer.localBounds=new Bounds(Vector3.Scale(warpedBounds.center,inverseScale),Vector3.Scale(warpedBounds.size,inverseScale));}
-            var collision=target.GetComponent<BoxCollider>();if(collision!=null){var model=art.Find(definition.id)??art.Find(definition.mesh);var warped=WarpBounds(model.near.bounds,scale,x,z,plane,pose.foundation);collision.center=warped.center;collision.size=Vector3.Max(warped.size,Vector3.one*.5f);}
+            var collision=target.GetComponent<BoxCollider>();if(collision!=null){var model=art.FindBuilding(definition);var warped=WarpBounds(model.near.bounds,scale,x,z,plane,pose.foundation);collision.center=warped.center;collision.size=Vector3.Max(warped.size,Vector3.one*.5f);}
             constructionPoses[target]=pose;return pose;
         }
         static Bounds WarpBounds(Bounds source,Vector3 scale,Vector3 x,Vector3 z,float plane,float foundation){

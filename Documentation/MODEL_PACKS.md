@@ -3,7 +3,9 @@
 Open **Massive Army > Art > Model packs** in Unity, then choose **New pack**.
 The profile lists the RTS and civilisation buildings and all 31 unit types.
 Select an ID, enable **Override this model**, and set its size in metres.
-Unchanged entries continue using the original catalogue.
+Unchanged entries continue using the original catalogue. Overrides apply only to
+the selected building ID: residential buildings that share the default command
+centre mesh do not inherit a command centre override.
 
 Each LOD accepts an imported mesh/model/prefab, a cube, a generated shape,
 or original art. Assign a material or an albedo texture and tint to cubes

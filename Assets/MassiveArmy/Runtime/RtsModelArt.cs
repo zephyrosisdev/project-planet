@@ -35,5 +35,13 @@ namespace MassiveArmy
             if(lookup==null){lookup=new Dictionary<string,Building>();foreach(var b in buildings)lookup.Add(b.id,b);}
             return lookup.TryGetValue(id,out var value)?value:null;
         }
+        public Building FindBuilding(BuildingDefinition definition)
+        {
+            var own=Find(definition.id);if(own!=null)return own;
+            var fallback=Find(definition.mesh);
+            // Shared default geometry is not an override of every definition that uses it.
+            // Resolve old baked packs too, without requiring the player to bake them again.
+            return fallback?.customLods==true?Resources.Load<RtsModelArt>("MassiveArmy/ModelArt/Catalogue")?.Find(definition.mesh):fallback;
+        }
     }
 }

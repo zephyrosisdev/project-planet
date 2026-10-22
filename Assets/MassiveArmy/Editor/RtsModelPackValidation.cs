@@ -25,6 +25,12 @@ namespace MassiveArmy.EditorTools
                 using(var baked=RtsModelPackBaker.Compile(pack)){
                     var art=baked.catalogue;var building=art.Find(b.id);
                     Check(building.customLods&&building.near.GetIndexCount(0)==72&&building.far.GetIndexCount(0)==36&&building.distant.GetIndexCount(0)==36,"Building has three independent baked LODs");
+                    var definitions=RtsModelPackBaker.Catalogue();
+                    Check(art.FindBuilding(definitions.Buildings["command"])==building,"Command override resolves by its own building ID");
+                    foreach(var definition in definitions.buildings.Where(d=>original.Find(d.id)==null&&original.Find(d.mesh)!=null))
+                        {var resolved=art.FindBuilding(definition);var baseline=original.Find(definition.mesh);Check(resolved.near==baseline.near&&resolved.far==baseline.far&&resolved.material==baseline.material&&!resolved.customLods,"Shared default mesh remains unchanged for "+definition.id);}
+                    Check(art.FindBuilding(definitions.Buildings["civil_housing"]).near==original.FindBuilding(definitions.Buildings["civil_housing"]).near,"Command-only override leaves residential housing geometry unchanged");
+
                     Check(art.unitNear[0].bytes.Length==512*3*64&&art.unitFar[0].bytes.Length==128*3*64,"Custom unit banks retain fixed GPU allocation");
                     Check(art.unitNear[1]==original.unitNear[1]&&art.unitIds.SequenceEqual(original.unitIds),"Other unit banks and catalogue indices remain intact");
                     for(int view=0;view<8;view++)Check(Read(art.impostors,view).Any(x=>x.a>32),"Automatic impostor view "+view+" contains visible geometry");
@@ -35,6 +41,12 @@ namespace MassiveArmy.EditorTools
                     var reload=AssetDatabase.LoadAssetAtPath<RtsModelArt>(artPath);Check(AssetDatabase.LoadAssetAtPath<TextAsset>(bankPath).bytes.SequenceEqual(expected),"Saved binary bank survives reload");Check(reload.Find(b.id).material.GetTexture("_Albedo")!=null,"Saved material texture reference survives reload");Check(reload.Find(b.id).distant!=null,"Saved distant LOD reference survives reload");Check(Read(reload.impostors,0).Any(x=>x.a>32),"Saved generated impostor survives texture-array reload");using(var renderer=new ArtUnitRenderer(false,reload))Check(renderer.NearMesh!=null,"Saved catalogue uploads to GPU after reload");
                     AssetDatabase.DeleteAsset(temporaryFolder);temporaryFolder=null;
                 }
+                u.enabled=false;var housing=pack.buildings.First(x=>x.id=="civil_housing");housing.enabled=true;housing.size=new Vector3(4,4,4);
+                using(var explicitHousing=RtsModelPackBaker.Compile(pack)){
+                    var definitions=RtsModelPackBaker.Catalogue();var art=explicitHousing.catalogue;
+                    Check(art.FindBuilding(definitions.Buildings[housing.id])==art.Find(housing.id)&&art.Find(housing.id).customLods,"Explicit residential override still resolves by its own ID");
+                    Check(art.Find(housing.id).near!=art.Find(b.id).near,"Command and residential overrides keep independent meshes");
+                }housing.enabled=false;u.enabled=true;
                 prefab=new GameObject("Model-pack multi-mesh fixture");
                 for(int i=0;i<2;i++){var child=GameObject.CreatePrimitive(PrimitiveType.Cube);child.transform.SetParent(prefab.transform,false);child.transform.localPosition=new Vector3(i,0,0);}
                 b.lod0.kind=ModelSourceKind.MeshOrPrefab;b.lod0.model=prefab;
