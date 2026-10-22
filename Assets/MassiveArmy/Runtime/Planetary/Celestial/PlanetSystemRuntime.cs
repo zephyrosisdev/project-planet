@@ -86,7 +86,7 @@ namespace MassiveArmy.Planetary
             var previous=ActiveWorld;var ship=previous.ShipForValidation;
             if(ship==null||!previous.IsPiloting)throw new InvalidOperationException("Enter a pilot seat before travelling between planets");
             var pose=ship.Pose;var position=previous.definition.position.Add(pose.position);
-            var velocity=pose.linearVelocity+previous.definition.velocity;bool assist=ship.FlightAssistEnabled,gear=ship.GearDeployed;
+            var velocity=ship.NormalFlightVelocity+previous.definition.velocity;bool assist=ship.FlightAssistEnabled,gear=ship.GearDeployed;
             var next=worlds[index];if(next==null||!next.Ready)throw new InvalidOperationException("Destination planet is still preparing");
             previous.SetResidentActive(false);
             try{

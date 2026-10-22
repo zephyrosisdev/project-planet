@@ -24,7 +24,7 @@ namespace MassiveArmy
         {
             this.battle=battle;
             rocket=Resources.Load<Mesh>("MassiveArmy/CombatArt/Rocket");combatPresentation=new CombatPresentation(battle);
-            if(battle.Settings.baseBuilding&&Resources.Load<RtsModelArt>("MassiveArmy/ModelArt/Catalogue")!=null)modelArt=new ArtUnitRenderer(battle.ZombieType>=0);
+            if(battle.Settings.baseBuilding&&RtsModelArt.Load()!=null)modelArt=new ArtUnitRenderer(battle.ZombieType>=0);
             meshes=new[]{modelArt!=null?modelArt.NearMesh:ArmyMeshes.Tank(true),modelArt!=null?modelArt.FarMesh:ArmyMeshes.Tank(false),ArmyMeshes.Quad(),ArmyMeshes.Quad()};
             IndexCounts=new[]{meshes[0].GetIndexCount(0),meshes[1].GetIndexCount(0),meshes[2].GetIndexCount(0),meshes[3].GetIndexCount(0)};
             atlas=ArmyMeshes.Atlas(); var shader=Resources.Load<Shader>("MassiveArmy/Units");

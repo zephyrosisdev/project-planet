@@ -19,7 +19,7 @@ namespace MassiveArmy
         static Mesh cube,cylinder;
         public RtsPresentation(RtsWorld world,Transform parent)
         {
-            this.world=world;modelArt=Resources.Load<RtsModelArt>("MassiveArmy/ModelArt/Catalogue");root=new GameObject("RTS base infrastructure");root.transform.SetParent(parent,false);
+            this.world=world;modelArt=RtsModelArt.Load();root=new GameObject("RTS base infrastructure");root.transform.SetParent(parent,false);
             Shader shader=Resources.Load<Shader>("MassiveArmy/Structure");
             hull=Material(shader,new Color(.075f,.12f,.17f));trim=Material(shader,new Color(.02f,1.1f,1.8f));enemyTrim=Material(shader,new Color(1.7f,.025f,.2f));
             if(cube==null){cube=Primitive(PrimitiveType.Cube);cylinder=Primitive(PrimitiveType.Cylinder);}
@@ -95,7 +95,7 @@ namespace MassiveArmy
                 near=Joint(near);
                 var closeArt=MeshObject("UV armoured shell",b.visual.transform,near,art.material);
                 var farArt=MeshObject("UV distant shell",b.visual.transform,art.walls!=null&&art.walls.Length==16?near:Joint(art.far),art.material);
-                var lodArt=b.visual.GetComponent<LODGroup>();if(lodArt==null)lodArt=b.visual.AddComponent<LODGroup>();lodArt.SetLODs(new[]{new LOD(.025f,new[]{closeArt.GetComponent<Renderer>()}),new LOD(.002f,new[]{farArt.GetComponent<Renderer>()})});lodArt.RecalculateBounds();
+                var lodArt=b.visual.GetComponent<LODGroup>();if(lodArt==null)lodArt=b.visual.AddComponent<LODGroup>();lodArt.SetLODs(new[]{new LOD(.025f,new[]{closeArt.GetComponent<Renderer>()}),new LOD(.002f,new[]{farArt.GetComponent<Renderer>()})});if(art.customLods&&art.distant!=null){var proxyArt=MeshObject("UV proxy shell",b.visual.transform,art.distant,art.material);lodArt.SetLODs(new[]{new LOD(.025f,new[]{closeArt.GetComponent<Renderer>()}),new LOD(.008f,new[]{farArt.GetComponent<Renderer>()}),new LOD(.002f,new[]{proxyArt.GetComponent<Renderer>()})});}lodArt.RecalculateBounds();
                 if(art.gateLeaf!=null)MeshObject("Gate leaf",b.visual.transform,art.gateLeaf,art.material);
                 teamProperties.SetColor("_TeamColor",b.team==0?new Color(.02f,.72f,1):new Color(1,.035f,.12f));
                 teamProperties.SetBuffer("_StructureAim",world.Battle.StructureAimBuffer);teamProperties.SetInt("_BuildingIndex",b.index);teamProperties.SetFloat("_HasTurret",turret?1:0);teamProperties.SetFloat("_BuildingYaw",b.rotation*Mathf.PI*.5f);

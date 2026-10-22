@@ -6,7 +6,7 @@ namespace MassiveArmy.Planetary {
         public bool Docked=>dockStation!=0&&dockProgress>=1;public bool Docking=>dockStation!=0&&dockProgress<1;
         public long DockedStationId=>dockStation;
         public string DockingStatus {
-            get {if(world.Orbitals==null)return "";if(dockStation!=0)return (Docked?"DOCKED · K TO UNDOCK · F TO WALK":"DOCKING · "+(dockProgress*100).ToString("0")+"%");var v=world.Orbitals.Nearest(pose.position,out double distance);if(v==null||distance>200000)return "";double relative=(pose.linearVelocity-v.Pose.linearVelocity).Magnitude;return $"{v.State.Name} #{v.State.id}\nRANGE {distance/1000:0.00} km · RELATIVE {relative:0.0} m/s\nASSIST: B matches orbital velocity\nK: dock inside forward hangar (<25 m/s)";}
+            get {if(world.Orbitals==null)return "";if(dockStation!=0)return (Docked?"DOCKED · J TO UNDOCK · F TO WALK":"DOCKING · "+(dockProgress*100).ToString("0")+"%");var v=world.Orbitals.Nearest(pose.position,out double distance);if(v==null||distance>200000)return "";double relative=(pose.linearVelocity-v.Pose.linearVelocity).Magnitude;return $"{v.State.Name} #{v.State.id}\nRANGE {distance/1000:0.00} km · RELATIVE {relative:0.0} m/s\nASSIST: B matches orbital velocity\nJ: dock inside forward hangar (<25 m/s)";}
         }
         public bool ToggleDock(){
             if(dockStation!=0){var old=world.Orbitals?.Find(dockStation);dockStation=0;dockProgress=0;SetFlightAssistance(false);if(old!=null){pose.linearVelocity=old.Pose.linearVelocity+new Double3(old.Rotation*Vector3.back)*12;pose.angularVelocity=old.Pose.angularVelocity;shipFrame.Pose=pose;}return true;}

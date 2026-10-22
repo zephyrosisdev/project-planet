@@ -17,11 +17,11 @@ namespace MassiveArmy.Planetary
             var absolute=model.Current[model.NodeFor(world.definition)].position+pose.position;
             int primary=model.Strongest(absolute,model.Current,out double share,out int second);var a=model.Nodes[primary];var b=model.Nodes[second];
             bool stale=path.Count>0&&model.Time-path.Timestamp>Math.Max(30,path.Horizon*.15);
-            orbitStatus=Landed?"LANDED":stale?"PREDICTION AGING · RECALCULATING":path.Status;
-            if(!Landed&&FlightAssistEnabled)orbitStatus="ASSISTED · COAST PREVIEW";
+            orbitStatus=CruiseActive?$"K · WARP {CruiseSpeedReadout} · RELEASE TO RETURN":Landed?"LANDED":stale?"PREDICTION AGING · RECALCULATING":path.Status;
+            if(!CruiseActive&&!Landed&&FlightAssistEnabled)orbitStatus="ASSISTED · COAST PREVIEW";
             orbitColor=Landed?Color.gray:path.Impact?new Color(1,.4f,.2f):new Color(.25f,1,.75f);
             var r=absolute-model.Current[primary].position;var v=pose.linearVelocity+world.definition.velocity-model.Current[primary].velocity;
-            orbitReadout=$"PRIMARY   {a.name} ({share*100:0}% influence)\nSECONDARY {b.name}\nALTITUDE  {Distance(pose.position.Magnitude-world.definition.radius)}\nSPEED     {Speed:0.0} m/s (planet frame)\nL · ATTITUDE HOLD {(RotationLocked?"ON":"OFF")}\nFORECAST  {Duration(path.Horizon)}\nSummed gravity · moving bodies\nFinite forecast; long-term stability unproven.";
+            orbitReadout=$"PRIMARY   {a.name} ({share*100:0}% influence)\nSECONDARY {b.name}\nALTITUDE  {Distance(pose.position.Magnitude-world.definition.radius)}\nSPEED     {SpeedReadout} (planet frame)\nL · ATTITUDE HOLD {(RotationLocked?"ON":"OFF")}\nFORECAST  {Duration(path.Horizon)}\nSummed gravity · moving bodies\nFinite forecast; long-term stability unproven.";
             if(path.Count==0)orbitReadout+="\nBuilding numerical prediction…";
             // The numerical track is plotted in the current camera's orbital-plane projection.
             mapExtent=Math.Max(a.radius*2,r.Magnitude*1.3);

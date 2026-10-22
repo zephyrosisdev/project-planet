@@ -1,0 +1,3851 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b3b002caf8e0234bbb3b0e4f696bc57, type: 3}
+  m_Name: Model Pack
+  m_EditorClassIdentifier: Assembly-CSharp-Editor::MassiveArmy.EditorTools.RtsModelPack
+  buildings:
+  - id: command
+    enabled: 0
+    size: {x: 39.40094, y: 25.42375, z: 28.930878}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: outpost
+    enabled: 0
+    size: {x: 14.56, y: 24, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: barracks
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: light_depot
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: factory
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: ordnance
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: helipad
+    enabled: 0
+    size: {x: 21.84, y: 5.368, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: airbase
+    enabled: 0
+    size: {x: 43.68, y: 12, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: naval_yard
+    enabled: 0
+    size: {x: 36.4, y: 28, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: lab
+    enabled: 0
+    size: {x: 21.84, y: 16.6784, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: advanced_lab
+    enabled: 0
+    size: {x: 29.12, y: 22.5712, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: strategic_lab
+    enabled: 0
+    size: {x: 36.4, y: 26.5712, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: logistics
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: repair_depot
+    enabled: 0
+    size: {x: 21.84, y: 14.5, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: field_command
+    enabled: 0
+    size: {x: 21.84, y: 24, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: radar_station
+    enabled: 0
+    size: {x: 14.56, y: 16.0576, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: phased_radar
+    enabled: 0
+    size: {x: 21.84, y: 17.5864, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: horizon_radar
+    enabled: 0
+    size: {x: 29.12, y: 17.5864, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: counter_radar
+    enabled: 0
+    size: {x: 14.56, y: 14.912, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: mine
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: oil
+    enabled: 0
+    size: {x: 14.56, y: 16, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: gas
+    enabled: 0
+    size: {x: 14.56, y: 19.5, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: rare
+    enabled: 0
+    size: {x: 21.84, y: 11, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: isotope
+    enabled: 0
+    size: {x: 21.84, y: 11, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: synthetic
+    enabled: 0
+    size: {x: 21.84, y: 19.5, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: material_storage
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: fuel_storage
+    enabled: 0
+    size: {x: 14.56, y: 8.95, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: rare_storage
+    enabled: 0
+    size: {x: 14.56, y: 10.5, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: isotope_storage
+    enabled: 0
+    size: {x: 14.56, y: 10.5, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: wind
+    enabled: 0
+    size: {x: 14.56, y: 23.043732, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: solar
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: gas_turbine
+    enabled: 0
+    size: {x: 21.84, y: 18.6152, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: reactor
+    enabled: 0
+    size: {x: 29.12, y: 11, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: fusion
+    enabled: 0
+    size: {x: 36.4, y: 14, z: 36.4}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: exotic
+    enabled: 0
+    size: {x: 43.68, y: 23, z: 43.68}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: battery
+    enabled: 0
+    size: {x: 14.56, y: 11, z: 7.28}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: wall
+    enabled: 0
+    size: {x: 8, y: 6, z: 8}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: gate
+    enabled: 0
+    size: {x: 24, y: 12, z: 7.28}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: autocannon
+    enabled: 0
+    size: {x: 7.28, y: 9.5, z: 7.28}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: at_turret
+    enabled: 0
+    size: {x: 7.28, y: 9.5, z: 7.28}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: aa_turret
+    enabled: 0
+    size: {x: 7.28, y: 9.5, z: 7.28}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: sam
+    enabled: 0
+    size: {x: 14.56, y: 9.5, z: 7.28}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: advanced_sam
+    enabled: 0
+    size: {x: 14.56, y: 9.5187, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: point_defence
+    enabled: 0
+    size: {x: 7.28, y: 9.5, z: 7.28}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: artillery_battery
+    enabled: 0
+    size: {x: 21.84, y: 9.5, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: missile_defence
+    enabled: 0
+    size: {x: 14.56, y: 9.5187, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: laser
+    enabled: 0
+    size: {x: 7.28, y: 9.6552, z: 7.28}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: shield
+    enabled: 0
+    size: {x: 21.84, y: 24.6784, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: silo
+    enabled: 0
+    size: {x: 29.12, y: 20.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_iron
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_copper
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_silicon
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_aluminium
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_carbon
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_water
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_sulfur
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_nickel
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_chromium
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_titanium
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_lithium
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_uranium
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_rare_earth
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_platinum
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_hydrogen
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_oxygen
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_helium_3
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_smelter
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_fabricator
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_electronics
+    enabled: 0
+    size: {x: 21.84, y: 16.6784, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_fuel_refinery
+    enabled: 0
+    size: {x: 21.84, y: 19.5, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_life_support
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_advanced_materials
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_composites
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_isotopes
+    enabled: 0
+    size: {x: 21.84, y: 16.6784, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_hydroponics
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_chemistry
+    enabled: 0
+    size: {x: 21.84, y: 19.5, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_rocket_assembly
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_launch_pad
+    enabled: 0
+    size: {x: 47, y: 25, z: 47}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mission_control
+    enabled: 0
+    size: {x: 14.56, y: 16.0576, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_tracking
+    enabled: 0
+    size: {x: 14.56, y: 16.0576, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_satellite_factory
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_payload_integration
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_observatory
+    enabled: 0
+    size: {x: 14.56, y: 16.0576, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_radio_telescope
+    enabled: 0
+    size: {x: 14.56, y: 16.0576, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_spectroscopy
+    enabled: 0
+    size: {x: 21.84, y: 16.6784, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_communications
+    enabled: 0
+    size: {x: 14.56, y: 16.0576, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_spaceport
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_warehouse
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_habitat
+    enabled: 0
+    size: {x: 39.40094, y: 25.42375, z: 28.930878}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_colonial_admin
+    enabled: 0
+    size: {x: 39.40094, y: 25.42375, z: 28.930878}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_sigint
+    enabled: 0
+    size: {x: 14.56, y: 16.0576, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_market
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_oil_well
+    enabled: 0
+    size: {x: 14.56, y: 16, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_oil_refinery
+    enabled: 0
+    size: {x: 21.84, y: 19.5, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_food_processing
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_farm_wheat
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_farm_rice
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_farm_potatoes
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_farm_vegetables
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_farm_orchard
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_farm_flax
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_farm_oilseed
+    enabled: 0
+    size: {x: 29.12, y: 17, z: 14.56}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_housing
+    enabled: 0
+    size: {x: 39.40094, y: 25.42375, z: 28.930878}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_mine_methane
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_beef_shed
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_butcher
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_drinks_plant
+    enabled: 0
+    size: {x: 29.12, y: 15.5, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_food_shop
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_drinks_shop
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_pharmacy
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_rental_home
+    enabled: 0
+    size: {x: 39.40094, y: 25.42375, z: 28.930878}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_social_home
+    enabled: 0
+    size: {x: 39.40094, y: 25.42375, z: 28.930878}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_school
+    enabled: 0
+    size: {x: 21.84, y: 16.6784, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_council
+    enabled: 0
+    size: {x: 39.40094, y: 25.42375, z: 28.930878}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_gathering_camp
+    enabled: 0
+    size: {x: 21.84, y: 15, z: 23.478}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_fence
+    enabled: 0
+    size: {x: 8, y: 6, z: 8}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_port
+    enabled: 0
+    size: {x: 36.4, y: 28, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_airport
+    enabled: 0
+    size: {x: 43.68, y: 12, z: 29.12}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  - id: civil_freight_station
+    enabled: 0
+    size: {x: 21.84, y: 12, z: 21.84}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod2:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+  units:
+  - id: infantry
+    enabled: 0
+    size: {x: 1.18, y: 2.35, z: 1.6600001}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: engineer
+    enabled: 0
+    size: {x: 1.27, y: 2.35, z: 1.335}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: heavy_infantry
+    enabled: 0
+    size: {x: 1.18, y: 2.35, z: 1.6600001}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: scout
+    enabled: 0
+    size: {x: 2.366, y: 1.675, z: 3.64}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: apc
+    enabled: 0
+    size: {x: 3.23, y: 1.7149999, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: tank
+    enabled: 0
+    size: {x: 3.6198, y: 2.02, z: 5.35}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: heavy_tank
+    enabled: 0
+    size: {x: 5.4297, y: 2.246327, z: 7.9500003}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: at
+    enabled: 0
+    size: {x: 3.6198, y: 2.02, z: 5.35}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: aa
+    enabled: 0
+    size: {x: 3.23, y: 2.0967503, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: artillery_unit
+    enabled: 0
+    size: {x: 3.6198, y: 2.02, z: 6.5979996}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: mlrs
+    enabled: 0
+    size: {x: 3.6198, y: 2.128, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: supply
+    enabled: 0
+    size: {x: 3.23, y: 1.94, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: repair
+    enabled: 0
+    size: {x: 3.23, y: 2.19, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: command_vehicle
+    enabled: 0
+    size: {x: 3.23, y: 3.2400002, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: fighter
+    enabled: 0
+    size: {x: 7.875, y: 1.3262501, z: 9.99375}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: attack_heli
+    enabled: 0
+    size: {x: 8.15625, y: 2.0219948, z: 10.96875}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: gunship
+    enabled: 0
+    size: {x: 7.3125, y: 1.1369948, z: 9.75}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: bomber
+    enabled: 0
+    size: {x: 7.875, y: 1.3784254, z: 9.99375}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: transport_heli
+    enabled: 0
+    size: {x: 8.15625, y: 1.99, z: 10.96875}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: recon_air
+    enabled: 0
+    size: {x: 7.875, y: 1.4015626, z: 9.99375}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: patrol_boat
+    enabled: 0
+    size: {x: 4.032, y: 4.7, z: 11.440001}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: gunboat
+    enabled: 0
+    size: {x: 6.048, y: 4.7, z: 17.16}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: transport_ship
+    enabled: 0
+    size: {x: 8.064, y: 3, z: 22.880001}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: destroyer
+    enabled: 0
+    size: {x: 10.08, y: 4.7, z: 28.599998}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: submarine
+    enabled: 0
+    size: {x: 3.78, y: 4.047497, z: 15.5298}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: cruiser
+    enabled: 0
+    size: {x: 14.112, y: 4.7, z: 40.04}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: battleship
+    enabled: 0
+    size: {x: 18.144001, y: 4.700192, z: 51.48}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: carrier_unit
+    enabled: 0
+    size: {x: 20.16, y: 2.2, z: 57.199997}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: mobile_missile
+    enabled: 0
+    size: {x: 3.6198, y: 2.128, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: mobile_radar
+    enabled: 0
+    size: {x: 3.23, y: 3.62, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  - id: strategic_platform
+    enabled: 0
+    size: {x: 3.6198, y: 2.128, z: 5.2}
+    lod0:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    lod1:
+      kind: 2
+      model: {fileID: 0}
+      material: {fileID: 0}
+      albedo: {fileID: 0}
+      tint: {r: 1, g: 1, b: 1, a: 1}
+      shape: 0
+      rotation: {x: 0, y: 0, z: 0}
+    impostors: []
+  bakedCatalogue: {fileID: 0}
+  bakedAt: 

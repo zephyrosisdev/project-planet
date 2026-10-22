@@ -12,9 +12,9 @@ namespace MassiveArmy
         readonly GraphicsBuffer near,far,bounds;
         public readonly Mesh NearMesh,FarMesh;
         readonly RtsModelArt art;
-        public ArtUnitRenderer(bool zombies=true)
+        public ArtUnitRenderer(bool zombies=true,RtsModelArt catalogue=null)
         {
-            art=Resources.Load<RtsModelArt>("MassiveArmy/ModelArt/Catalogue");
+            art=catalogue??RtsModelArt.Load();
             if(art==null||art.unitIds.Length!=31)throw new InvalidOperationException("Complete model art catalogue is required for base-building rendering");
             near=Bank(art.unitNear,NearTriangles,zombies);far=Bank(art.unitFar,FarTriangles,zombies);
             var sizes=new Vector4[art.unitBounds.Length+(zombies?1:0)];Array.Copy(art.unitBounds,sizes,art.unitBounds.Length);if(zombies)sizes[art.unitBounds.Length]=new Vector4(3.4f,1.05f,0,0);

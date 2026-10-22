@@ -10,6 +10,8 @@ namespace MassiveArmy
         {
             public string id;
             public Mesh near,far,gateLeaf;
+            public Mesh distant;
+            public bool customLods;
             public Mesh[] walls;
             public Material material;
         }
@@ -19,6 +21,7 @@ namespace MassiveArmy
         public Texture2DArray albedo,metallic,normal,impostors;
         public Vector4[] unitBounds;
         Dictionary<string,Building> lookup;
+        public static RtsModelArt Load(){var selection=Resources.Load<RtsModelSelection>("MassiveArmy/ModelArt/Selection");return selection!=null&&selection.catalogue!=null?selection.catalogue:Resources.Load<RtsModelArt>("MassiveArmy/ModelArt/Catalogue");}
         public static float FoundationHeight(Battlefield field,BuildingDefinition definition,Vector2 position,int rotation)
         {
             float x=definition.footprintWidth*8*.45f,z=definition.footprintDepth*8*.45f;

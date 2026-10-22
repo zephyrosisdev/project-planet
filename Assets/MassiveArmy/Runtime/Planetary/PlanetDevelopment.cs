@@ -336,7 +336,7 @@ namespace MassiveArmy.Planetary
 
             if(currentRtsContent){
 
-                var catalog=RtsCatalog.Load();var art=Resources.Load<RtsModelArt>("MassiveArmy/ModelArt/Catalogue");for(int i=0;i<catalog.units.Length;i++)if(art.unitIds[i]!=catalog.units[i].id)throw new System.InvalidOperationException("RTS catalogue and model bank type order disagree");
+                var catalog=RtsCatalog.Load();var art=RtsModelArt.Load();for(int i=0;i<catalog.units.Length;i++)if(art.unitIds[i]!=catalog.units[i].id)throw new System.InvalidOperationException("RTS catalogue and model bank type order disagree");
 
                 var gpuTypes=new UnitArchetype[catalog.units.Length+1];var gpuTraits=new UnitTraits[catalog.units.Length+1];for(int i=0;i<catalog.units.Length;i++){gpuTypes[i]=catalog.units[i].Gpu;gpuTraits[i]=catalog.units[i].Traits;}
 
@@ -538,7 +538,7 @@ namespace MassiveArmy.Planetary
 
             if(!Ready)return;
 
-            if(IsPiloting){GUI.Label(new Rect(12,12,1100,80),$"CAPITAL SHIP · {spacecraft.Speed:F0} m/s\nW/S thrust · A/D strafe · Space land/take off · R/C climb/descend · V flight assist · mouse pitch/yaw · Q/E roll · Shift boost · G landing gear · B brake · L orbit attitude lock · Left mouse fire rocket · F leave seat · Tab/H return to RTS");}
+            if(IsPiloting){GUI.Label(new Rect(12,12,1100,80),$"CAPITAL SHIP · {spacecraft.SpeedReadout}\nW/S thrust · A/D strafe · Space land/take off · R/C climb/descend · V flight assist · mouse pitch/yaw · Q/E roll · Shift boost · Hold K {PlanetSpacecraft.CruiseSpeedReadout} (space) · J dock/undock · G landing gear · B brake · L orbit attitude lock · Left mouse fire rocket · F leave seat · Tab/H return to RTS");}
 
             else if(modes.Mode==PlayerControlMode.FirstPerson){GUI.Label(new Rect(Screen.width*.5f-4,Screen.height*.5f-10,20,20),"+");GUI.Label(new Rect(12,12,900,60),$"Health {player.Environment.Health:F0}   Oxygen {player.Environment.Oxygen:F0}%   Inventory: repair tool, suit oxygen\nWASD walk • mouse look • Space jump • F interact • Tab return to RTS");}
 

@@ -100,7 +100,7 @@ namespace MassiveArmy
         {
             if(settings.spectatorMode)return;
             CancelPlacement();placing=d;placementRotation=0;placementWheel=0;
-            var artwork=Resources.Load<RtsModelArt>("MassiveArmy/ModelArt/Catalogue")?.Find(d.id);modelGhost=artwork!=null;
+            var artwork=RtsModelArt.Load()?.Find(d.id);modelGhost=artwork!=null;
             if(modelGhost){ghost=new GameObject("Building shell placement preview");ghost.AddComponent<MeshFilter>().sharedMesh=artwork.near;ghost.AddComponent<MeshRenderer>();
                 if(artwork.gateLeaf!=null){var leaf=new GameObject("Gate leaf preview");leaf.transform.SetParent(ghost.transform,false);leaf.AddComponent<MeshFilter>().sharedMesh=artwork.gateLeaf;leaf.AddComponent<MeshRenderer>();}}
             else{ghost=GameObject.CreatePrimitive(PrimitiveType.Cube);ArmyLifetime.Destroy(ghost.GetComponent<Collider>());}
