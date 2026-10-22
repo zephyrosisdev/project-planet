@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 namespace MassiveArmy.Planetary
 {
     // Session orchestration reads aggregate counters only. Slots, targets, damage and recycling stay on GPU.
-    public sealed class PlanetEncounter : IDisposable
+    public sealed partial class PlanetEncounter : IDisposable
     {
         readonly PlanetCombatDecals decals;readonly GraphicsBuffer roamOrigins;readonly PlanetNuclearPresentation nuclear;
         public int NukesDetonated {get;private set;}
@@ -46,7 +46,7 @@ namespace MassiveArmy.Planetary
             bool sparse=world.definition.radius>=PlanetDefinition.RegionalNavigationRadius&&Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-dense-spatial")<0;headCount=sparse?262144:navigation.CellCount;if(sparse)shader.EnableKeyword("PLANET_SPARSE_SPATIAL");shader.SetInt("_HeadCount",headCount);shader.SetInt("_SpatialRes",sparse?Mathf.CeilToInt(2*world.definition.radius/128):resolution);
             contactResolution=Mathf.Clamp(Mathf.CeilToInt(2*world.definition.radius/24),32,512);contactHeads=Buffer(6*contactResolution*contactResolution,4);contactNext=Buffer(capacity,4);shader.SetInt("_ContactRes",contactResolution);float maxContactRadius=ZombieDefinition.Archetype.radius;foreach(var type in world.Base.Catalog.units)if((int)type.movement<3)maxContactRadius=Mathf.Max(maxContactRadius,type.radius);shader.SetFloat("_MaxContactRadius",maxContactRadius);
             crowdDispatch=new GraphicsBuffer(GraphicsBuffer.Target.Structured|GraphicsBuffer.Target.IndirectArguments,4,4);crowdWork=Buffer(12*((resolution+15)/16)*((resolution+15)/16),4);shader.SetInt("_CrowdTiled",resolution%16==0?1:0);crowdMass=Buffer(navigation.CellCount,4);crowdGrid=Buffer(navigation.CellCount,16);pressureA=Buffer(navigation.CellCount,4);pressureB=Buffer(navigation.CellCount,4);crowdGrid.SetData(new Vector4[navigation.CellCount]);pressureA.SetData(new float[navigation.CellCount]);pressureB.SetData(new float[navigation.CellCount]);
-            snapshot=Buffer(capacity,64);heads=Buffer(headCount,4);next=Buffer(capacity*(sparse?3:1),4);damage=Buffer(capacity,4);free=Buffer(capacity,4);counters=Buffer(8,4);steering=Buffer(capacity,16);structures=Buffer(128*3,16);structureDamage=Buffer(128,4);structureDamage.SetData(clearStructureDamage);
+            snapshot=Buffer(capacity,64);heads=Buffer(headCount,4);next=Buffer(capacity*(sparse?3:1),4);damage=Buffer(capacity,4);free=Buffer(capacity,4);counters=Buffer(8,4);counters.SetData(reset);steering=Buffer(capacity,16);structures=Buffer(128*3,16);structureDamage=Buffer(128,4);structureDamage.SetData(clearStructureDamage);
             interestSources=Buffer(6*interestResolution*interestResolution,4);interestRegions=Buffer(6*interestResolution*interestResolution,4);activity=Buffer(capacity,4);activeIndices=Buffer(capacity,4);lastSimulationTick=Buffer(capacity,4);activeDispatch=new GraphicsBuffer(GraphicsBuffer.Target.Structured|GraphicsBuffer.Target.IndirectArguments,6,4);activeDispatch.SetData(new uint[6]);
             if(deployment==null){deployment=new Deployment();var prepare=deployment.Prepare(world.definition,world.Rig.FocusDirection,resolution);while(prepare.MoveNext()){} }
             entries.AddRange(deployment.entries);var eligible=deployment.eligible;var home=world.Rig.FocusDirection;
@@ -121,7 +121,7 @@ namespace MassiveArmy.Planetary
         void Dispatch(string name,int count){shader.Dispatch(shader.FindKernel(name),Mathf.Max(1,(count+127)/128),1,1);}
         public uint Spawn(int requested,int team,int type,int group,bool wave=false)
         {
-            reset[0]=(uint)world.unitCount;counters.SetData(reset);shader.SetInt("_Count",world.unitCount);Dispatch("FindFree",world.unitCount);shader.SetInt("_SpawnCount",requested);shader.SetInt("_SpawnWave",wave?1:0);shader.SetInt("_SpawnTeam",team);shader.SetInt("_SpawnType",type);shader.SetInt("_SpawnGroup",group);shader.SetInt("_Serial",(int)serial);Dispatch("Spawn",requested);serial+=(uint)requested;counters.GetData(values);world.SetArmyCount((int)values[0]);if(team==2)zombies+=values[2];return values[2];
+            reset[0]=(uint)world.unitCount;counters.SetData(reset,0,0,3);shader.SetInt("_Count",world.unitCount);Dispatch("FindFree",world.unitCount);shader.SetInt("_SpawnCount",requested);shader.SetInt("_SpawnWave",wave?1:0);shader.SetInt("_SpawnTeam",team);shader.SetInt("_SpawnType",type);shader.SetInt("_SpawnGroup",group);shader.SetInt("_Serial",(int)serial);Dispatch("Spawn",requested);serial+=(uint)requested;counters.GetData(values);world.SetArmyCount((int)values[0]);if(team==2)zombies+=values[2];return values[2];
         }
         public void WakeDefenceOrders(){nextOrderTick=Math.Min(nextOrderTick,world.SimulationTicks);}
         public void BeforeTick()
@@ -146,12 +146,12 @@ namespace MassiveArmy.Planetary
             shader.SetInt("_Count",world.unitCount);shader.SetFloat("_Dt",BattleSettings.Tick);shader.SetInt("_Tick",(int)world.SimulationTicks);bool wasInterested=useInterest;useInterest=InterestManagement&&zombies>=8192&&world.definition.radius*2>world.InterestRadius;
             if(wasInterested!=useInterest){shader.SetInt("_UseInterest",useInterest?1:0);movement.SetInt("_PlanetInterestEnabled",useInterest?1:0);}if(useInterest)movement.SetInt("_PlanetInterestTick",(int)world.SimulationTicks);
             if(useInterest){if(!wasInterested)Dispatch("InitializeInterest",world.unitCount);shader.SetInt("_InterestRes",interestResolution);shader.SetVector("_InterestObserver",world.InterestDirection);shader.SetFloat("_InterestRadius",world.InterestRadius);Dispatch("ClearInterest",6*interestResolution*interestResolution);Dispatch("MarkInterest",world.unitCount);Dispatch("MarkObservers",structureCount);Dispatch("ExpandInterest",6*interestResolution*interestResolution);Dispatch("ClassifyInterest",world.unitCount);Dispatch("BuildActiveDispatch",1);}
-            Dispatch("Snapshot",world.unitCount);Dispatch("ClearCells",CrowdEnabled?Math.Max(headCount,6*contactResolution*contactResolution):headCount);Dispatch("BuildCells",world.unitCount);if(world.SimulationTicks%5==0)Dispatch("Hearing",navigation.CellCount);
+            PrepareCivicCombat();Dispatch("Snapshot",world.unitCount);Dispatch("ClearCells",CrowdEnabled?Math.Max(headCount,6*contactResolution*contactResolution):headCount);Dispatch("BuildCells",world.unitCount);if(world.SimulationTicks%5==0)Dispatch("Hearing",navigation.CellCount);
             if(CrowdEnabled){
                 Dispatch("BuildCrowd",navigation.CellCount);
                 Graphics.ExecuteCommandBuffer(crowdCommands);
             }
-            navigation.Regional?.Bind(shader,shader.FindKernel("Steer"));shader.SetBuffer(shader.FindKernel("Steer"),"_NavField",navigation.Global);DispatchActive("Steer");
+            navigation.Regional?.Bind(shader,shader.FindKernel("Steer"));shader.SetBuffer(shader.FindKernel("Steer"),"_NavField",navigation.Global);DispatchActive("Steer");FindCivicTargets();
         }
         public void MoveUnits(){
             if(useInterest&&navigation.Regional!=null){int active=movement.FindKernel("MoveActive"),dormant=movement.FindKernel("MoveDormant");movement.DispatchIndirect(active,activeDispatch,0);movement.Dispatch(dormant,(world.unitCount+4095)/4096,1,1);}
@@ -160,13 +160,13 @@ namespace MassiveArmy.Planetary
         void DispatchActive(string name){if(useInterest)shader.DispatchIndirect(shader.FindKernel(name),activeDispatch,0);else Dispatch(name,world.unitCount);}
         public void AfterTick()
         {
-            DispatchActive("Fight");Dispatch("Defences",world.Base.Buildings.Count);Dispatch("ApplyDamage",world.unitCount);
+            DispatchActive("Fight");ApplyCivicDamage();Dispatch("Defences",world.Base.Buildings.Count);Dispatch("ApplyDamage",world.unitCount);
             if(pending||Time.realtimeSinceStartupAsDouble<nextRead)return;nextRead=Time.realtimeSinceStartupAsDouble+.5;
             // Clear only the statistics tail; spawning counters occupy the first three words.
             counters.SetData(new uint[4],0,4,4);Dispatch(useInterest?"StatisticsBatched":"Statistics",world.unitCount);pending=true;
             AsyncGPUReadback.Request(structureDamage,result=>{if(disposed||result.hasError)return;var damage=result.GetData<uint>();for(int i=0;i<Math.Min(damage.Length,world.Base.Buildings.Count);i++)if(damage[i]>0)world.Base.Damage(world.Base.Buildings[i],damage[i]);});structureDamage.SetData(clearStructureDamage);
             if(useInterest)AsyncGPUReadback.Request(activeDispatch,result=>{if(!disposed&&!result.hasError)ActiveZombies=result.GetData<uint>()[5];});
-            AsyncGPUReadback.Request(counters,result=>{if(disposed)return;pending=false;if(!result.hasError){var statistics=result.GetData<uint>();zombies=statistics[6];waveAlive=statistics[7];}});
+            AsyncGPUReadback.Request(counters,result=>{if(disposed)return;pending=false;if(!result.hasError){var statistics=result.GetData<uint>();zombies=statistics[6];waveAlive=statistics[7];if(civicEnabled)world.Base.Citizens.ReadDeaths(statistics[3]);}});
         }
         void EnsureStructures(int count){
             if(count<=structureDamage.count)return;int oldCount=structureDamage.count,capacity=Mathf.NextPowerOfTwo(count);var old=structureDamage;
@@ -190,7 +190,7 @@ namespace MassiveArmy.Planetary
             if(world.deformTerrainOnNuke){if(world.definition.Edits.AddCrater(direction,crater))world.TerrainChanged();else world.Base.Notice="Persistent crater budget reached (32); blast damage still applied";}
             nuclear.Play(direction,Mathf.Max(radius,crater));NukesDetonated++;
         }
-        public void Dispose(){disposed=true;nuclear.Dispose();roamOrigins.Dispose();crowdCommands?.Dispose();decals.Dispose();movement.DisableKeyword("PLANET_ENCOUNTERS");movement.DisableKeyword("PLANET_CROWD");foreach(var buffer in new[]{contactHeads,contactNext,crowdDispatch,crowdWork,crowdMass,crowdGrid,pressureA,pressureB,snapshot,heads,next,damage,free,counters,sites,steering,eligibility,presence,objectives,noise,hearing,interestSources,interestRegions,activity,activeIndices,activeDispatch,lastSimulationTick})buffer.Dispose();ArmyLifetime.Destroy(shader);}
+        public void Dispose(){disposed=true;DisposeCivicCombat();structures.Dispose();structureDamage.Dispose();nuclear.Dispose();roamOrigins.Dispose();crowdCommands?.Dispose();decals.Dispose();movement.DisableKeyword("PLANET_ENCOUNTERS");movement.DisableKeyword("PLANET_CROWD");foreach(var buffer in new[]{contactHeads,contactNext,crowdDispatch,crowdWork,crowdMass,crowdGrid,pressureA,pressureB,snapshot,heads,next,damage,free,counters,sites,steering,eligibility,presence,objectives,noise,hearing,interestSources,interestRegions,activity,activeIndices,activeDispatch,lastSimulationTick})buffer.Dispose();ArmyLifetime.Destroy(shader);}
     }
 }
 

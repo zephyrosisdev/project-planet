@@ -148,6 +148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 714a9446d3171e84eaca41c0608401c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.Planetary.PlanetDevelopment
+  countryCount: 4
   deformTerrainOnNuke: 1
   sessionMode: 0
   requestedCapacity: 0

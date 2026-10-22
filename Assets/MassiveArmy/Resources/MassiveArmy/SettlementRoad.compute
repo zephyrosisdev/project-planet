@@ -1,3 +1,4 @@
+#pragma kernel PickHearse
 #pragma kernel Navigate
 #pragma kernel ClearSearch
 #pragma kernel CopySearch
@@ -112,3 +113,7 @@ void Navigate(uint slot:SV_DispatchThreadID){
  forward=normalize(forward);Pose pose;pose.position=float4(position,1);float scale=max(1,job.start.w);pose.up=float4(up*scale,0);pose.forward=float4(forward*scale,0);pose.right=float4(normalize(cross(up,forward))*scale,0);pose.properties=float4(job.parameters.w>0?job.parameters.w:11,job.parameters.y,(job.flags&16)!=0?1:0,0);
  if(frozen)pose=_CargoPoses[slot];_CargoPoses[slot]=pose;_RoadWork[slot]=w;Summary summary;summary.version=job.version;summary.arrived=w.arrived;summary.distance=w.distance;summary.status=w.phase;_RoadSummary[slot]=summary;
 }
+
+StructuredBuffer<float4> _UnusedPick;
+RWStructuredBuffer<uint> _PickResult;float3 _PickOrigin,_PickDirection;uint _PickCount;
+[numthreads(128,1,1)]void PickHearse(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_PickCount)return;Pose p=_CargoPoses[i];if(p.properties.x<32)return;float3 delta=p.position.xyz+p.up.xyz*1.5-_PickOrigin;float along=dot(delta,_PickDirection);if(along<0||along>32767)return;float3 offset=delta-_PickDirection*along;if(dot(offset,offset)>16)return;uint ignored;InterlockedMin(_PickResult[0],((uint)(along*2)<<16)|i,ignored);}

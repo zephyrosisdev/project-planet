@@ -7,7 +7,7 @@ namespace MassiveArmy
     public sealed class RtsBuilding
     {
         public int index,team,level=1,node=-1,rallyUnit=-1,rotation,wallConnections=-1;
-        public long persistentId;
+        public long persistentId;public uint modularDoors;
         public BuildingDefinition definition;
         public Vector2 position,rally;
         public float health,construction,upgradeProgress,upgradeTime;

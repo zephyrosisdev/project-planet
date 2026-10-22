@@ -35,7 +35,7 @@ namespace MassiveArmy.Planetary
         public bool StrategyEnabled {get;private set;}
         internal Vector3 OpposingHome {get;private set;}
 
-        public void FocusFaction(int team){if(Base==null||team<0||team>1)return;rig.SetFocusDirection(Base.Homes[team]);rig.Distance=300;}
+        public void FocusFaction(int team){if(Base==null||team<0||team>=Base.Factions.Length)return;rig.SetFocusDirection(Base.Homes[team]);rig.Distance=300;}
 
         internal PlanetSpacecraft ShipForValidation=>spacecraft;
         internal PlanetFirstPersonController PlayerForValidation=>player;int shipInteraction=-1;internal bool AutomaticPlayerStep=true;
@@ -46,6 +46,7 @@ namespace MassiveArmy.Planetary
         internal PlanetLighting LightingForValidation=>lighting;
 
         internal PlanetEncounter EncounterForValidation=>encounter;
+        internal void TickCivicCombatForValidation(){encounter.BeforeTick();encounter.AfterTick();SimulationTicks++;}
 
         public void ReturnToMenu(){if(returnToMenu!=null)returnToMenu();else UnityEngine.SceneManagement.SceneManager.LoadScene("MassiveBattle");}
 
@@ -111,7 +112,7 @@ namespace MassiveArmy.Planetary
 
         public PlanetRtsHud Hud=>hud;
 
-        internal GraphicsBuffer UnitsForValidation=>units;
+        internal GraphicsBuffer UnitsForValidation=>units;internal GraphicsBuffer ArchetypesForCivicCombat=>archetypes;internal GraphicsBuffer ArmyForCivicCombat=>units;
 
         GraphicsBuffer placementProbe;readonly uint[] occupied=new uint[1];
 
@@ -265,7 +266,7 @@ namespace MassiveArmy.Planetary
 
             rig=view.gameObject.AddComponent<PlanetRtsCamera>();rig.FocusDirection=startingHome;rig.Initialize(surface,origin);if(ResidentActive)lighting=new PlanetLighting(view,transform,rig.FocusDirection);
 
-            player=new PlanetFirstPersonController(surface,origin,view,transform){CaptureCursor=!Application.isBatchMode};modes=new PlayerControlModeManager();
+            player=new PlanetFirstPersonController(surface,origin,view,transform){CaptureCursor=!Application.isBatchMode,SurfaceSupport=direction=>Base?.PlayerEntryRadius(direction)??0};modes=new PlayerControlModeManager();
 
             modes.Bind(PlayerControlMode.RTS,_=>{});modes.Bind(PlayerControlMode.FirstPerson,enabled=>player.SetActive(enabled));
 
@@ -370,7 +371,7 @@ namespace MassiveArmy.Planetary
             initialized=true;
         }
 
-        public bool Interact(){if(!IsPiloting&&!IsFirstPerson&&(hud?.TextFocused==true||hud?.ModalOpen==true))return false;if(IsPiloting){spacecraft.Rebase();Physics.SyncTransforms();if(!spacecraft.CanExitSeat(player.Collision,out var local)){Base.Notice="Pilot exit is obstructed";return false;}modes.Switch(PlayerControlMode.FirstPerson);player.EnterShip(spacecraft,local,Vector3.forward);spacecraft.Rebase();Base?.Rebase();Orbitals?.Tick();Physics.SyncTransforms();return true;}if(!IsFirstPerson){SetFirstPerson(true);return true;}if(InteractStation())return true;if(spacecraft==null)return false;Physics.SyncTransforms();int action=spacecraft.FindInteraction(view.transform.position,view.transform.forward);if(action<0)return false;if(action<spacecraft.DoorCount)return spacecraft.ToggleDoor(action);SetShipControl(true);return true;}
+        public bool Interact(){if(!IsPiloting&&!IsFirstPerson&&(hud?.TextFocused==true||hud?.ModalOpen==true))return false;if(IsPiloting){spacecraft.Rebase();Physics.SyncTransforms();if(!spacecraft.CanExitSeat(player.Collision,out var local)){Base.Notice="Pilot exit is obstructed";return false;}modes.Switch(PlayerControlMode.FirstPerson);player.EnterShip(spacecraft,local,Vector3.forward);spacecraft.Rebase();Base?.Rebase();Orbitals?.Tick();Physics.SyncTransforms();return true;}if(!IsFirstPerson){SetFirstPerson(true);return true;}Physics.SyncTransforms();if(Base!=null&&Base.InteractModularDoor(new Ray(view.transform.position,view.transform.forward)))return true;if(InteractStation())return true;if(spacecraft==null)return false;Physics.SyncTransforms();int action=spacecraft.FindInteraction(view.transform.position,view.transform.forward);if(action<0)return false;if(action<spacecraft.DoorCount)return spacecraft.ToggleDoor(action);SetShipControl(true);return true;}
         public void SetShipControl(bool enabled){if(spacecraft==null)return;if(enabled){player.SetActive(false);modes.Switch(PlayerControlMode.Spacecraft);}else{rig.SetFocusDirection(spacecraft.Direction);modes.Switch(PlayerControlMode.RTS);rig.RefreshPose();}spacecraft.Rebase();Base?.Rebase();Orbitals?.Tick();Physics.SyncTransforms();}
 
         internal void ApplyShipRocketImpact(Vector3 direction)=>encounter?.RocketImpact(direction);
@@ -395,6 +396,8 @@ namespace MassiveArmy.Planetary
             bool picked=Base.Pick(position);if(!picked)Base.ClearSelection();return picked;
         }
 
+        void InspectHearse(CargoVehicleState vehicle){var centre=PlanetRenderCentre;var matrix=view.projectionMatrix*view.worldToCameraMatrix*Matrix4x4.Translate(centre);commands?.Select(matrix,view.transform.position-centre,new Vector2(Screen.width,Screen.height),new Vector2(-100,-100),new Vector2(-100,-100));Base.SelectHearse(vehicle);}
+        Vector2 hearseClickStart;
         void SelectionInput(Mouse mouse,Keyboard keyboard)
 
         {
@@ -404,6 +407,8 @@ namespace MassiveArmy.Planetary
             Vector2 position=mouse.position.ReadValue();
 
             bool blocked=hud!=null&&hud.Blocks(position);
+            if(mouse.leftButton.wasPressedThisFrame)hearseClickStart=position;
+            if(mouse.leftButton.wasReleasedThisFrame&&!blocked&&(position-hearseClickStart).sqrMagnitude<25&&Base?.Placing==null&&Base?.RoadPlacing!=true&&!NuclearTargetArmed)Base?.CargoNavigation?.PickHearse(view.ScreenPointToRay(position),InspectHearse);
 
             if(sessionMode==PlanetGameMode.AiTest){
                 selecting=false;

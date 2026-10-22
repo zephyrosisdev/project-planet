@@ -14,7 +14,7 @@ Shader "MassiveArmy/UV armour structures" {
  struct A{float4 p:POSITION;float3 n:NORMAL;float4 t:TANGENT;float2 uv:TEXCOORD0;float2 joint:TEXCOORD1;};
  struct V{float4 p:SV_POSITION;float3 world:TEXCOORD0;float2 uv:TEXCOORD1;float3 n:TEXCOORD2;float3 t:TEXCOORD3;float3 b:TEXCOORD4;};
  V Vert(A i){float angle=TurretAngle(i.joint.x);i.p.xz=TurretTurn(i.p.xz,angle);i.n.xz=TurretTurn(i.n.xz,angle);i.t.xz=TurretTurn(i.t.xz,angle);PlanetStructureVertex(i.p.xyz,i.n,i.t.xyz);V o;o.p=UnityObjectToClipPos(i.p);o.world=mul(unity_ObjectToWorld,i.p).xyz;o.uv=i.uv;o.n=UnityObjectToWorldNormal(i.n);o.t=UnityObjectToWorldDir(i.t.xyz);o.b=cross(o.n,o.t)*i.t.w*unity_WorldTransformParams.w;return o;}
- float4 Frag(V i):SV_Target{float3 n=tex2D(_Normal,i.uv).xyz*2-1;n=normalize(i.t*n.x+i.b*n.y+i.n*n.z);return float4(ShadeArmour(i.world,n,tex2D(_Albedo,i.uv).rgb,tex2D(_Metallic,i.uv),_TeamColor.rgb,_WorldSpaceCameraPos),1);}
+ float4 Frag(V i):SV_Target{float3 n=tex2D(_Normal,i.uv).xyz*2-1;n=normalize(i.t*n.x+i.b*n.y+i.n*n.z);return float4(ShadeArmour(i.world,n,tex2D(_Albedo,i.uv).rgb,tex2D(_Metallic,i.uv),_TeamColor.rgb,_WorldSpaceCameraPos)+float3(.3,.6,1)*pow(1-saturate(abs(dot(n,normalize(_WorldSpaceCameraPos-i.world)))),4)*(1-smoothstep(-.08,.18,dot(normalize(mul((float3x3)unity_ObjectToWorld,float3(0,1,0))),_ArmyLightDirection))),1);}
  ENDHLSL
  }
  Pass {Name "ShadowCaster" Tags{"LightMode"="ShadowCaster"} Cull Off ZWrite On ColorMask 0

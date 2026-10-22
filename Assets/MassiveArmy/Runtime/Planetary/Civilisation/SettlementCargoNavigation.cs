@@ -5,7 +5,7 @@ using UnityEngine.Rendering;
 namespace MassiveArmy.Planetary
 {
     /// <summary>GPU owns cart search state, route parents and motion. CPU reads only bounded mission events.</summary>
-    public sealed class SettlementCargoNavigation:IDisposable {
+    public sealed partial class SettlementCargoNavigation:IDisposable {
         struct Job {public Vector4 start,goal;public uint version,startNode,goalNode,flags;public Vector4 parameters;}
         struct Summary {public uint version,arrived;public float distance;public uint status;}
         readonly PlanetDevelopment world;readonly ComputeShader shader;readonly int kernel;
@@ -46,11 +46,12 @@ namespace MassiveArmy.Planetary
                 if(from==null||to==null){from=to=home;}if(home==null)continue;
                 bool rail=vehicle.train&&vehicle.leg==1;var network=rail?local.Rails:local.Roads;int a=network.Node(network.Port(from)),b=network.Node(network.Port(to));
                 Vector3 start=a>=0?(Vector3)network.Nodes[a].position:network.Port(from)*(world.definition.radius+1),goal=b>=0?(Vector3)network.Nodes[b].position:network.Port(to)*(world.definition.radius+1);
+                if(vehicle.funeral&&vehicle.phase!=CargoVehiclePhase.Idle){int pickup=NearestRoad(local,vehicle.funeralPickup,home.team);if(vehicle.phase==CargoVehiclePhase.Collecting)b=pickup;else a=pickup;start=a>=0?(Vector3)network.Nodes[a].position:start;goal=b>=0?(Vector3)network.Nodes[b].position:goal;}
                 bool longHaul=vehicle.freight&&vehicle.leg==1;bool flying=vehicle.aerial&&(!vehicle.freight||longHaul),sailing=vehicle.seaborne&&longHaul;
                 if(flying){var surface=new PlanetSurface(world.definition);start=surface.GetSurfacePositionPrecise(local.Roads.Port(from),60).Float;goal=surface.GetSurfacePositionPrecise(local.Roads.Port(to),60).Float;}
                 if(sailing){float radius=world.definition.radius+world.definition.oceanHeight+1;start=world.SystemRuntime.Civilisation.Logistics.Berth(local,from)*radius;goal=world.SystemRuntime.Civilisation.Logistics.Berth(local,to)*radius;}
                 vehicle.navigationVersion=++serial;vehicle.gpuArrived=false;
-                jobs[slot]=new Job{start=new Vector4(start.x,start.y,start.z,vehicle.freight?1+.2f*(Math.Clamp(vehicle.tier,1,3)-1):1),goal=goal,version=vehicle.navigationVersion,startNode=unchecked((uint)a),goalNode=unchecked((uint)b),flags=(flying?2u:sailing?8u:rail?16u:0u)|(vehicle.phase==CargoVehiclePhase.Idle?4u:0u),parameters=new Vector4(vehicle.freight?(float)world.SystemRuntime.Civilisation.Logistics.LegSpeed(vehicle):vehicle.aerial?world.SystemRuntime.Civilisation.Settings.airCargoSpeed:world.SystemRuntime.Civilisation.Settings.groundCargoSpeed,from.team,world.definition.radius,rail?13:sailing?22:flying&&vehicle.freight?17:flying?18:11)};summaries[slot]=default;dirty=true;
+                jobs[slot]=new Job{start=new Vector4(start.x,start.y,start.z,vehicle.freight?1+.2f*(Math.Clamp(vehicle.tier,1,3)-1):1),goal=goal,version=vehicle.navigationVersion,startNode=unchecked((uint)a),goalNode=unchecked((uint)b),flags=(flying?2u:sailing?8u:rail?16u:0u)|(vehicle.phase==CargoVehiclePhase.Idle?4u:0u),parameters=new Vector4(vehicle.freight?(float)world.SystemRuntime.Civilisation.Logistics.LegSpeed(vehicle):vehicle.aerial?world.SystemRuntime.Civilisation.Settings.airCargoSpeed:world.SystemRuntime.Civilisation.Settings.groundCargoSpeed,from.team,world.definition.radius,vehicle.funeral?43:rail?13:sailing?22:flying&&vehicle.freight?17:flying?18:11)};summaries[slot]=default;dirty=true;
             }
             // Arrival events already contain the final pose/status. Until a new mission or
             // topology revision, an arrived/idle fleet needs no additional GPU dispatch/readback.
@@ -66,6 +67,6 @@ namespace MassiveArmy.Planetary
         internal void ValidateStorageGrowth(){if(poses!=null)Allocate(nodeCapacity*2,vehicleCapacity);}
         public bool Arrived(CargoVehicleState vehicle)=>vehicle.navigationVersion!=0&&vehicle.gpuArrived;
         void Release(){nodes?.Dispose();railNodes?.Dispose();jobBuffer?.Dispose();work?.Dispose();seen?.Dispose();parents?.Dispose();queue?.Dispose();distances?.Dispose();summary?.Dispose();poses?.Dispose();}
-        public void Dispose(){disposed=true;Release();UnityEngine.Object.Destroy(shader);}
+        public void Dispose(){disposed=true;pickResult?.Dispose();Release();UnityEngine.Object.Destroy(shader);}
     }
 }

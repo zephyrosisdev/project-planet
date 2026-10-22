@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 namespace MassiveArmy.Planetary {
     public sealed partial class PlanetRtsHud {
         bool orbitalsView;long orbitalSelection,orbitalDestination,orbitalPad;string orbitalResource="propellant";double orbitalAmount=40;
-        void OpenOrbitals(){residentsView=false;resourcesView=false;orbitalsView=true;if(civilisationOpen)civilisationOpen=false;ToggleCivilisation();}
+        void OpenOrbitals(){crimeView=false;residentsView=false;resourcesView=false;orbitalsView=true;if(civilisationOpen)civilisationOpen=false;ToggleCivilisation();}
         void LaunchControls(VisualElement parent,RtsBuilding pad){if(world.Civilisation==null||pad.definition.id!="civil_launch_pad")return;
             Label(parent,"ORBITAL PAYLOADS","subheading");Label(parent,"Road cargo must deliver orbital kits and launch fuel here. Preparation pauses without food, power or workers. Watch the 20-second powered ascent curve into a circular orbit. Use FOLLOW LAUNCH in the orbital manifest; move the camera to return to the surface.","muted");
             foreach(OrbitalPayloadKind kind in Enum.GetValues(typeof(OrbitalPayloadKind))){var selected=kind;Button(parent,$"LAUNCH {kind} · {OrbitalEconomy.Kits(kind):0} kits / {OrbitalEconomy.Fuel(kind):0} fuel",()=>{world.Civilisation.Orbitals.Launch(world,pad,selected,0,out string reason);world.Notice=reason;revision=-1;},"orbital-launch-"+kind);}

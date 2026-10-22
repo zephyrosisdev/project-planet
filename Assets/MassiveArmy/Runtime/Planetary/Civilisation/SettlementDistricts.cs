@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 namespace MassiveArmy.Planetary {
     public static class SettlementDistricts {
@@ -27,7 +28,7 @@ namespace MassiveArmy.Planetary {
         }
         readonly Dictionary<(int,SettlementDistrict),PlanningFrontier> planningFrontiers=new Dictionary<(int,SettlementDistrict),PlanningFrontier>();
         readonly Dictionary<(int,string),PlanningFrontier> cropFrontiers=new Dictionary<(int,string),PlanningFrontier>();
-        readonly PlanningFrontier[] allFrontiers={new PlanningFrontier(),new PlanningFrontier()};
+        readonly PlanningFrontier[] allFrontiers=System.Linq.Enumerable.Range(0,PlanetCountries.Maximum).Select(_=>new PlanningFrontier()).ToArray();
         readonly Dictionary<(int,string),int> failedPlanningOffsets=new Dictionary<(int,string),int>();
         readonly Dictionary<(int,string),int> planningCursors=new Dictionary<(int,string),int>();
         readonly List<RtsBuilding> planningAnchors=new List<RtsBuilding>(12);
@@ -36,9 +37,10 @@ namespace MassiveArmy.Planetary {
         void RegisterPlanningSite(RtsBuilding b){var key=(b.team,b.definition.district);if(!planningFrontiers.TryGetValue(key,out var ring)){ring=new PlanningFrontier();planningFrontiers.Add(key,ring);}var area=Area(b);ring.Add(b,area);allFrontiers[b.team].Add(b,area);if(b.definition.id.StartsWith("civil_farm_")){var cropKey=(b.team,b.definition.id);if(!cropFrontiers.TryGetValue(cropKey,out var crop)){crop=new PlanningFrontier();cropFrontiers.Add(cropKey,crop);}crop.Add(b,area);}}
         int PlanningCursor(BuildingDefinition d,int team){var key=(team,d.id);planningCursors.TryGetValue(key,out int cursor);planningCursors[key]=(cursor+1)&int.MaxValue;return cursor;}
         void PlanningAnchors(BuildingDefinition d,int team,int cursor){
-            planningAnchors.Clear();var district=!string.IsNullOrEmpty(d.retailResource)?SettlementDistrict.Residential:d.district;
-            PlanningFrontier preferred=null;if(d.id.StartsWith("civil_farm_"))cropFrontiers.TryGetValue((team,d.id),out preferred);if(preferred==null)planningFrontiers.TryGetValue((team,district),out preferred);if(preferred!=null)Add(preferred,8);
-            Add(allFrontiers[team],4);
+            planningAnchors.Clear();var district=d.district;
+            PlanningFrontier preferred=null;if(d.id.StartsWith("civil_farm_"))cropFrontiers.TryGetValue((team,d.id),out preferred);if(preferred==null)planningFrontiers.TryGetValue((team,district),out preferred);if(preferred!=null)Add(preferred,6);
+            if(d.district==SettlementDistrict.Agricultural&&planningFrontiers.TryGetValue((team,SettlementDistrict.Agricultural),out var fields)&&fields!=preferred)Add(fields,4);
+            Add(allFrontiers[team],d.district==SettlementDistrict.Agricultural?2:4);
             // Headquarters remain military anchors after economic frontier rings roll over.
             if(planningAnchors.Count==0){var command=Buildings.Find(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.buildRadius>0);if(command!=null)planningAnchors.Add(command);}
             void Add(PlanningFrontier ring,int budget){for(int i=0;i<Math.Min(budget,ring.count);i++){var b=i<budget/2?ring.GetEdge((cursor%96)*(budget/2)+i):ring.Get((cursor%ring.count)*(budget/2)+i-budget/2);if(b==null||b.removed||!b.Complete&&!(d.id.StartsWith("civil_farm_")&&b.definition.id==d.id)||!CivilianExpansion(d)&&b.definition.buildRadius<=0||planningAnchors.Contains(b))continue;planningAnchors.Add(b);}}
@@ -46,18 +48,18 @@ namespace MassiveArmy.Planetary {
         internal bool CivilianExpansion(BuildingDefinition d)=>Civilisation!=null&&d.district!=SettlementDistrict.Military&&d.id!="command"&&d.id!="outpost";
         bool BuildDistrict(BuildingDefinition d,int team){
             using var timing=SettlementPerformance.Sample("DistrictPlacement");int cursor=PlanningCursor(d,team);PlanningAnchors(d,team,cursor);var occupancy=CaptureConstructionOccupancy();bool seedField=d.id.StartsWith("civil_farm_")&&!planningAnchors.Exists(b=>b.definition.id==d.id);var candidates=districtCandidates;candidates.Clear();LastPlanningCandidates=0;
-            if(d.housingCapacity>0||!string.IsNullOrEmpty(d.retailResource))AddStreetCandidates(d,team,candidates,occupancy);
+            if(d.housingCapacity>0)AddStreetCandidates(d,team,candidates,occupancy);
             foreach(var anchorBuilding in planningAnchors){var a=Area(anchorBuilding);
                 // Farms grow as contiguous blocks; housing grows by shared frontage.
-                if(d.id.StartsWith("civil_farm_")&&anchorBuilding.definition.id==d.id)for(int side=-1;side<=1;side+=2){int dx=(a.rotation&1)==0?side*a.width:0,dy=(a.rotation&1)!=0?side*a.depth:0;Add(a.x+a.width*.5+dx,a.y+a.depth*.5+dy,a.rotation,-100000);}
+                if(d.district==SettlementDistrict.Agricultural&&anchorBuilding.definition.district==SettlementDistrict.Agricultural)for(int side=-1;side<=1;side+=2){int width=(a.rotation&1)==0?d.footprintWidth:d.footprintDepth,depth=(a.rotation&1)==0?d.footprintDepth:d.footprintWidth;double dx=(a.rotation&1)==0?side*(a.width+width)*.5:0,dy=(a.rotation&1)!=0?side*(a.depth+depth)*.5:0;Add(a.x+a.width*.5+dx,a.y+a.depth*.5+dy,a.rotation,-100000);}
                 var offset=anchorBuilding.definition.district==d.district?Vector2.zero:SettlementDistricts.Offset(d.district);int stride=Math.Max(d.footprintWidth,d.footprintDepth)+2;
                 for(int edge=0;edge<16;edge++){int side=edge/4,along=edge%4-1;int x=side==0?-2:side==1?2:along,y=side==2?-2:side==3?2:along;
                     double px=a.x+a.width*.5+offset.x+x*stride,py=a.y+a.depth*.5+offset.y+y*stride;var p=Grid.Point(a.face,px,py);
                     int turn=0;float best=float.MaxValue;for(int rotation=0;rotation<4;rotation++){float score=(Grid.Direction(Grid.Port(Grid.Area(d,p,rotation)))-Homes[team]).sqrMagnitude;if(score<best){best=score;turn=rotation;}}
                     Add(px,py,turn,Mathf.Abs(x)+Mathf.Abs(y));
                 }
-                void Add(double x,double y,int rotation,float priority){LastPlanningCandidates++;var p=Grid.Point(a.face,x,y);if(!GridClear(Grid.Area(d,p,rotation),out _,d,occupancy))return;
-                    if(seedField){var field=Grid.Area(d,p,rotation);bool space=false;for(int sign=-1;sign<=1;sign+=2){int dx=(rotation&1)==0?sign*field.width:0,dy=(rotation&1)!=0?sign*field.depth:0;var next=Grid.Point(field.face,field.x+field.width*.5+dx,field.y+field.depth*.5+dy);if(GridClear(Grid.Area(d,next,rotation),out _,d,occupancy))space=true;}if(!space)return;}
+                void Add(double x,double y,int rotation,float priority){LastPlanningCandidates++;var p=Grid.Point(a.face,x,y);if(!DistrictClear(d,p,team)||!GridClear(Grid.Area(d,p,rotation),out _,d,occupancy))return;
+                    if(seedField){var field=Grid.Area(d,p,rotation);bool space=false;for(int sign=-1;sign<=1;sign+=2){int dx=(rotation&1)==0?sign*field.width:0,dy=(rotation&1)!=0?sign*field.depth:0;var next=Grid.Point(field.face,field.x+field.width*.5+dx,field.y+field.depth*.5+dy);if(DistrictClear(d,next,team)&&GridClear(Grid.Area(d,next,rotation),out _,d,occupancy))space=true;}if(!space)return;}
                     // Local road length and district compatibility are constant-work rules.
                     var port=Grid.Port(Grid.Area(d,p,rotation));var anchorPort=Grid.Port(a);float road=port.face==anchorPort.face?Mathf.Abs(port.x-anchorPort.x)+Mathf.Abs(port.y-anchorPort.y):100;
                     candidates.Add((p,rotation,priority+road*.8f));}
@@ -67,7 +69,7 @@ namespace MassiveArmy.Planetary {
         internal bool BuildSettlementFrontier(string requested,int team){var d=Catalog.Buildings[requested];return CivilianExpansion(d)&&d.terrain!=TerrainRule.Node&&BuildDistrict(d,team);}
         readonly List<(Vector3 point,int rotation,float score)> previewStreetCandidates=new List<(Vector3,int,float)>();
         void AlignResidentialPreview(BuildingDefinition d,ref Vector3 point,ref int rotation){
-            rotation=EntranceRotation(d,point,0);if(d.housingCapacity<=0&&string.IsNullOrEmpty(d.retailResource))return;
+            rotation=EntranceRotation(d,point,0);if(d.housingCapacity<=0)return;
             previewStreetCandidates.Clear();AddStreetCandidates(d,0,previewStreetCandidates,CaptureConstructionOccupancy());float closest=12;
             Vector3 selected=point;foreach(var candidate in previewStreetCandidates){float distance=Distance(point,candidate.point);if(distance<closest){closest=distance;selected=candidate.point;rotation=candidate.rotation;}}point=selected;
         }
@@ -89,7 +91,7 @@ namespace MassiveArmy.Planetary {
                 void Add(int x,int y,int width,int depth,int rotation){
                     if(x<0||y<0||x+width>Grid.Resolution||y+depth>Grid.Resolution)return;
                     var p=Grid.Point(a.face,x+width*.5,y+depth*.5);var area=Grid.Area(d,p,rotation);
-                    if(!GridClear(area,out _,d,occupancy))return;
+                    if(!DistrictClear(d,p,team)||!GridClear(area,out _,d,occupancy))return;
                     float score=-50000;
                     candidates.Add((p,rotation,score));
                 }

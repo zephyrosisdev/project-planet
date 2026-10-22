@@ -1,0 +1,1162 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5759b9149a2b6234caa9e92d71a097a1, type: 3}
+  m_Name: Catalogue
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.RtsModelArt
+  buildings:
+  - id: command
+    near: {fileID: -4121970056015173194, guid: 8509d5ee62cac9b46924e8745e32c9bc, type: 2}
+    far: {fileID: 1592023479629570680, guid: 8509d5ee62cac9b46924e8745e32c9bc, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -7675942936996462856, guid: 8509d5ee62cac9b46924e8745e32c9bc, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 8509d5ee62cac9b46924e8745e32c9bc, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: outpost
+    near: {fileID: 3982051126509718304, guid: a8aac0d9e0c75944f8c6cd4ca0c19e1c, type: 2}
+    far: {fileID: 8969222151679138987, guid: a8aac0d9e0c75944f8c6cd4ca0c19e1c, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 2303885447560023978, guid: a8aac0d9e0c75944f8c6cd4ca0c19e1c, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: a8aac0d9e0c75944f8c6cd4ca0c19e1c, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: barracks
+    near: {fileID: -7608130681267699775, guid: fad83d2d503c5824694b4024694ea1cf, type: 2}
+    far: {fileID: -8477261747682336844, guid: fad83d2d503c5824694b4024694ea1cf, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1179715108745217928, guid: fad83d2d503c5824694b4024694ea1cf, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: fad83d2d503c5824694b4024694ea1cf, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: light_depot
+    near: {fileID: 2877898683358480934, guid: cbc6d4cefcd59ad4581524e8a87a49f0, type: 2}
+    far: {fileID: -7504409281072848014, guid: cbc6d4cefcd59ad4581524e8a87a49f0, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -28625751442067079, guid: cbc6d4cefcd59ad4581524e8a87a49f0, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: cbc6d4cefcd59ad4581524e8a87a49f0, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: factory
+    near: {fileID: -8027926211371508979, guid: 6c992b4e8085c6a4290a0952f92cd57e, type: 2}
+    far: {fileID: 755056832632114600, guid: 6c992b4e8085c6a4290a0952f92cd57e, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 4426530909839499118, guid: 6c992b4e8085c6a4290a0952f92cd57e, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 6c992b4e8085c6a4290a0952f92cd57e, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: ordnance
+    near: {fileID: -7516734812821852303, guid: 98abd64af035920418d1a458582aede8, type: 2}
+    far: {fileID: 7992058875286897742, guid: 98abd64af035920418d1a458582aede8, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 1720163387032376728, guid: 98abd64af035920418d1a458582aede8, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 98abd64af035920418d1a458582aede8, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: helipad
+    near: {fileID: -7921308251432925146, guid: 62eb5b61ef0fefb40a255e41d4753d35, type: 2}
+    far: {fileID: 1640425672758516600, guid: 62eb5b61ef0fefb40a255e41d4753d35, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1943645867994473480, guid: 62eb5b61ef0fefb40a255e41d4753d35, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 62eb5b61ef0fefb40a255e41d4753d35, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: airbase
+    near: {fileID: -2672469358731437079, guid: 52ac0e3422f80cc47840d03af1e7b0a1, type: 2}
+    far: {fileID: 8199085077946156654, guid: 52ac0e3422f80cc47840d03af1e7b0a1, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 5973104993723975194, guid: 52ac0e3422f80cc47840d03af1e7b0a1, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 52ac0e3422f80cc47840d03af1e7b0a1, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: naval_yard
+    near: {fileID: -8194228188089566916, guid: ac6bd03b7efb8a74c8f9bbb6aadce0b6, type: 2}
+    far: {fileID: 1537862084125372830, guid: ac6bd03b7efb8a74c8f9bbb6aadce0b6, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -2644050465497713614, guid: ac6bd03b7efb8a74c8f9bbb6aadce0b6, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: ac6bd03b7efb8a74c8f9bbb6aadce0b6, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: lab
+    near: {fileID: 5998831184929805214, guid: 37b286baa629d404db8790e56306506e, type: 2}
+    far: {fileID: -1273294379875266831, guid: 37b286baa629d404db8790e56306506e, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1325552548519064208, guid: 37b286baa629d404db8790e56306506e, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 37b286baa629d404db8790e56306506e, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: advanced_lab
+    near: {fileID: -4037474327595634501, guid: 455bdae482b4751469ebdd78148f410a, type: 2}
+    far: {fileID: 3871331700247992679, guid: 455bdae482b4751469ebdd78148f410a, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -171425717743550888, guid: 455bdae482b4751469ebdd78148f410a, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 455bdae482b4751469ebdd78148f410a, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: strategic_lab
+    near: {fileID: -4332838772868413594, guid: 47bac95aeaf2b424d8151b75907d3a82, type: 2}
+    far: {fileID: 8180075874186785073, guid: 47bac95aeaf2b424d8151b75907d3a82, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1133338716161684577, guid: 47bac95aeaf2b424d8151b75907d3a82, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 47bac95aeaf2b424d8151b75907d3a82, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: logistics
+    near: {fileID: -3984233087665339497, guid: 5d8afbab8b81f874ba6b146b53a601f1, type: 2}
+    far: {fileID: 7983912117961994981, guid: 5d8afbab8b81f874ba6b146b53a601f1, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -755632657279751971, guid: 5d8afbab8b81f874ba6b146b53a601f1, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 5d8afbab8b81f874ba6b146b53a601f1, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: repair_depot
+    near: {fileID: -4447036454794391327, guid: 1865057d773d02448a36548854cf0686, type: 2}
+    far: {fileID: 3155017238745657855, guid: 1865057d773d02448a36548854cf0686, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -7588421331656063589, guid: 1865057d773d02448a36548854cf0686, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 1865057d773d02448a36548854cf0686, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: field_command
+    near: {fileID: -6814875584124000226, guid: 6515015faba1e074fab318fa1ea3d433, type: 2}
+    far: {fileID: 3091071412320712782, guid: 6515015faba1e074fab318fa1ea3d433, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -3807627356035482242, guid: 6515015faba1e074fab318fa1ea3d433, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 6515015faba1e074fab318fa1ea3d433, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: radar_station
+    near: {fileID: -5137408014794948245, guid: 7baa9dda359c52d49b1cb8e4e0018409, type: 2}
+    far: {fileID: -320807896141969578, guid: 7baa9dda359c52d49b1cb8e4e0018409, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -105583453077468333, guid: 7baa9dda359c52d49b1cb8e4e0018409, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 7baa9dda359c52d49b1cb8e4e0018409, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: phased_radar
+    near: {fileID: -1638919698841026472, guid: 670b7e8825744f14080a7ee4d30eba8c, type: 2}
+    far: {fileID: -4752498280064963284, guid: 670b7e8825744f14080a7ee4d30eba8c, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 877669436045103233, guid: 670b7e8825744f14080a7ee4d30eba8c, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 670b7e8825744f14080a7ee4d30eba8c, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: horizon_radar
+    near: {fileID: -7981827452026435517, guid: 35a2d3b41dd444e4abfb16f14dd05d12, type: 2}
+    far: {fileID: -1621869282544680389, guid: 35a2d3b41dd444e4abfb16f14dd05d12, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -5332006706754096308, guid: 35a2d3b41dd444e4abfb16f14dd05d12, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 35a2d3b41dd444e4abfb16f14dd05d12, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: counter_radar
+    near: {fileID: -1809225336673850875, guid: b50644cc08f6b314a90a327da5083b93, type: 2}
+    far: {fileID: -3948530886173763936, guid: b50644cc08f6b314a90a327da5083b93, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 5743229894540658744, guid: b50644cc08f6b314a90a327da5083b93, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: b50644cc08f6b314a90a327da5083b93, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: mine
+    near: {fileID: 5482518202712638782, guid: 7dffe9c1b49760943b876c681e415d19, type: 2}
+    far: {fileID: 1412285333713222036, guid: 7dffe9c1b49760943b876c681e415d19, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -9002657426972871547, guid: 7dffe9c1b49760943b876c681e415d19, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 7dffe9c1b49760943b876c681e415d19, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: oil
+    near: {fileID: -221689836259285368, guid: 0530036f02ec8cc40ac20bb689f7374d, type: 2}
+    far: {fileID: -8492470984599000681, guid: 0530036f02ec8cc40ac20bb689f7374d, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -4752575382872324782, guid: 0530036f02ec8cc40ac20bb689f7374d, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 0530036f02ec8cc40ac20bb689f7374d, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: gas
+    near: {fileID: -1639184073506340713, guid: ea8d38c2e789e9a4a8b17e7846e3a6b4, type: 2}
+    far: {fileID: 6139449319423931983, guid: ea8d38c2e789e9a4a8b17e7846e3a6b4, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 8505599877630138353, guid: ea8d38c2e789e9a4a8b17e7846e3a6b4, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: ea8d38c2e789e9a4a8b17e7846e3a6b4, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: rare
+    near: {fileID: 4295547565286483632, guid: b2a794fd66439654bbea2598d49d186b, type: 2}
+    far: {fileID: 2936467378386819487, guid: b2a794fd66439654bbea2598d49d186b, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -782023974597102067, guid: b2a794fd66439654bbea2598d49d186b, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: b2a794fd66439654bbea2598d49d186b, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: isotope
+    near: {fileID: -2844362038264922544, guid: 675ee38c9e3c810499bd3a63d2057ad1, type: 2}
+    far: {fileID: -8454438483608722160, guid: 675ee38c9e3c810499bd3a63d2057ad1, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -3852508324517474195, guid: 675ee38c9e3c810499bd3a63d2057ad1, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 675ee38c9e3c810499bd3a63d2057ad1, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: synthetic
+    near: {fileID: -3073996549520274966, guid: 06a5b649ef39fd74cb5eafde9cd0e69a, type: 2}
+    far: {fileID: -6252272035360016524, guid: 06a5b649ef39fd74cb5eafde9cd0e69a, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1164883026571436014, guid: 06a5b649ef39fd74cb5eafde9cd0e69a, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 06a5b649ef39fd74cb5eafde9cd0e69a, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: material_storage
+    near: {fileID: -1550512721596473961, guid: 800e9c6790fe932449f202566c49a797, type: 2}
+    far: {fileID: -4643290397226641098, guid: 800e9c6790fe932449f202566c49a797, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -3279120598905986667, guid: 800e9c6790fe932449f202566c49a797, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 800e9c6790fe932449f202566c49a797, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: fuel_storage
+    near: {fileID: 7984644577490204714, guid: 3e32121905ce56a4a86cd642d9ab420e, type: 2}
+    far: {fileID: 2213190140364277093, guid: 3e32121905ce56a4a86cd642d9ab420e, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 5817369204312520131, guid: 3e32121905ce56a4a86cd642d9ab420e, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 3e32121905ce56a4a86cd642d9ab420e, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: rare_storage
+    near: {fileID: 6496746708006288787, guid: 825fd735af28c5843ad37c5d52d58fd0, type: 2}
+    far: {fileID: -5067660813411129943, guid: 825fd735af28c5843ad37c5d52d58fd0, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 731185598526019614, guid: 825fd735af28c5843ad37c5d52d58fd0, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 825fd735af28c5843ad37c5d52d58fd0, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: isotope_storage
+    near: {fileID: -149602976435955856, guid: 832c2c7c1089d5b4185b02670b71a4c7, type: 2}
+    far: {fileID: 6635661969580313947, guid: 832c2c7c1089d5b4185b02670b71a4c7, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 1349489736572173120, guid: 832c2c7c1089d5b4185b02670b71a4c7, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 832c2c7c1089d5b4185b02670b71a4c7, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: wind
+    near: {fileID: 4300000, guid: 806534b1968bd1c4caac69c18d110c30, type: 2}
+    far: {fileID: 4300000, guid: 36bb50cccba51e44299394a9d142af38, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: d7c53fe65a5531c42b5f79e3544984ff, type: 2}
+  - id: solar
+    near: {fileID: 4300000, guid: 8430be1aa4d9ad24eb58e5f2df717c7c, type: 2}
+    far: {fileID: 4300000, guid: 7552b05dd80779b41b8d15c2f2638e98, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 937ed8b88b5119849bab42ad07768800, type: 2}
+  - id: gas_turbine
+    near: {fileID: 4300000, guid: a4acf496dd5ca2c44b8604b0c38adf63, type: 2}
+    far: {fileID: 4300000, guid: 28a0f99b6ccbd2b4096381cfd7ef53af, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 28c8e2839ecc30741853bdda20ffde43, type: 2}
+  - id: reactor
+    near: {fileID: 4300000, guid: 225b329ed361c1a46a4a8d4abb7d1960, type: 2}
+    far: {fileID: 4300000, guid: 4842606ed05bcdc42930fa4f92938ae8, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 18c17c1914c445b43afbbde7aecae0be, type: 2}
+  - id: fusion
+    near: {fileID: 4300000, guid: a496e06e925665344abff11969567e1d, type: 2}
+    far: {fileID: 4300000, guid: 8b0ed3037be0f934eb85a8bdcac50d94, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 585a0a11c9d785045a40d980cee94ec2, type: 2}
+  - id: exotic
+    near: {fileID: 4300000, guid: 71ae1dc6b5c58ea4bbf2f5e0402007b0, type: 2}
+    far: {fileID: 4300000, guid: 0f4f1f36e1bc0f04bbe46ea8b0f6d29e, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 829e465a0f39a0a4397c6541c6f75c9f, type: 2}
+  - id: battery
+    near: {fileID: 4300000, guid: dc960bfd48bd8b44e9eddf4b97af9387, type: 2}
+    far: {fileID: 4300000, guid: 23037273e998b214bb9dc76703e50687, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 5bbb16789c4b56540843739145e6e0c3, type: 2}
+  - id: wall
+    near: {fileID: 4300000, guid: 3f06dc692b55dc94cb23347bc573c371, type: 2}
+    far: {fileID: 4300000, guid: 6ae6691d6eff17940906037378fd95a2, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls:
+    - {fileID: 4300000, guid: 5726ae2c9028fd44a840c2d3b0b5ddd8, type: 2}
+    - {fileID: 4300000, guid: ae5c04ef07c2e12459e9443c9dfe1623, type: 2}
+    - {fileID: 4300000, guid: 6e9ef1d5bfb09544abb5387d277b7b7b, type: 2}
+    - {fileID: 4300000, guid: cd88edc0c358f7d499e1757b014bf01b, type: 2}
+    - {fileID: 4300000, guid: b9df14ac53901fe45a6c91a702643bdf, type: 2}
+    - {fileID: 4300000, guid: ef30aa0e9c82f754fa91711b0bf80dbd, type: 2}
+    - {fileID: 4300000, guid: 5d6d1980a07c77545b2fc64cf0c5864b, type: 2}
+    - {fileID: 4300000, guid: 227403b2ebd6466428d45dad20dc50fa, type: 2}
+    - {fileID: 4300000, guid: ffff5c50a0ab3144cb5db2794f72f99a, type: 2}
+    - {fileID: 4300000, guid: 75de8619131029440a7a81e5be6ce986, type: 2}
+    - {fileID: 4300000, guid: cf0dadc340d642f46bc70593f9c6f373, type: 2}
+    - {fileID: 4300000, guid: 655bc226890db014b8d7faa7d3c37db1, type: 2}
+    - {fileID: 4300000, guid: 57768533ea474544caf16fe7abd7e936, type: 2}
+    - {fileID: 4300000, guid: 89572f309abf6e846bdf2974fb3cd3db, type: 2}
+    - {fileID: 4300000, guid: 3d74c90c5e11c9146afdc640d6db037c, type: 2}
+    - {fileID: 4300000, guid: e75e4d0eb06a4cb4c977d278ac78ff43, type: 2}
+    material: {fileID: 2100000, guid: e6c05cc3b176de34dbdff67c25115d03, type: 2}
+  - id: gate
+    near: {fileID: 4300000, guid: 07ddc8dff50ede2408f35f11d4be90b1, type: 2}
+    far: {fileID: 4300000, guid: b2288e19cd36cd041a7f0666b54d23e6, type: 2}
+    gateLeaf: {fileID: 4300000, guid: f280cf4545b93e447badc8729de516fe, type: 2}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 350aafa9fb7237943b4c92fd5f624f48, type: 2}
+  - id: autocannon
+    near: {fileID: 4300000, guid: 50a38fc2d115b5c49b093c31332bf532, type: 2}
+    far: {fileID: 4300000, guid: 8491a02abc9e0294a9803c7194ae19d8, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 6bd6d6301d0176a45a1b0eaba2c88c3c, type: 2}
+  - id: at_turret
+    near: {fileID: 4300000, guid: 664f916dca91e2949b02ba412acb7257, type: 2}
+    far: {fileID: 4300000, guid: bffabd286a0c67343a5a534162370946, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 3698a2923b8a5a94b98525622d914725, type: 2}
+  - id: aa_turret
+    near: {fileID: 4300000, guid: b5bc142a12176804195164edab8de6e4, type: 2}
+    far: {fileID: 4300000, guid: 25b392ddd898e2346a1b8c67a719f41b, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 417b976d8210fe645a16ae79bfa1ba21, type: 2}
+  - id: sam
+    near: {fileID: 4300000, guid: 6d8753fc263153a4092bc67fe332eba9, type: 2}
+    far: {fileID: 4300000, guid: a2a253ff34861284382f77cfb5eaf059, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 8f942cb47d6a7304087c3ea3000eee26, type: 2}
+  - id: advanced_sam
+    near: {fileID: 4300000, guid: d10965aa0d0266d4a8be10c72969b4a5, type: 2}
+    far: {fileID: 4300000, guid: 0fccbdaf9bd41ef4ba78112acf1f4d79, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: e2320a32a6841b247b5f9664c71ff37f, type: 2}
+  - id: point_defence
+    near: {fileID: 4300000, guid: 656866f0d141e7b4cab267fb1e5e641d, type: 2}
+    far: {fileID: 4300000, guid: 36c13a9fef9b1254b8103c0382f5847b, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 3451567c311e9ce4f802241fef8dfe9d, type: 2}
+  - id: artillery_battery
+    near: {fileID: 4300000, guid: 0259592c6ddfed94ea14b654ebf16314, type: 2}
+    far: {fileID: 4300000, guid: c6d622e4fe6b8754eb5f47732aa24d62, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: d57972f5255c4db468b8a037c83af9e2, type: 2}
+  - id: missile_defence
+    near: {fileID: 4300000, guid: 8ce9000779f15dc42a064d856e34893a, type: 2}
+    far: {fileID: 4300000, guid: 4b75250b892e0c94784941a029904118, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 644eec153338e85409dd9af1308410ff, type: 2}
+  - id: laser
+    near: {fileID: 4300000, guid: 7ecda69eaf318ea45889c7b731f878c3, type: 2}
+    far: {fileID: 4300000, guid: c403c5a85d9b74b4abb72672deea85d4, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: bd671a8e8d0950141b77e932d1207922, type: 2}
+  - id: shield
+    near: {fileID: 4300000, guid: de8923d95d0570f4daf452f148df0cbd, type: 2}
+    far: {fileID: 4300000, guid: 2a390a059e5dce44abcaa6a1c4852983, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 57829a09fb53df8479692e6738db7ec7, type: 2}
+  - id: silo
+    near: {fileID: 4300000, guid: 2e3913394314d304e92d41ac2c286c81, type: 2}
+    far: {fileID: 4300000, guid: 463d65bcf963a434d9b2cb1703035781, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 61fd9fdb98d63084ea8c15fe1415f2ea, type: 2}
+  - id: civil_launch_pad
+    near: {fileID: 4300000, guid: 4b978c32876bf9e4b9ac65154793fba4, type: 2}
+    far: {fileID: 4300000, guid: 4b978c32876bf9e4b9ac65154793fba4, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 0}
+    customLods: 0
+    modular: {fileID: 0}
+    walls: []
+    material: {fileID: 2100000, guid: 5550344ebb1f1084aadfa4926cbfe8a6, type: 2}
+  - id: civil_advanced_materials
+    near: {fileID: 1449944557749204041, guid: 5770f3539e0ec5d4ab96060f48c5125f, type: 2}
+    far: {fileID: -5377702659350786069, guid: 5770f3539e0ec5d4ab96060f48c5125f, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -3870863503415732156, guid: 5770f3539e0ec5d4ab96060f48c5125f, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 5770f3539e0ec5d4ab96060f48c5125f, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_airport
+    near: {fileID: 1932820985337161832, guid: a61cf51cec37b8e4a9f988e27490fd24, type: 2}
+    far: {fileID: -1926742260436974959, guid: a61cf51cec37b8e4a9f988e27490fd24, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -3550657249450727542, guid: a61cf51cec37b8e4a9f988e27490fd24, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: a61cf51cec37b8e4a9f988e27490fd24, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_beef_shed
+    near: {fileID: 4892187146464314205, guid: 6798dafa51bba434393e3cdfa3394de2, type: 2}
+    far: {fileID: -5927693015811785357, guid: 6798dafa51bba434393e3cdfa3394de2, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 2078264406557208240, guid: 6798dafa51bba434393e3cdfa3394de2, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 6798dafa51bba434393e3cdfa3394de2, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_butcher
+    near: {fileID: -7398707074019326953, guid: 7646acfee94ead949982cf4a25212500, type: 2}
+    far: {fileID: -562565765429120959, guid: 7646acfee94ead949982cf4a25212500, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1630459428453429404, guid: 7646acfee94ead949982cf4a25212500, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 7646acfee94ead949982cf4a25212500, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_chemistry
+    near: {fileID: -5895526019129214434, guid: f7a97e8be17d62c4ab02bf948b3f59c6, type: 2}
+    far: {fileID: -3878014772589125549, guid: f7a97e8be17d62c4ab02bf948b3f59c6, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -7116014822207983667, guid: f7a97e8be17d62c4ab02bf948b3f59c6, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: f7a97e8be17d62c4ab02bf948b3f59c6, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_colonial_admin
+    near: {fileID: -7276247453069150709, guid: 5bacfeb805bab194f8988a0b9baf0d25, type: 2}
+    far: {fileID: -758233459712313131, guid: 5bacfeb805bab194f8988a0b9baf0d25, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 7258600491117581512, guid: 5bacfeb805bab194f8988a0b9baf0d25, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 5bacfeb805bab194f8988a0b9baf0d25, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_communications
+    near: {fileID: -3007777990923826383, guid: ebb7a8cf4f78e8b4889cc8a5959076d1, type: 2}
+    far: {fileID: 7557113246838172237, guid: ebb7a8cf4f78e8b4889cc8a5959076d1, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -3414646312541645924, guid: ebb7a8cf4f78e8b4889cc8a5959076d1, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: ebb7a8cf4f78e8b4889cc8a5959076d1, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_composites
+    near: {fileID: -1695497371319678330, guid: 6b1b154e03afd984ead96de0b26100e3, type: 2}
+    far: {fileID: -18577030329673128, guid: 6b1b154e03afd984ead96de0b26100e3, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 4209413403353295635, guid: 6b1b154e03afd984ead96de0b26100e3, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 6b1b154e03afd984ead96de0b26100e3, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_council
+    near: {fileID: 6014826721753073990, guid: d47537828e18b8b4c95c0e376c6d19ac, type: 2}
+    far: {fileID: 2587629623869601900, guid: d47537828e18b8b4c95c0e376c6d19ac, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -8421358008394864417, guid: d47537828e18b8b4c95c0e376c6d19ac, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: d47537828e18b8b4c95c0e376c6d19ac, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_drinks_plant
+    near: {fileID: -2591772288395438277, guid: 7a990b5c34209804d99c74346e646f40, type: 2}
+    far: {fileID: -5579867949835182201, guid: 7a990b5c34209804d99c74346e646f40, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 9001897891633147306, guid: 7a990b5c34209804d99c74346e646f40, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 7a990b5c34209804d99c74346e646f40, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_drinks_shop
+    near: {fileID: 3032445911962521505, guid: c84c166f2badfa6409e79a2171789248, type: 2}
+    far: {fileID: 5762439059444982040, guid: c84c166f2badfa6409e79a2171789248, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1602120805776117909, guid: c84c166f2badfa6409e79a2171789248, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: c84c166f2badfa6409e79a2171789248, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_electronics
+    near: {fileID: 4845559926714972882, guid: 92099699df39d3a4da48c9ba3bd00ece, type: 2}
+    far: {fileID: -6705216434378531466, guid: 92099699df39d3a4da48c9ba3bd00ece, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 8126590705727083338, guid: 92099699df39d3a4da48c9ba3bd00ece, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 92099699df39d3a4da48c9ba3bd00ece, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_fabricator
+    near: {fileID: 5934554905810673536, guid: a11942ba139a03a4888944919eb112ae, type: 2}
+    far: {fileID: -5472733460973930969, guid: a11942ba139a03a4888944919eb112ae, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 6456613791655997061, guid: a11942ba139a03a4888944919eb112ae, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: a11942ba139a03a4888944919eb112ae, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_food_processing
+    near: {fileID: 2717670214493742508, guid: 6e7980f1227cf6848b8953fb59bf7c47, type: 2}
+    far: {fileID: 3654387930793918631, guid: 6e7980f1227cf6848b8953fb59bf7c47, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 750116359285944517, guid: 6e7980f1227cf6848b8953fb59bf7c47, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 6e7980f1227cf6848b8953fb59bf7c47, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_food_shop
+    near: {fileID: -8502895357420979686, guid: 87a7828b175bd9e438601a3b4ede94be, type: 2}
+    far: {fileID: 5814069463866697931, guid: 87a7828b175bd9e438601a3b4ede94be, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 1384608432942132292, guid: 87a7828b175bd9e438601a3b4ede94be, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 87a7828b175bd9e438601a3b4ede94be, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_freight_station
+    near: {fileID: 697157957805608526, guid: 473dc485b35bb62409c69a7121be97cc, type: 2}
+    far: {fileID: -5267583461495551631, guid: 473dc485b35bb62409c69a7121be97cc, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 3847470089160659638, guid: 473dc485b35bb62409c69a7121be97cc, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 473dc485b35bb62409c69a7121be97cc, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_fuel_refinery
+    near: {fileID: -8307516814524082254, guid: 3aff55f279a21bf47a5d8a57023bdd05, type: 2}
+    far: {fileID: -6978151176040232180, guid: 3aff55f279a21bf47a5d8a57023bdd05, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 2819772248888559827, guid: 3aff55f279a21bf47a5d8a57023bdd05, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 3aff55f279a21bf47a5d8a57023bdd05, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_gathering_camp
+    near: {fileID: 1754954240080355348, guid: 9a19e21282c59044bbc1225c3f1ed894, type: 2}
+    far: {fileID: -8237443709328680220, guid: 9a19e21282c59044bbc1225c3f1ed894, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 6209976732153920873, guid: 9a19e21282c59044bbc1225c3f1ed894, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 9a19e21282c59044bbc1225c3f1ed894, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_habitat
+    near: {fileID: 5441043803235778078, guid: d38ac200700e31f40be0a86b89361901, type: 2}
+    far: {fileID: -4268690040270215324, guid: d38ac200700e31f40be0a86b89361901, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 8970100706113453430, guid: d38ac200700e31f40be0a86b89361901, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: d38ac200700e31f40be0a86b89361901, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_housing
+    near: {fileID: 616759065490707544, guid: ccd82135efa10e940a583de4f0a16380, type: 2}
+    far: {fileID: -570442344875967140, guid: ccd82135efa10e940a583de4f0a16380, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -863074061648086395, guid: ccd82135efa10e940a583de4f0a16380, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: ccd82135efa10e940a583de4f0a16380, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_hydroponics
+    near: {fileID: 6542688887469884423, guid: 731bc4c4f1c381247b9ae43d8330fb73, type: 2}
+    far: {fileID: 778189729775688235, guid: 731bc4c4f1c381247b9ae43d8330fb73, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 8099368667410754901, guid: 731bc4c4f1c381247b9ae43d8330fb73, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 731bc4c4f1c381247b9ae43d8330fb73, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_isotopes
+    near: {fileID: -451940069091658348, guid: 56e49f60967e61b42900e8e86ec6d74c, type: 2}
+    far: {fileID: -2892212595790754323, guid: 56e49f60967e61b42900e8e86ec6d74c, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -9053682171008852168, guid: 56e49f60967e61b42900e8e86ec6d74c, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 56e49f60967e61b42900e8e86ec6d74c, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_life_support
+    near: {fileID: -440427100210530775, guid: 446026bf1ad2ae74d9ef284967f477e9, type: 2}
+    far: {fileID: 5378994373584668877, guid: 446026bf1ad2ae74d9ef284967f477e9, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 8708567182937534410, guid: 446026bf1ad2ae74d9ef284967f477e9, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 446026bf1ad2ae74d9ef284967f477e9, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_market
+    near: {fileID: -2187564698011657135, guid: 925c05081d6d0e741ab7b8884db93627, type: 2}
+    far: {fileID: -1006202339646727529, guid: 925c05081d6d0e741ab7b8884db93627, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 4018290853291851136, guid: 925c05081d6d0e741ab7b8884db93627, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 925c05081d6d0e741ab7b8884db93627, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_aluminium
+    near: {fileID: 4321145230729043377, guid: f0582a83b96f25a4392ff6ae9919e3bb, type: 2}
+    far: {fileID: 2280996965833164658, guid: f0582a83b96f25a4392ff6ae9919e3bb, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -5640394703070060691, guid: f0582a83b96f25a4392ff6ae9919e3bb, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: f0582a83b96f25a4392ff6ae9919e3bb, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_carbon
+    near: {fileID: -857527967789267641, guid: b253aaeb1d2e9c64495b3a4dff0a6676, type: 2}
+    far: {fileID: -5846964964287831013, guid: b253aaeb1d2e9c64495b3a4dff0a6676, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 5578512950993841138, guid: b253aaeb1d2e9c64495b3a4dff0a6676, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: b253aaeb1d2e9c64495b3a4dff0a6676, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_chromium
+    near: {fileID: -7815499019222622317, guid: ee00a67344895954a92047ff8defda94, type: 2}
+    far: {fileID: -6257397804382480575, guid: ee00a67344895954a92047ff8defda94, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -5147643815595798135, guid: ee00a67344895954a92047ff8defda94, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: ee00a67344895954a92047ff8defda94, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_copper
+    near: {fileID: -7789977544494591899, guid: d33f44e273accdb46a8c42a497674c9a, type: 2}
+    far: {fileID: 9101779782801221795, guid: d33f44e273accdb46a8c42a497674c9a, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 1828908113610505040, guid: d33f44e273accdb46a8c42a497674c9a, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: d33f44e273accdb46a8c42a497674c9a, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_helium_3
+    near: {fileID: 8841495204529949208, guid: 2a827821da4600344b093b825dd0da43, type: 2}
+    far: {fileID: 1642571447730671156, guid: 2a827821da4600344b093b825dd0da43, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 7409615804703101903, guid: 2a827821da4600344b093b825dd0da43, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 2a827821da4600344b093b825dd0da43, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_hydrogen
+    near: {fileID: -7326889047915274231, guid: 59d9c60c3fe8d0b449ef7fb853d49d9e, type: 2}
+    far: {fileID: 8454801576474717259, guid: 59d9c60c3fe8d0b449ef7fb853d49d9e, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 8649477030513783139, guid: 59d9c60c3fe8d0b449ef7fb853d49d9e, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 59d9c60c3fe8d0b449ef7fb853d49d9e, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_iron
+    near: {fileID: 7152337941368180984, guid: e3d08d5edb05f6d499ebc8615b06bc39, type: 2}
+    far: {fileID: -4214456313747177232, guid: e3d08d5edb05f6d499ebc8615b06bc39, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 3155348536373004712, guid: e3d08d5edb05f6d499ebc8615b06bc39, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: e3d08d5edb05f6d499ebc8615b06bc39, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_lithium
+    near: {fileID: -471786324336531822, guid: a04ada1dd48dd024280368fe6c345658, type: 2}
+    far: {fileID: 5925000259609159768, guid: a04ada1dd48dd024280368fe6c345658, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -4962513487437146604, guid: a04ada1dd48dd024280368fe6c345658, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: a04ada1dd48dd024280368fe6c345658, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_methane
+    near: {fileID: 2152704425216416230, guid: d0a6a182118abd8478b9bb377558d4ff, type: 2}
+    far: {fileID: 5797609011820967320, guid: d0a6a182118abd8478b9bb377558d4ff, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 1302488342656070856, guid: d0a6a182118abd8478b9bb377558d4ff, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: d0a6a182118abd8478b9bb377558d4ff, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_nickel
+    near: {fileID: 4598116397572097733, guid: 86bcbc4e686778c4f97d6b1b25a0514f, type: 2}
+    far: {fileID: 2753557382107256670, guid: 86bcbc4e686778c4f97d6b1b25a0514f, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -548071339660249385, guid: 86bcbc4e686778c4f97d6b1b25a0514f, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 86bcbc4e686778c4f97d6b1b25a0514f, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_oxygen
+    near: {fileID: -5762443706392838882, guid: 9d7be844b42b6b44a9c86f7797b7d5ee, type: 2}
+    far: {fileID: -2700217124478992713, guid: 9d7be844b42b6b44a9c86f7797b7d5ee, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 6193942688309511384, guid: 9d7be844b42b6b44a9c86f7797b7d5ee, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 9d7be844b42b6b44a9c86f7797b7d5ee, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_platinum
+    near: {fileID: -1075367192892906790, guid: bc16010daa8a49743a9d125cb81b18b8, type: 2}
+    far: {fileID: 5783814146904207971, guid: bc16010daa8a49743a9d125cb81b18b8, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -8885618240807716099, guid: bc16010daa8a49743a9d125cb81b18b8, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: bc16010daa8a49743a9d125cb81b18b8, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_rare_earth
+    near: {fileID: -5266636452530875466, guid: 6c34ab804561d7b4a90b6529ad62f847, type: 2}
+    far: {fileID: -908324592344118491, guid: 6c34ab804561d7b4a90b6529ad62f847, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -5174485342212001524, guid: 6c34ab804561d7b4a90b6529ad62f847, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 6c34ab804561d7b4a90b6529ad62f847, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_silicon
+    near: {fileID: -4409079959370987511, guid: dc5355f4d457b434ba9a396cae1c7802, type: 2}
+    far: {fileID: 7687405689126406820, guid: dc5355f4d457b434ba9a396cae1c7802, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -771204417966359601, guid: dc5355f4d457b434ba9a396cae1c7802, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: dc5355f4d457b434ba9a396cae1c7802, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_sulfur
+    near: {fileID: 9222820706096838148, guid: 42bf764c0b3dc9a458e98db0ebf7ffff, type: 2}
+    far: {fileID: 8585695286452176492, guid: 42bf764c0b3dc9a458e98db0ebf7ffff, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 6844490615109236556, guid: 42bf764c0b3dc9a458e98db0ebf7ffff, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 42bf764c0b3dc9a458e98db0ebf7ffff, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_titanium
+    near: {fileID: -3226884882559313075, guid: 1f6cfa40621ab094eb0c9b4ba4ebf25d, type: 2}
+    far: {fileID: 600446934083381229, guid: 1f6cfa40621ab094eb0c9b4ba4ebf25d, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -8265200735350649953, guid: 1f6cfa40621ab094eb0c9b4ba4ebf25d, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 1f6cfa40621ab094eb0c9b4ba4ebf25d, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_uranium
+    near: {fileID: -1813456582957679193, guid: 4abeb19422d1afd4f9cab949490064b2, type: 2}
+    far: {fileID: 7625565772122484907, guid: 4abeb19422d1afd4f9cab949490064b2, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 6457922799774728744, guid: 4abeb19422d1afd4f9cab949490064b2, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 4abeb19422d1afd4f9cab949490064b2, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mine_water
+    near: {fileID: 1808403430876397811, guid: 419dd0486d223d54681f1580c761a0b7, type: 2}
+    far: {fileID: -7114434702264995150, guid: 419dd0486d223d54681f1580c761a0b7, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 7018986416441790416, guid: 419dd0486d223d54681f1580c761a0b7, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 419dd0486d223d54681f1580c761a0b7, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_mission_control
+    near: {fileID: 7206846197537745541, guid: d1036b950ec240a4a8e8f0ac263cfcbd, type: 2}
+    far: {fileID: -7166561006417195357, guid: d1036b950ec240a4a8e8f0ac263cfcbd, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 5119419284482081667, guid: d1036b950ec240a4a8e8f0ac263cfcbd, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: d1036b950ec240a4a8e8f0ac263cfcbd, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_observatory
+    near: {fileID: 7780949813605265500, guid: 91959ba4b54c0124fab2f3416d7ff1e4, type: 2}
+    far: {fileID: 7590814508065622106, guid: 91959ba4b54c0124fab2f3416d7ff1e4, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -2171639214259915977, guid: 91959ba4b54c0124fab2f3416d7ff1e4, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 91959ba4b54c0124fab2f3416d7ff1e4, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_oil_refinery
+    near: {fileID: -7429452653116998133, guid: d013a58fbab316145bbf4dfaad12e742, type: 2}
+    far: {fileID: 1325596889242900884, guid: d013a58fbab316145bbf4dfaad12e742, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -6180743472033238238, guid: d013a58fbab316145bbf4dfaad12e742, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: d013a58fbab316145bbf4dfaad12e742, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_oil_well
+    near: {fileID: -7219420988668233597, guid: 5b8b53532d6b26941a4ed6d5e9808639, type: 2}
+    far: {fileID: 1895900952040485979, guid: 5b8b53532d6b26941a4ed6d5e9808639, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 7425097381735510291, guid: 5b8b53532d6b26941a4ed6d5e9808639, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 5b8b53532d6b26941a4ed6d5e9808639, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_payload_integration
+    near: {fileID: 2862432869310811306, guid: 9efcc249ece3a7c4795628bd9539b3b7, type: 2}
+    far: {fileID: 9162977920330943716, guid: 9efcc249ece3a7c4795628bd9539b3b7, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 2346139882318573897, guid: 9efcc249ece3a7c4795628bd9539b3b7, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 9efcc249ece3a7c4795628bd9539b3b7, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_pharmacy
+    near: {fileID: -712687009092456520, guid: 5572825fb8db26d41b25e0ebbb7827ca, type: 2}
+    far: {fileID: 3883823754758950492, guid: 5572825fb8db26d41b25e0ebbb7827ca, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 3476263276026409946, guid: 5572825fb8db26d41b25e0ebbb7827ca, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 5572825fb8db26d41b25e0ebbb7827ca, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_port
+    near: {fileID: -3136482568377167329, guid: 83d99d8bbea46a64da940c8e3b67c513, type: 2}
+    far: {fileID: -6568640030630176646, guid: 83d99d8bbea46a64da940c8e3b67c513, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -7799247039727821868, guid: 83d99d8bbea46a64da940c8e3b67c513, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 83d99d8bbea46a64da940c8e3b67c513, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_radio_telescope
+    near: {fileID: -5020123098493896280, guid: 8f298591671c80543b85f8f5b70a1ac8, type: 2}
+    far: {fileID: -891959138549115826, guid: 8f298591671c80543b85f8f5b70a1ac8, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -3260911874412925453, guid: 8f298591671c80543b85f8f5b70a1ac8, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 8f298591671c80543b85f8f5b70a1ac8, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_rental_home
+    near: {fileID: 2230998935946735873, guid: 8f0dd4f26e343d64cbc5582415b7936d, type: 2}
+    far: {fileID: 7971587853286390685, guid: 8f0dd4f26e343d64cbc5582415b7936d, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -3628734330517788173, guid: 8f0dd4f26e343d64cbc5582415b7936d, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 8f0dd4f26e343d64cbc5582415b7936d, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_rocket_assembly
+    near: {fileID: -8106920528593732212, guid: a2a98c8b9c7ac534aa5a0492437994a7, type: 2}
+    far: {fileID: -487159530250777391, guid: a2a98c8b9c7ac534aa5a0492437994a7, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1310667347625311698, guid: a2a98c8b9c7ac534aa5a0492437994a7, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: a2a98c8b9c7ac534aa5a0492437994a7, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_satellite_factory
+    near: {fileID: 2517734670695591878, guid: 368a98089a61a0c45ae6481c3e79e605, type: 2}
+    far: {fileID: 5870086169179160346, guid: 368a98089a61a0c45ae6481c3e79e605, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1992864362123943100, guid: 368a98089a61a0c45ae6481c3e79e605, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 368a98089a61a0c45ae6481c3e79e605, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_school
+    near: {fileID: 7494802044270101377, guid: ba909100e354da24ea16c78c4871298d, type: 2}
+    far: {fileID: -1148584426869904593, guid: ba909100e354da24ea16c78c4871298d, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -1279404356207321979, guid: ba909100e354da24ea16c78c4871298d, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: ba909100e354da24ea16c78c4871298d, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_sigint
+    near: {fileID: -399986847176821093, guid: 804ed9725861b594e96971aa38554b1c, type: 2}
+    far: {fileID: 8255088218855151325, guid: 804ed9725861b594e96971aa38554b1c, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 8799668229816488275, guid: 804ed9725861b594e96971aa38554b1c, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 804ed9725861b594e96971aa38554b1c, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_smelter
+    near: {fileID: 899287236199256872, guid: 81b9175368c2f4f4cafb7a2fbda71c9c, type: 2}
+    far: {fileID: 3778323098370852214, guid: 81b9175368c2f4f4cafb7a2fbda71c9c, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 8940722451328370150, guid: 81b9175368c2f4f4cafb7a2fbda71c9c, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 81b9175368c2f4f4cafb7a2fbda71c9c, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_social_home
+    near: {fileID: -3404389814807849624, guid: 2c44ca4670830a94c92962c5507cdea2, type: 2}
+    far: {fileID: 2474611228277234038, guid: 2c44ca4670830a94c92962c5507cdea2, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -7152849075052585345, guid: 2c44ca4670830a94c92962c5507cdea2, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 2c44ca4670830a94c92962c5507cdea2, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_spaceport
+    near: {fileID: -5276562807609151048, guid: 00af07f95079c2a488847c4b2db62fe9, type: 2}
+    far: {fileID: 8773881344073312448, guid: 00af07f95079c2a488847c4b2db62fe9, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 3378700310273962866, guid: 00af07f95079c2a488847c4b2db62fe9, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 00af07f95079c2a488847c4b2db62fe9, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_spectroscopy
+    near: {fileID: -9025397382109818933, guid: 4aa6d75e9c6ebb24c86453dbb24f55a7, type: 2}
+    far: {fileID: 3179131544443806981, guid: 4aa6d75e9c6ebb24c86453dbb24f55a7, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: -8175656541929112424, guid: 4aa6d75e9c6ebb24c86453dbb24f55a7, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 4aa6d75e9c6ebb24c86453dbb24f55a7, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_tracking
+    near: {fileID: 7012973378367167659, guid: 64e41b5645141a7488d2422c6daf70d2, type: 2}
+    far: {fileID: -2219961299501566954, guid: 64e41b5645141a7488d2422c6daf70d2, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 9012633601082042953, guid: 64e41b5645141a7488d2422c6daf70d2, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 64e41b5645141a7488d2422c6daf70d2, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  - id: civil_warehouse
+    near: {fileID: -2690785451071559384, guid: 391b420528157ac4ba4af3aef962667e, type: 2}
+    far: {fileID: -1136721515916683516, guid: 391b420528157ac4ba4af3aef962667e, type: 2}
+    gateLeaf: {fileID: 0}
+    distant: {fileID: 7702741006290746055, guid: 391b420528157ac4ba4af3aef962667e, type: 2}
+    customLods: 1
+    modular: {fileID: 11400000, guid: 391b420528157ac4ba4af3aef962667e, type: 2}
+    walls: []
+    material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  unitIds:
+  - infantry
+  - engineer
+  - heavy_infantry
+  - scout
+  - apc
+  - tank
+  - heavy_tank
+  - at
+  - aa
+  - artillery_unit
+  - mlrs
+  - supply
+  - repair
+  - command_vehicle
+  - fighter
+  - attack_heli
+  - gunship
+  - bomber
+  - transport_heli
+  - recon_air
+  - patrol_boat
+  - gunboat
+  - transport_ship
+  - destroyer
+  - submarine
+  - cruiser
+  - battleship
+  - carrier_unit
+  - mobile_missile
+  - mobile_radar
+  - strategic_platform
+  unitNear:
+  - {fileID: 4900000, guid: 9746c5372c6a66c4ca6f8c647feb76c2, type: 3}
+  - {fileID: 4900000, guid: ea88cfef018a97d4fbc4a4a92d4a625c, type: 3}
+  - {fileID: 4900000, guid: 65e8063a15989654283f24730e0ec930, type: 3}
+  - {fileID: 4900000, guid: ffb28ae5f9fc0a74daad2c8d3941788b, type: 3}
+  - {fileID: 4900000, guid: 2d36fa43d2a3fe14bbb82f6a25d3de42, type: 3}
+  - {fileID: 4900000, guid: 91486175e06f7ae41afd9967d726261c, type: 3}
+  - {fileID: 4900000, guid: f2401e9d77892e047b7157453e526464, type: 3}
+  - {fileID: 4900000, guid: 54263b493c6b34840b8003f1a23854c6, type: 3}
+  - {fileID: 4900000, guid: eb70d07c39ffb8d4da5c8aa8c5c66f60, type: 3}
+  - {fileID: 4900000, guid: 02925e2509f811f4e90388273f5dc423, type: 3}
+  - {fileID: 4900000, guid: befae04cb513db345978ed7d27c56e21, type: 3}
+  - {fileID: 4900000, guid: ba3ea97ef5b63e84fa33bf23fe9e3e65, type: 3}
+  - {fileID: 4900000, guid: 8869b3a2bd5e37a4ca3c244b73c9e0c7, type: 3}
+  - {fileID: 4900000, guid: f6e89ee9642899e478fe833580452b3b, type: 3}
+  - {fileID: 4900000, guid: 73604bfbecf2cc34cb5c380948bc2015, type: 3}
+  - {fileID: 4900000, guid: b5fab6ecd18a9a64da180c6d7855a2d2, type: 3}
+  - {fileID: 4900000, guid: 22250c0372f07d842841a71773c46838, type: 3}
+  - {fileID: 4900000, guid: 03ecd47b6e01dc547a0a6ce54e59e83d, type: 3}
+  - {fileID: 4900000, guid: edc1113e0800e0a40ba248df3b6fa3ad, type: 3}
+  - {fileID: 4900000, guid: 45db2b83f494ff541b82099d8cdb2d3b, type: 3}
+  - {fileID: 4900000, guid: daefdd7750d83f249adda43c04bd8e21, type: 3}
+  - {fileID: 4900000, guid: 9e9ca927c9fd9ac4f89365a1e44a474a, type: 3}
+  - {fileID: 4900000, guid: 4367d24f044b6ac4e8efac80367e2db4, type: 3}
+  - {fileID: 4900000, guid: a634e1147a58e8d46926c2df9e400ed8, type: 3}
+  - {fileID: 4900000, guid: 7ab5cbdfe07fc4a4f8afff0ee3953fc9, type: 3}
+  - {fileID: 4900000, guid: fb8f3f7ecd9e799488ec6163b8c4dccc, type: 3}
+  - {fileID: 4900000, guid: eb10c054db42e47429771e4e33ed441b, type: 3}
+  - {fileID: 4900000, guid: 9c07f0aac344cc24d899df1ef50dfb3c, type: 3}
+  - {fileID: 4900000, guid: 142e83374191f604abd675473c564cff, type: 3}
+  - {fileID: 4900000, guid: f0b94e178fa3f914788b9a1e9c8cd0c1, type: 3}
+  - {fileID: 4900000, guid: 841af81e8ee2fad46b676b3f98e3a86e, type: 3}
+  unitFar:
+  - {fileID: 4900000, guid: 2227d5f1e134e974d956f129367d18c2, type: 3}
+  - {fileID: 4900000, guid: 71520875a1f0b65409f49afc633153f5, type: 3}
+  - {fileID: 4900000, guid: 4dd5f253502b30b458c4b914ede24058, type: 3}
+  - {fileID: 4900000, guid: b911945d1985b5e45a0578e8ef903eeb, type: 3}
+  - {fileID: 4900000, guid: 8480a1982bfe948439d57f9cfdafa047, type: 3}
+  - {fileID: 4900000, guid: a86ea8d47ca40974998482349cd7fd62, type: 3}
+  - {fileID: 4900000, guid: 13ffd439b9704314ca96a2e9dce78fd2, type: 3}
+  - {fileID: 4900000, guid: f65e5659724fd644295646982e494616, type: 3}
+  - {fileID: 4900000, guid: 10c1694ca39f78d43beda4ddca53bef3, type: 3}
+  - {fileID: 4900000, guid: a492ca1f978096845978321d10bd727b, type: 3}
+  - {fileID: 4900000, guid: 80f5c63e0ab766540ac1a5b0733a546f, type: 3}
+  - {fileID: 4900000, guid: 5b3107c78bce56f44a2353eaf16aac4f, type: 3}
+  - {fileID: 4900000, guid: 26d462c588cfa75418b509a62a20c187, type: 3}
+  - {fileID: 4900000, guid: 2ed6a9a3ab74eb742bb5564e0d77f357, type: 3}
+  - {fileID: 4900000, guid: 496f2e9662079bb4cbc515a7f5dbaeaf, type: 3}
+  - {fileID: 4900000, guid: df08ec3144759c54bac603468f603d6c, type: 3}
+  - {fileID: 4900000, guid: 2af4fc1eb944ecf479d9f910ff472043, type: 3}
+  - {fileID: 4900000, guid: 03d6e6d8e639ea840a2d1acb99da321f, type: 3}
+  - {fileID: 4900000, guid: e649512fadea61c469279b028187d645, type: 3}
+  - {fileID: 4900000, guid: 4944c7ad52c1c5d45998b671503d6e58, type: 3}
+  - {fileID: 4900000, guid: 97c283cdc5164f94ea4e93b2a6a197de, type: 3}
+  - {fileID: 4900000, guid: bf35f418143430d4b8998e3a8b49cf27, type: 3}
+  - {fileID: 4900000, guid: 7179c90f19b203547aed3473ccec397f, type: 3}
+  - {fileID: 4900000, guid: 331981958592a2f40a900d407e40e851, type: 3}
+  - {fileID: 4900000, guid: b463d124d4c5744499c0b0e1e3dcb6a3, type: 3}
+  - {fileID: 4900000, guid: 6a2884ed8d15a3a4a9aef4b543253d58, type: 3}
+  - {fileID: 4900000, guid: d7d9be6c36a8551469aee133a9cc7d85, type: 3}
+  - {fileID: 4900000, guid: 4f80b1cd54cbf2e40b0007016e35e975, type: 3}
+  - {fileID: 4900000, guid: 967d3e7b0ad87cd4ba32e78e50f48dc3, type: 3}
+  - {fileID: 4900000, guid: 2865ff2b4cfda5047b944bdd6da64a1e, type: 3}
+  - {fileID: 4900000, guid: 8f05229ba32d4344f8ff9fb01bb2457f, type: 3}
+  albedo: {fileID: 18700000, guid: eb6c0d2fc5b4b91478514f4fa43e9368, type: 2}
+  metallic: {fileID: 18700000, guid: 95f83ff3580b05a439910bd864b4c18c, type: 2}
+  normal: {fileID: 18700000, guid: 89adf589308d37c41935f90272a1bce4, type: 2}
+  impostors: {fileID: 18700000, guid: d47c5fb04efd9cb4ba9d06bafdfe749d, type: 2}
+  unitBounds:
+  - {x: 3.4499998, y: 1.1999999, z: 0, w: 0}
+  - {x: 3.4499998, y: 1.1999999, z: 0, w: 0}
+  - {x: 3.4499998, y: 1.1999999, z: 0, w: 0}
+  - {x: 5.46, y: 0.8725, z: 0, w: 0}
+  - {x: 7.7999997, y: 0.8175, z: 0, w: 0}
+  - {x: 8.025, y: 1.045, z: 0, w: 0}
+  - {x: 11.925, y: 1.0806634, z: 0, w: 0}
+  - {x: 8.025, y: 1.045, z: 0, w: 0}
+  - {x: 7.7999997, y: 1.008375, z: 0, w: 0}
+  - {x: 9.896999, y: 1.045, z: 0, w: 0}
+  - {x: 7.7999997, y: 1.099, z: 0, w: 0}
+  - {x: 7.7999997, y: 0.93, z: 0, w: 0}
+  - {x: 7.7999997, y: 1.0550001, z: 0, w: 0}
+  - {x: 7.7999997, y: 1.58, z: 0, w: 0}
+  - {x: 14.990624, y: 0.536875, z: 0, w: 0}
+  - {x: 16.453125, y: 0.91400254, z: 0, w: 0}
+  - {x: 14.625, y: 0.47150254, z: 0, w: 0}
+  - {x: 14.990624, y: 0.51078737, z: 0, w: 0}
+  - {x: 16.453125, y: 0.92999995, z: 0, w: 0}
+  - {x: 14.990624, y: 0.57453126, z: 0, w: 0}
+  - {x: 17.16, y: 2.35, z: 0, w: 0}
+  - {x: 25.74, y: 2.35, z: 0, w: 0}
+  - {x: 34.32, y: 1.5, z: 0, w: 0}
+  - {x: 42.899998, y: 2.35, z: 0, w: 0}
+  - {x: 23.2947, y: 0.37625164, z: 0, w: 0}
+  - {x: 60.06, y: 2.35, z: 0, w: 0}
+  - {x: 77.22, y: 2.350096, z: 0, w: 0}
+  - {x: 85.799995, y: 1.1, z: 0, w: 0}
+  - {x: 7.7999997, y: 1.099, z: 0, w: 0}
+  - {x: 7.7999997, y: 1.77, z: 0, w: 0}
+  - {x: 7.7999997, y: 1.099, z: 0, w: 0}

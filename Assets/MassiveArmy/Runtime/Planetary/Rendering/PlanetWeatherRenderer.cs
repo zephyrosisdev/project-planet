@@ -44,9 +44,8 @@ namespace MassiveArmy.Planetary
             for(int i=VisibleBodies-1;i>at;i--){bodies[i]=bodies[i-1];distances[i]=distances[i-1];}bodies[at]=body;distances[at]=distance;}
         bool Properties(MaterialPropertyBlock block,PlanetDefinition body,UniversePosition observer,Camera view){
             var centre=body.position.RelativeTo(observer).Float;float outer=body.radius+body.atmosphereHeight,z=Vector3.Dot(centre,view.transform.forward),tan=Mathf.Tan(view.fieldOfView*Mathf.Deg2Rad*.5f),aspect=(float)width/height;
-            if(z+outer<=0)return false;Vector4 bounds=new Vector4(-1,-1,1,1);
-            if(centre.magnitude>outer*1.02f&&z>outer){float x=Vector3.Dot(centre,view.transform.right)/(z*tan*aspect),y=Vector3.Dot(centre,view.transform.up)/(z*tan),extent=outer/Mathf.Max(1,z-outer)/tan;
-                bounds=new Vector4(Mathf.Max(-1,x-extent/aspect),Mathf.Max(-1,y-extent),Mathf.Min(1,x+extent/aspect),Mathf.Min(1,y+extent));if(bounds.x>=bounds.z||bounds.y>=bounds.w)return false;}
+            var viewCentre=new Vector3(Vector3.Dot(centre,view.transform.right),Vector3.Dot(centre,view.transform.up),z);
+            if(!PlanetWeatherProjection.Bounds(viewCentre,outer,tan,aspect,out var bounds))return false;
             var settings=body.weather??(body.weather=new PlanetWeather());settings.Layer(body,out float bottom,out float thickness);float altitude=centre.magnitude-body.radius,near=settings.HasClouds?PlanetWeather.NearDetail(altitude,body.atmosphereHeight):0;
             if(near>0)VolumetricBodies++;if(body==world.definition)LocalAtmosphereDrawn=true;
             double clock=world.SystemRuntime?.Civilisation?.RenderTime??world.SystemRuntime?.WeatherTime??world.SimulationTicks*BattleSettings.Tick;float phase=(float)(clock*settings.windSpeed/body.radius%(Math.PI*2));uint seed=PlanetWeather.Hash(unchecked((uint)body.terrainSeed));

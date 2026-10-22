@@ -61,6 +61,8 @@ namespace MassiveArmy.Planetary
         public List<HouseholdState> households=new List<HouseholdState>();
         public List<EnterpriseState> enterprises=new List<EnterpriseState>();
         public CouncilState council=new CouncilState();
+        public CrimeState crime=new CrimeState();
+        public CivicSecurityState security=new CivicSecurityState();public List<DeathRecord> deaths=new List<DeathRecord>();
         public double civicFoodService,civicDrinksService,civicMedicineService,civicServiceSeconds;
         public int societyRevision;public long lastCivicDay=-1;
         public int population,housingCapacity,housedPopulation;public double growthProgress,foodDemand,foodSupplied,powerGeneration,powerDemand;
@@ -68,6 +70,8 @@ namespace MassiveArmy.Planetary
         public List<CargoVehicleState> cargoVehicles=new List<CargoVehicleState>();public List<CargoVehicleOrder> cargoOrders=new List<CargoVehicleOrder>();
     }
     [Serializable] public sealed class SurfaceInstallation {
+        public bool serviceEquipmentIssued;
+        public uint modularDoors;
         public int workersAssigned,workersRequired;
         public long id;public string definition;public Vector2 position;public int level=1;public double construction,health;public bool powered=true,paused;public string recipe;
         public ResourceInventory inventory=new ResourceInventory();public string crop;public double growth,soilFertility=.8;public int harvests;public bool planted;

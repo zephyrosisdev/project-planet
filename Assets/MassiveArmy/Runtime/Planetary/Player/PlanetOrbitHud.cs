@@ -34,6 +34,7 @@ namespace MassiveArmy.Planetary
         RtsUiController pilotUi;VisualElement flightPanel,landingPanel;Label orbitalDockLabel,statusLabel,readoutLabel,progradeLabel,peLabel,apLabel,weaponLabel,landingLabel,landingInfo;
         RtsUiDrawing mapDrawing,progradeDrawing,landingDrawing;bool pilotVisible;
         internal void SetPilotRenderTarget(RenderTexture target)=>pilotUi.SetRenderTarget(target);
+        internal VisualElement PilotRootForValidation=>pilotUi.Root;
         void InitializePilotHud(){pilotUi=new RtsUiController(hull.transform,BuildPilotHud,UpdatePilotHud,()=>active);pilotUi.Attach();}
         Label PilotLabel(VisualElement parent,string text,int size=14){var label=new Label(text);label.style.fontSize=size;label.style.color=Color.white;label.style.whiteSpace=WhiteSpace.Normal;label.pickingMode=PickingMode.Ignore;parent.Add(label);return label;}
         void BuildPilotHud(VisualElement root)
@@ -45,11 +46,11 @@ namespace MassiveArmy.Planetary
             peLabel=PilotLabel(mapDrawing,"Pe",12);apLabel=PilotLabel(mapDrawing,"Ap",12);peLabel.style.position=apLabel.style.position=UnityEngine.UIElements.Position.Absolute;
             PilotLabel(flightPanel,"Orbit-plane map · white = ship · clipped at edge",12);
             orbitalDockLabel=PilotLabel(flightPanel,"",12);orbitalDockLabel.style.color=new Color(.2f,1,.7f);readoutLabel=PilotLabel(flightPanel,"");readoutLabel.style.marginTop=12;readoutLabel.style.whiteSpace=WhiteSpace.NoWrap;
-            var note=PilotLabel(flightPanel,$"Left mouse: rockets (45 s fail-safe).\nSpace: land / take off · R/C: climb.\nHold K: {CruiseSpeedReadout} in space · J: dock.\nV: flight assist · L: orbital coast.\nGreen outline: valid assisted landing site.\nOrbit map: coasting reference (assist off).",12);note.style.marginTop=14;
+            var note=PilotLabel(flightPanel,$"Left mouse: rockets (45 s fail-safe).\nSpace: land / take off · R/C: climb.\nHold K: {CruiseSpeedReadout} in space · J: dock.\nV: flight assist · L: orbital coast.\nGreen outline: valid assisted landing site.\nBlue: local two-body orbit reference.\nGreen: gravity forecast (coast only).",12);note.style.marginTop=14;
             landingPanel=new VisualElement{pickingMode=PickingMode.Ignore};landingPanel.style.position=UnityEngine.UIElements.Position.Absolute;landingPanel.style.left=16;landingPanel.style.bottom=90;landingPanel.style.width=340;landingPanel.style.paddingLeft=14;landingPanel.style.paddingRight=14;landingPanel.style.paddingTop=12;landingPanel.style.paddingBottom=12;landingPanel.style.backgroundColor=new Color(.025f,.06f,.08f,.9f);root.Add(landingPanel);
             landingLabel=PilotLabel(landingPanel,"",15);landingInfo=PilotLabel(landingPanel,"",12);landingDrawing=new RtsUiDrawing();landingDrawing.style.height=90;landingDrawing.style.width=300;landingPanel.Add(landingDrawing);PilotLabel(landingPanel,"Landing approach · side view",11);
             progradeDrawing=new RtsUiDrawing();progradeDrawing.style.position=UnityEngine.UIElements.Position.Absolute;progradeDrawing.StretchToParentSize();root.Add(progradeDrawing);progradeLabel=PilotLabel(root,"PROGRADE",12);progradeLabel.style.position=UnityEngine.UIElements.Position.Absolute;
-            pilotVisible=!active;nextOrbitRefresh=0;UpdatePilotHud();
+            BuildFlightInstruments(root);pilotVisible=!active;nextOrbitRefresh=0;UpdatePilotHud();
         }
         void MapLine(Vector2 a,Vector2 b,Color color)=>mapDrawing.Lines.Add((a,b,color));
         void MapDot(Vector2 p,Color color){MapLine(p+Vector2.left*3,p+Vector2.right*3,color);MapLine(p+Vector2.up*3,p+Vector2.down*3,color);}
@@ -79,8 +80,8 @@ namespace MassiveArmy.Planetary
             orbitalDockLabel.text=DockingStatus;weaponLabel.text=$"ROCKETS {ActiveRockets}/{RocketCapacity} AIRBORNE · {(ActiveRockets>=RocketCapacity?"WAIT FOR DETONATION":fireDelay>0?"RELOADING":"READY")}";
             if(orbitReadout==null||Time.unscaledTime>=nextOrbitRefresh){RefreshOrbit();nextOrbitRefresh=Time.unscaledTime+.2f;statusLabel.text=orbitStatus;statusLabel.style.color=FlightAssistEnabled&&!Landed?new Color(.25f,1,.75f):orbitColor;readoutLabel.text=orbitReadout;UpdateOrbitMap();}
             progradeDrawing.Lines.Clear();var sight=new Vector2(pilotUi.Root.resolvedStyle.width*.5f,pilotUi.Root.resolvedStyle.height*.5f);progradeDrawing.Lines.Add((sight+Vector2.left*5,sight+Vector2.right*5,Color.green));progradeDrawing.Lines.Add((sight+Vector2.up*5,sight+Vector2.down*5,Color.green));var hudVelocity=HudVelocity();progradeLabel.style.display=hudVelocity.Magnitude>1?DisplayStyle.Flex:DisplayStyle.None;
-            if(hudVelocity.Magnitude>1&&pilotUi.Root.resolvedStyle.width>0&&pilotUi.Root.resolvedStyle.height>0){var v=camera.transform.InverseTransformDirection(hudVelocity.Float.normalized);var c=new Vector2(pilotUi.Root.resolvedStyle.width*.5f,pilotUi.Root.resolvedStyle.height*.5f);Vector2 marker=c+new Vector2(v.x,-v.y)*90;var color=v.z>=0?Color.green:new Color(1,.6f,.2f);progradeDrawing.Lines.Add((marker+Vector2.left*9,marker+Vector2.right*9,color));progradeDrawing.Lines.Add((marker+Vector2.up*9,marker+Vector2.down*9,color));progradeLabel.style.left=marker.x+12;progradeLabel.style.top=marker.y-12;progradeLabel.text=v.z>=0?"PROGRADE":"PROGRADE AFT";progradeLabel.style.color=color;}
-            progradeDrawing.MarkDirtyRepaint();
+            if(hudVelocity.Magnitude>1&&pilotUi.Root.resolvedStyle.width>0&&pilotUi.Root.resolvedStyle.height>0){var v=camera.transform.InverseTransformDirection(hudVelocity.Float.normalized);var c=new Vector2(pilotUi.Root.resolvedStyle.width*.5f,pilotUi.Root.resolvedStyle.height*.5f);float focal=c.y/Mathf.Tan(camera.fieldOfView*Mathf.Deg2Rad*.5f);var offset=new Vector2(v.x,-v.y)*(focal/Mathf.Max(.01f,Mathf.Abs(v.z)));if(v.z<0&&offset.sqrMagnitude<1)offset=Vector2.down*c.y;float limitX=Mathf.Max(80,c.x-420),limitY=Mathf.Max(80,c.y-140);float edge=Mathf.Max(1,Mathf.Max(Mathf.Abs(offset.x)/limitX,Mathf.Abs(offset.y)/limitY));Vector2 marker=c+offset/edge;var color=v.z>=0?Color.green:new Color(1,.6f,.2f);progradeDrawing.Lines.Add((marker+Vector2.left*9,marker+Vector2.right*9,color));progradeDrawing.Lines.Add((marker+Vector2.up*9,marker+Vector2.down*9,color));progradeLabel.style.left=marker.x+12;progradeLabel.style.top=marker.y-12;progradeLabel.text=v.z>=0?"PROGRADE":"PROGRADE AFT";progradeLabel.style.color=color;}
+            UpdateFlightInstruments(sight);progradeDrawing.MarkDirtyRepaint();
         }
     }
 }

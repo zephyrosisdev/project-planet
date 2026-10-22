@@ -37,7 +37,7 @@ namespace MassiveArmy.Planetary {
             }return false;
         }
         public int UnlockedFreightTier(PlanetRtsBase local,int team,bool sea,bool rail=false){string prefix=rail?"civil_heavy_rail":sea?"civil_bulk_shipping":"civil_heavy_airlift";return local.Factions[team].HasTech(prefix+"_3")?3:local.Factions[team].HasTech(prefix+"_2")?2:1;}
-        public bool UpgradeCarrier(PlanetRtsBase local,int team,long id){var colony=local.Settlements?[team];var vehicle=colony?.cargoVehicles.Find(v=>v.id==id);if(vehicle==null||vehicle.phase!=CargoVehiclePhase.Idle||vehicle.loaded>1e-6||vehicle.upgradeRemaining>0)return false;
+        public bool UpgradeCarrier(PlanetRtsBase local,int team,long id){var colony=local.Settlements?[team];var vehicle=colony?.cargoVehicles.Find(v=>v.id==id);if(vehicle==null||vehicle.funeral||vehicle.phase!=CargoVehiclePhase.Idle||vehicle.loaded>1e-6||vehicle.upgradeRemaining>0)return false;
             int tier=vehicle.freight?UnlockedFreightTier(local,team,vehicle.seaborne,vehicle.train):1;int currentTier=Math.Clamp(vehicle.tier,1,3),level=Math.Clamp(vehicle.level,1,3);if(tier<=currentTier&&level>=3)return false;
             double cost=(vehicle.freight?240:80)*(tier>currentTier?currentTier+1:level);if(Find(colony,vehicle.warehouse)?.inventory.Spend("construction_materials",cost)!=true)return false;
             vehicle.pendingTier=tier>currentTier?currentTier+1:currentTier;vehicle.pendingLevel=tier>currentTier?level:level+1;vehicle.upgradeRemaining=30;return true;

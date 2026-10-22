@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 277d9b4b2de052b48ad20bd230437be2, type: 3}
+  m_Name: DefaultKit
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.ModularBuildingKit
+  material: {fileID: 2100000, guid: 9e6dde3902ff83349a74a6a75e9609d0, type: 2}
+  glassMaterial: {fileID: 2100000, guid: f46313ecceaa480439dca40695908b0f, type: 2}
+  modules:
+  - id: wall-1m
+    kind: 0
+    size: {x: 1, y: 3.2, z: 0.2}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: wall-2m
+    kind: 0
+    size: {x: 2, y: 3.2, z: 0.2}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: wall-4m
+    kind: 0
+    size: {x: 4, y: 3.2, z: 0.2}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: door-1m
+    kind: 1
+    size: {x: 1, y: 2.3, z: 0.09}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: door-wide
+    kind: 1
+    size: {x: 2.4, y: 2.3, z: 0.09}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: window-1m
+    kind: 2
+    size: {x: 1, y: 1.3, z: 0.025}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: window-2m
+    kind: 2
+    size: {x: 2, y: 1.3, z: 0.025}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: window-3m
+    kind: 2
+    size: {x: 3, y: 1.3, z: 0.025}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: floor
+    kind: 3
+    size: {x: 2, y: 0.12, z: 2}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: stairs
+    kind: 4
+    size: {x: 1.8, y: 3.2, z: 4.8}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: garden-wall
+    kind: 5
+    size: {x: 2, y: 1.2, z: 0.2}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: pillar
+    kind: 6
+    size: {x: 0.2, y: 3.2, z: 0.2}
+    mesh: {fileID: 0}
+    colour: {r: 1, g: 1, b: 1, a: 1}
+  - id: grave-marker
+    kind: 6
+    size: {x: 0.65, y: 0.9, z: 0.18}
+    mesh: {fileID: 0}
+    colour: {r: 0.5, g: 0.51, b: 0.49, a: 1}

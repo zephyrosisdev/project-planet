@@ -4,7 +4,7 @@ using UnityEngine.UIElements;
 namespace MassiveArmy.Planetary {
     public sealed partial class PlanetRtsHud {
         bool residentsView;int residentPage;
-        void OpenResidents(){orbitalsView=false;residentsView=true;resourcesView=false;if(civilisationOpen)civilisationOpen=false;ToggleCivilisation();}
+        void OpenResidents(){crimeView=false;orbitalsView=false;residentsView=true;resourcesView=false;if(civilisationOpen)civilisationOpen=false;ToggleCivilisation();}
         void HouseholdContext(VisualElement parent,RtsBuilding building){
             var colony=world.Settlements?[building.team];if(colony==null||building.definition.housingCapacity<=0)return;
             var h=colony.households.Find(x=>x.home==building.persistentId);if(h==null){Label(parent,"VACANT FAMILY HOME · up to six residents","body");return;}
@@ -24,8 +24,10 @@ namespace MassiveArmy.Planetary {
             for(int i=start;i<end;i++){var p=colony.residents[i];if(!p.alive)continue;var h=CivilisationRuntime.Family(colony,p.household);var job=CivilisationRuntime.SocietyBuilding(world,p.workplace);
                 Label(civilisationContent,$"{p.name} · age {(int)p.age} · {(p.age<18?"Child":p.role.ToString())} · {simulation.Routine(colony,p,simulation.SimulationTime)}","subheading").name="resident-"+p.id;
                 Label(civilisationContent,$"{h?.surname} family · {h?.tenure} · {(h?.home>0?"Home #"+h.home:"Awaiting a home")}\n{p.relationship} · {p.background} · education {p.education:P0} · reputation {p.reputation:P0}\n{(p.age<18?"School / dependent":job?.definition.name??"Available for work")} · wage {p.wage:0.00}/day · last pay {p.lastPay:0.00} · savings {p.savings:0.00}","body");
+                SettlementCrimeView.Resident(civilisationContent,colony,p,Observer);
                 if(job!=null)Label(civilisationContent,$"Shift {simulation.WorkStart(p):00.0}–{simulation.WorkStart(p)+8:00.0}h · walks via connected roads","muted");
             }
+            RecentDeaths(civilisationContent,colony,20);
             Label(civilisationContent,"LOCAL BUSINESSES","subheading");foreach(var e in colony.enterprises)Label(civilisationContent,$"{e.name} · cash {e.balance:0.00} · payroll {e.wagesPaid:0.00} · sales {e.sales:0.00}","muted");
             ((ScrollView)civilisationContent).scrollOffset=new Vector2(0,scroll);
         }

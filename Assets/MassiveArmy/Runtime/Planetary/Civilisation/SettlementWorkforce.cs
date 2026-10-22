@@ -7,12 +7,12 @@ namespace MassiveArmy.Planetary {
         internal static int ConstructionPriority(RtsBuilding building)=>!building.Complete?(RecoveryEssential(building.definition)?0:building.definition.housingCapacity>0?1:2):3;
         internal static int WorkerPriority(BuildingDefinition d){
             if(d.extractedResource=="water"||d.id.StartsWith("civil_farm_")||d.id=="civil_food_processing"||d.id=="civil_hydroponics"||d.id=="civil_beef_shed"||d.id=="civil_butcher")return 0;
-            if(d.extraction>0||Backbone(d))return 1;
+            if(d.id==PoliceHeadquarters||d.id==Graveyard||d.extraction>0||Backbone(d))return 1;
             if(d.id.StartsWith("civil_"))return 2;
             return 3;
         }
         internal static void AllocateWorkers(PlanetRtsBase local,ColonyState colony,int team){
-            int adults=0;foreach(var person in colony.residents)if(person.alive&&person.age>=18&&person.age<75)adults++;
+            int adults=0;foreach(var person in colony.residents)if(person.alive&&!Confined(person)&&person.age>=18&&person.age<75)adults++;
             colony.workforce=Math.Max(0,Math.Min(colony.population,colony.residents.Count==0?colony.population:adults));colony.employed=colony.workerDemand=colony.plannedWorkerDemand=0;
             foreach(var b in local.Buildings){if(b.team!=team||b.removed)continue;
                 b.WorkersAssigned=0;b.WorkforceEfficiency=b.definition.workers==0?1:0;

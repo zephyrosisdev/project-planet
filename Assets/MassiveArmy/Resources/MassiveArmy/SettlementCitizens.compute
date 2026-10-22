@@ -3,6 +3,13 @@
 #pragma kernel BuildFlows
 #pragma kernel Walk
 #pragma kernel CopyWalkers
+#pragma kernel DrainDeaths
+#pragma kernel AcknowledgeDeaths
+#include "SettlementCivic.hlsl"
+RWStructuredBuffer<CivicAgent> _CivicStates;StructuredBuffer<CivicAgent> _PreviousCivic;
+StructuredBuffer<uint> _PatrolGoals;
+struct DeathEvent {uint slot,generation,cause,tick;float4 body;};
+RWStructuredBuffer<DeathEvent> _DeathEvents;StructuredBuffer<uint2> _Acknowledgements;uint _AcknowledgementCount;
 struct Node {float4 position;int4 neighbours;};
 struct Goal {int node,team,active,pad;};
 struct Order {uint home,target,team,model;float4 parameters;};
@@ -24,12 +31,20 @@ uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount,_StorageWidth
   for(uint edge=0;edge<4;edge++){int other=links[edge];if(other<0||other>=(int)_NodeCount||_Nodes[other].position.w!=goal.team||_Parents[offset+other]!=INVALID)continue;_Parents[offset+other]=node;_Queue[offset+search.y++]=(uint)other;}
  }_Search[g]=search;
 }
-[numthreads(128,1,1)] void CopyWalkers(uint3 id:SV_DispatchThreadID){if(id.x<_WalkerCount){Walker w=(Walker)0;if(id.x<_PreviousCount)w=_PreviousWalkers[id.x];_Walkers[id.x]=w;}}
-[numthreads(128,1,1)] void Walk(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount)return;Order order=_Orders[i];Walker w=_Walkers[i];Pose pose=(Pose)0;
- if(order.parameters.w<0||order.home>=_NodeCount||order.target>=_GoalCount){_CargoPoses[i]=pose;return;}
+[numthreads(128,1,1)] void CopyWalkers(uint3 id:SV_DispatchThreadID){if(id.x<_WalkerCount){Walker w=(Walker)0;if(id.x<_PreviousCount)w=_PreviousWalkers[id.x];_Walkers[id.x]=w;CivicAgent c=(CivicAgent)0;if(id.x<_PreviousCount)c=_PreviousCivic[id.x];_CivicStates[id.x]=c;}}
+[numthreads(128,1,1)] void Walk(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount)return;Order order=_Orders[i];Walker w=_Walkers[i];Pose pose=(Pose)0;CivicAgent civic=_CivicStates[i];
+ if(civic.generation!=(uint)order.parameters.x){civic=(CivicAgent)0;civic.health=100;civic.generation=(uint)order.parameters.x;w=(Walker)0;}
+ uint supply=(uint)order.parameters.z;civic.flags=(civic.flags&65535u)|((supply>>2)<<16);civic.pad=(civic.pad&~1u)|((supply>>1)&1u);
+ if(order.parameters.y==5){civic.pad=(supply>>2)<<1;civic.flags&=~6144u;}else civic.flags&=~1024u;
+ if(civic.health==0&&(civic.flags&512u)!=0){float3 up=normalize(civic.body.xyz),right=normalize(cross(up,abs(up.y)>.95?float3(1,0,0):float3(0,1,0))),front=cross(right,up);pose.position=float4(civic.body.xyz+up*.12,1);pose.up=float4(front*.9,0);pose.right=float4(right,0);pose.forward=float4(up,0);pose.properties=float4(order.model,order.team,0,distance(_CameraBody,civic.body.xyz)<_DrawRange?1:0);_CargoPoses[i]=pose;_CivicStates[i]=civic;uint slot;if(pose.properties.w>0){InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
+ if(order.parameters.y==5&&(civic.flags&1024u)!=0){pose=_CargoPoses[i];_CivicStates[i]=civic;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
+ if((supply&1u)==0||civic.health==0){civic.flags&=~1u;_CivicStates[i]=civic;_CargoPoses[i]=pose;return;}
+ bool patrol=order.parameters.y==1;uint stopCount=_PatrolGoals[order.team*9];if(patrol&&stopCount>0)order.target=_PatrolGoals[order.team*9+1+civic.patrolIndex%stopCount];
+ civic.flags=(civic.flags&~2u)|(patrol?2u:0u);
+ if(order.parameters.w<0||order.home>=_NodeCount||order.target>=_GoalCount){_CivicStates[i]=civic;_CargoPoses[i]=pose;return;}
  if(w.initialised==0){w.position=_Nodes[order.home].position;w.node=w.next=order.home;w.initialised=1;}
- if(distance(_CameraBody,w.position.xyz)>_DrawRange*1.5){_CargoPoses[i]=pose;_Walkers[i]=w;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
- if(w.node>=_NodeCount){_CargoPoses[i]=pose;return;}float remaining=min(_Delta,.25)*_Speed;float3 forward=0;bool moving=false;uint goal=_Goals[order.target].node;bool entered=false;
+ if(!patrol&&distance(_CameraBody,w.position.xyz)>_DrawRange*1.5){_CargoPoses[i]=pose;_Walkers[i]=w;_CivicStates[i]=civic;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
+ if(w.node>=_NodeCount){_CivicStates[i]=civic;_CargoPoses[i]=pose;return;}float remaining=(civic.flags&(8u|1024u))!=0?0:min(_Delta,.25)*_Speed*((civic.flags&2048u)!=0?1.8:1);float3 forward=0;bool moving=false;uint goal=_Goals[order.target].node;bool entered=false;
  // Retarget at road junctions, preserving GPU position mid-edge. Never teleport on a changed job or time of day.
  for(uint hop=0;hop<8;hop++){
   if(w.next==w.node){uint next=_Parents[order.target*_NodeStride+w.node];if(next==INVALID||next==w.node)break;w.next=next;}
@@ -42,8 +57,12 @@ uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount,_StorageWidth
  // Deterministic lane offset separates pedestrians from the cargo lane without CPU transforms.
  float lane=_SidewalkOffset+(((i*1664525u+1013904223u)&255)/255.0-.5)*.6;
  pose.position=float4(w.position.xyz+right*lane-up*.8,1);float scale=order.parameters.w;pose.up=float4(up*scale,0);pose.forward=float4(f*scale,0);pose.right=float4(right*scale,0);
- float visible=order.parameters.z>0&&distance(_CameraBody,w.position.xyz)<_DrawRange&&dot(normalize(_CameraBody),up)>.0?1:0;
+ float visible=(supply&1u)!=0&&distance(_CameraBody,w.position.xyz)<_DrawRange&&dot(normalize(_CameraBody),up)>.0?1:0;
  for(uint plane=0;plane<6;plane++)if(dot(_Frustum[plane].xyz,pose.position.xyz)+_Frustum[plane].w < -2)visible=0;
  // Residents disappear inside their home/workplace at arrival; walking meshes stay visible on the road.
- pose.properties=float4(order.model,order.team,moving?_Clock*8+i:0,visible*(w.node==goal&&w.next==w.node?0:1));_CargoPoses[i]=pose;_Walkers[i]=w;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}
+ bool outside=patrol||order.parameters.y==3||order.parameters.y==4||w.node!=goal||w.next!=w.node;civic.body=float4(pose.position.xyz,0);civic.flags=(civic.flags&~1u)|(outside?1u:0u);if(patrol&&stopCount>1&&w.node==goal&&w.next==w.node)civic.patrolIndex=(civic.patrolIndex+1)%stopCount;
+ pose.properties=float4(order.model,order.team,moving?_Clock*8+i:0,visible*(outside?1:0));_CargoPoses[i]=pose;_Walkers[i]=w;_CivicStates[i]=civic;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}
 }
+
+[numthreads(128,1,1)]void DrainDeaths(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount)return;CivicAgent c=_CivicStates[i];if(c.generation==0||c.health!=0||(c.flags&4u)!=0)return;uint slot;InterlockedAdd(_DeathEvents[0].slot,1,slot);if(slot>=256)return;DeathEvent e;e.slot=i;e.generation=c.generation;e.cause=0;e.tick=c.lastHitTick;e.body=c.body;_DeathEvents[slot+1]=e;}
+[numthreads(128,1,1)]void AcknowledgeDeaths(uint3 id:SV_DispatchThreadID){if(id.x>=_AcknowledgementCount)return;uint2 a=_Acknowledgements[id.x];CivicAgent c=_CivicStates[a.x];if(c.generation==a.y&&c.health==0){c.flags|=4u;_CivicStates[a.x]=c;}}

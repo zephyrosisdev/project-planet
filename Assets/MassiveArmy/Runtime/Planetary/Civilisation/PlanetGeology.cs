@@ -9,7 +9,7 @@ namespace MassiveArmy.Planetary
             foreach(var node in Nodes){string resource=node.resource==ResourceKind.Materials?"iron":node.resource==ResourceKind.Fuel?"hydrogen":node.resource==ResourceKind.RareElements?"rare_earth":"uranium";float richness=(float)profile.LocalAbundance(resource,CubeSphere.Decode(node.position),fixture.definition.terrainSeed);node.quality=richness;node.rateMultiplier=Mathf.Max(civilisation.Settings.geologicalMinimumEfficiency,richness*2);}
             var elements=System.Array.FindAll(civilisation.Catalogue.resources,element=>element.element&&profile.Get(element.id)>0);
             if(elements.Length==0)return;
-            for(int team=0;team<2;team++){
+            for(int team=0;team<Factions.Length;team++){
                 if(team==1&&fixture.sessionMode==PlanetGameMode.Swarm)continue;
                 for(int at=0;at<civilisation.Settings.geologicalDepositsPerFaction;at++){
                     var element=elements[at%elements.Length];int reserve=at/elements.Length;
@@ -36,7 +36,7 @@ namespace MassiveArmy.Planetary
             var d=Catalog.Buildings[id];if(d.terrain!=TerrainRule.Node||d.nodes.Length==0)return false;
             // A usable, unclaimed local prospect must be developed before surveying another.
             foreach(var node in Nodes)if(node.claimedBy<0&&node.remaining>0&&Array.IndexOf(d.nodes,node.kind)>=0&&string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)){
-                var direction=CubeSphere.Decode(node.position);if(Distance(direction,Homes[team])<=Distance(direction,Homes[1-team])&&!ResourceSiteCooling(id,team,node.id)&&Validate(d,direction,0,false,team).valid)return false;
+                var direction=CubeSphere.Decode(node.position);if(OwnDeposit(team,direction)&&!ResourceSiteCooling(id,team,node.id)&&Validate(d,direction,0,false,team).valid)return false;
             }
             var planet=Civilisation.Planet(fixture.definition.bodyId);var survey=planet.frontierSurveys.Find(s=>s.team==team&&s.resource==id);
             if(survey==null){survey=new FrontierSurvey{team=team,resource=id};planet.frontierSurveys.Add(survey);}

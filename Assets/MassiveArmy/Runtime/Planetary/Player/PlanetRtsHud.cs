@@ -91,7 +91,7 @@ namespace MassiveArmy.Planetary
             constructionTab.AddToClassList("construction-tab");ui.Block(constructionTab);
             drawerLeft=buildOpen?40:-400;UpdateConstructionDrawer(true);SetConstructionOpen(buildOpen);
             MakeMap();BuildResourceHover();context=front.Q("context");Refresh();
-            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.AddToClassList("settlement-toolbar");front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"ORBITALS",OpenOrbitals,"orbitals-open");Button(toolbar,"RESIDENTS",OpenResidents,"residents-open");Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",ToggleCivilisation,"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"RESEARCH",()=>Dispatch("tech"),"tech");Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
+            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.AddToClassList("settlement-toolbar");front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"ORBITALS",OpenOrbitals,"orbitals-open");Button(toolbar,"RESIDENTS",OpenResidents,"residents-open");Button(toolbar,"CRIME",OpenCrime,"crime-open");Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",()=>{crimeView=orbitalsView=residentsView=resourcesView=false;ToggleCivilisation();},"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"RESEARCH",()=>Dispatch("tech"),"tech");Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
 
         }
 
@@ -189,6 +189,7 @@ namespace MassiveArmy.Planetary
             void Mark(Vector2 p,Color color,float r){mapDrawing.Lines.Add((p+Vector2.left*r,p+Vector2.right*r,color));mapDrawing.Lines.Add((p+Vector2.up*r,p+Vector2.down*r,color));}
 
             foreach(var building in world.Buildings)Mark(Point(CubeSphere.Decode(building.position)),Color.cyan,2);
+            if(crimeMap&&world.Settlements!=null){int marked=0;var colony=world.Settlements[Observer?inspectedFaction:0];if(colony?.crime!=null)for(int i=colony.crime.cases.Count-1;i>=Math.Max(0,colony.crime.cases.Count-256)&&marked<32;i--){var incident=colony.crime.cases[i];if(!SettlementCrimeView.Visible(incident,Observer)||incident.closed)continue;Mark(Point(CubeSphere.Decode(incident.place)),new Color(1,.4f,.05f),4);marked++;}}
             var rig=fixture.Rig;var focus=rig.FocusDirection.normalized;var centre=Point(focus);Mark(centre,Color.yellow,4);
             // A fixed-size heading arrow stays legible when a street-level view is smaller than one atlas pixel.
             var heading=Vector3.ProjectOnPlane(rig.transform.forward,focus).normalized;
@@ -229,9 +230,9 @@ namespace MassiveArmy.Planetary
 
         {
 
-            context.Clear();queueStatus=null;var building=world.Selected;context.style.display=building==null?DisplayStyle.None:DisplayStyle.Flex;layout.Actions["context-reopen"].SetEnabled(building!=null);if(building==null)return;
+            context.Clear();queueStatus=null;var building=world.Selected;context.style.display=building==null&&world.SelectedHearse==null?DisplayStyle.None:DisplayStyle.Flex;layout.Actions["context-reopen"].SetEnabled(building!=null||world.SelectedHearse!=null);if(building==null){if(world.SelectedHearse!=null)HearseContext(context,world.SelectedHearse);return;}
 
-            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(world.Civilisation!=null){Label(context,"DISTRICT · "+building.definition.district,"muted");HouseholdContext(context,building);if(building.roadSuspended)Label(context,"Road access blocked · suspended while another route is planned","muted");}
+            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(world.Civilisation!=null){Label(context,"DISTRICT · "+building.definition.district,"muted");HouseholdContext(context,building);CivicSecurityContext(context,building);if(building.roadSuspended)Label(context,"Road access blocked · suspended while another route is planned","muted");}
 
             var portrait=new Image{image=art?.Find("building",building.definition.id)?.portrait,scaleMode=ScaleMode.ScaleToFit};portrait.AddToClassList("portrait-large");context.Add(portrait);
 

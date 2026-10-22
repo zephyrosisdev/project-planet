@@ -8,9 +8,9 @@ namespace MassiveArmy.Planetary
     // Army movement and combat remain GPU-only. Placement work is capped per decision.
     public sealed partial class PlanetRtsBase
     {
-        public readonly int[] AIDecisions=new int[2];
-        public readonly string[] AIActivity={"Starting","Starting"};
-        readonly float[] nextThink={2,4};float strategyTime;
+        public readonly int[] AIDecisions=new int[PlanetCountries.Maximum];
+        public readonly string[] AIActivity=Enumerable.Repeat("Starting",PlanetCountries.Maximum).ToArray();
+        readonly float[] nextThink=new float[PlanetCountries.Maximum];float strategyTime;
         bool playerAutoPilot;
         public bool AutoPilotEnabled=>Civilisation?.State.Faction(0)?.autonomous??playerAutoPilot;
         internal bool BaseAIEnabled(int team)=>Civilisation?.State.Faction(team)?.autonomous??(team==0?playerAutoPilot||fixture.sessionMode==PlanetGameMode.AiTest:fixture.sessionMode!=PlanetGameMode.Swarm);
@@ -45,7 +45,7 @@ namespace MassiveArmy.Planetary
         readonly Dictionary<(int,string,int),double> resourceSiteRetries=new Dictionary<(int,string,int),double>();
         internal bool ResourceSiteCooling(string id,int team,int node)=>Civilisation!=null&&resourceSiteRetries.TryGetValue((team,id,node),out double until)&&Civilisation.SimulationTime<until;
         bool BuildAI(string id,int team,int cycle){var d=Catalog.Buildings[id];var f=Factions[team];if(f.tier<d.tier||!f.HasTech(d.requiredTech))return false;
-            if(d.terrain==TerrainRule.Node){foreach(var node in Nodes.Where(n=>n.claimedBy<0&&n.remaining>0&&Array.IndexOf(d.nodes,n.kind)>=0&&string.Equals(n.elementId??"",d.extractedResource??"",StringComparison.Ordinal)).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position))))if((Civilisation==null||Distance(Homes[team],CubeSphere.Decode(node.position))<=Distance(Homes[1-team],CubeSphere.Decode(node.position)))&&!ResourceSiteCooling(id,team,node.id)){
+            if(d.terrain==TerrainRule.Node){foreach(var node in Nodes.Where(n=>n.claimedBy<0&&n.remaining>0&&Array.IndexOf(d.nodes,n.kind)>=0&&string.Equals(n.elementId??"",d.extractedResource??"",StringComparison.Ordinal)).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position))))if((Civilisation==null||OwnDeposit(team,CubeSphere.Decode(node.position)))&&!ResourceSiteCooling(id,team,node.id)){
                 if(ConstructForTeam(id,team,CubeSphere.Decode(node.position)))return true;
                 if(Civilisation!=null&&f.wallet.CanAfford(d.cost))resourceSiteRetries[(team,id,node.id)]=Civilisation.SimulationTime+60;
             }return false;}
@@ -56,7 +56,7 @@ namespace MassiveArmy.Planetary
         static readonly string[] orbitalResearchPath={"civil_industry","civil_rocketry","civil_tracking","civil_refining","civil_satellites","civil_astronomy","civil_spectroscopy","civil_communications","civil_probes","civil_navigation","civil_mining","civil_colonisation","civil_logistics","civil_orbital_construction"};
         int ResearchPriority(string id){int rank=Array.IndexOf(orbitalResearchPath,id);return rank<0?orbitalResearchPath.Length:rank;}
         void ThinkPlanetAI(float dt){if(!fixture.StrategyEnabled)return;strategyTime+=dt;
-            for(int team=0;team<2;team++){if(!BaseAIEnabled(team)||strategyTime<nextThink[team])continue;nextThink[team]=strategyTime+4;int cycle=++AIDecisions[team];var f=Factions[team];var owned=Buildings.Where(b=>b.team==team&&!b.removed).ToArray();var command=owned.FirstOrDefault(b=>b.definition.id=="command");if(command==null){AIActivity[team]="Command lost";continue;}bool Has(string id)=>HasProductiveBuilding(id,team);
+            for(int team=0;team<Factions.Length;team++){if(!BaseAIEnabled(team)||strategyTime<nextThink[team])continue;nextThink[team]=strategyTime+4;int cycle=++AIDecisions[team];var f=Factions[team];var owned=Buildings.Where(b=>b.team==team&&!b.removed).ToArray();var command=owned.FirstOrDefault(b=>b.definition.id=="command");if(command==null){AIActivity[team]="Command lost";continue;}bool Has(string id)=>HasProductiveBuilding(id,team);
                 foreach(var b in owned)if(b.Complete&&b.health<b.MaxHealth*.9f)b.repairing=AiCanSpend(team,new ResourceCost{materials=1});
                 bool built=false;AIActivity[team]="Developing economy and production";
                 if(Civilisation==null&&!Has("mine"))built=BuildAI("mine",team,cycle);

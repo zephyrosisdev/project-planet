@@ -91,6 +91,9 @@ Shader "MassiveArmy/Planet weather" {
    colour+=transmission*a*lit*3;transmission*=1-a;
   }return float4(colour,1-transmission);
  }
+ // Keep a small amount of night-time transmission for city lights. This
+ // affects cloud extinction only; existing opaque depth still bounds the ray.
+ float4 NightCloud(float4 cloud,float3 p){float cap=lerp(1,.88,1-Day(p));float scale=min(1,cap/max(.00001,cloud.a));return cloud*scale;}
  float4 Clouds(float3 ray,float begin,float stop,float jitter){
   if(_WeatherCloud.w<.5)return 0;float bottom=1+_WeatherAtmosphere.z,top=bottom+_WeatherAtmosphere.w;float2 outer,inner;
   if(!Sphere(ray,top,outer))return 0;float start=max(begin,outer.x),end=min(stop,outer.y);
@@ -106,7 +109,7 @@ Shader "MassiveArmy/Planet weather" {
   float middlePath=distance*.5,middle=start+middlePath+(middlePath>=first?gap:0);
   float3 middlePoint=ray*middle-_WeatherCentre,up=normalize(middlePoint);float mask=Coverage(up);
   float farAlpha=1-exp(-mask*_WeatherCloud.y*distance*.58);float4 farCloud=float4(CloudLight(middlePoint,.65,ray)*farAlpha,farAlpha);
-  [branch]if(_WeatherCloud.z<=.001)return farCloud;
+  [branch]if(_WeatherCloud.z<=.001)return NightCloud(farCloud,middlePoint);
   float transmission=1,step=distance/12;float3 colour=0;
   [loop]for(int i=0;i<12;i++){
    float path=(i+jitter)*step,t=start+path+(path>=first?gap:0);float3 p=ray*t-_WeatherCentre;float layer=saturate((length(p)-bottom)/_WeatherAtmosphere.w);
@@ -115,7 +118,7 @@ Shader "MassiveArmy/Planet weather" {
    float erosion=Noise(detail)*.65+Noise(detail*2.1)*.35;float density=saturate(cover-erosion*.42*_WeatherCloud.z)*vertical;
    float a=1-exp(-density*_WeatherCloud.y*step);colour+=transmission*a*CloudLight(p,layer,ray);transmission*=1-a;if(transmission<.015)break;
   }
-  return lerp(farCloud,float4(colour,1-transmission),_WeatherCloud.z);
+  return NightCloud(lerp(farCloud,float4(colour,1-transmission),_WeatherCloud.z),middlePoint);
  }
  float4 Integrate(V i):SV_Target{
   float3 ray=normalize(_WeatherForward+_WeatherRight*(i.ndc.x*_WeatherView.x*_WeatherView.y)+_WeatherUp*(i.ndc.y*_WeatherView.y*_WeatherView.z));

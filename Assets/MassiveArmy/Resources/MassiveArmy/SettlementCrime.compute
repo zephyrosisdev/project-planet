@@ -1,0 +1,61 @@
+#pragma kernel ClearCrimeGrid
+#pragma kernel BuildCrimeGrid
+#pragma kernel CrimeEncounters
+#pragma kernel DrainCrimeEvents
+#pragma kernel AckCrimeEvents
+#pragma kernel ApplyCrimeShots
+#pragma kernel ApplyCrimeReplies
+#include "SettlementCivic.hlsl"
+// Sparse civic encounters only. Never scans the army or reads poses to the CPU.
+struct CrimeOrder {uint generation,flags,gang,facility;float courage;uint pad0,pad1,pad2;};
+struct CrimeAgent {uint generation,status,target,pending;float cooldown,time;uint other,pad;};
+struct CrimeEvent {uint slot,generation,action,other;float4 body;};
+struct Facility {float4 position,right,up,forward,size;};
+struct Walker {float4 position;uint node,next,initialised,pad;};
+struct Pose {float4 position,right,up,forward,properties;};
+RWStructuredBuffer<CivicAgent> _CivicStates;StructuredBuffer<CrimeOrder> _CrimeOrders;
+RWStructuredBuffer<CrimeAgent> _CrimeAgents;RWStructuredBuffer<uint> _CrimeHeads,_CrimeNext,_CrimeClaims;
+RWStructuredBuffer<CrimeEvent> _CrimeEvents;StructuredBuffer<uint2> _CrimeAcks;StructuredBuffer<uint4> _CrimeReplies;
+StructuredBuffer<Facility> _CrimeFacilities;StructuredBuffer<Walker> _CrimeWalkers;RWStructuredBuffer<Pose> _CrimePoses;
+uint _CrimeCount,_CrimeFrame,_CrimeAckCount,_CrimeReplyCount;float _CrimeDelta,_CrimeClock;
+uint Hash(uint x){x^=x>>16;x*=0x7feb352du;x^=x>>15;x*=0x846ca68bu;return x^(x>>16);}
+uint Cell(int3 p){return (Hash(asuint(p.x))^Hash(asuint(p.y)+41u)^Hash(asuint(p.z)+83u))&8191u;}
+bool Armed(CivicAgent c){return (c.pad&1u)!=0&&(c.pad>>1)<(c.flags>>16);}
+void Event(inout CrimeAgent a,uint action,uint other){if(a.pending!=0)return;a.pending=action;a.other=other;a.time=_CrimeClock;}
+[numthreads(128,1,1)]void ClearCrimeGrid(uint3 id:SV_DispatchThreadID){if(id.x<8192)_CrimeHeads[id.x]=0xffffffffu;}
+[numthreads(128,1,1)]void BuildCrimeGrid(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_CrimeCount)return;CivicAgent c=_CivicStates[i];CrimeOrder o=_CrimeOrders[i];CrimeAgent a=_CrimeAgents[i];if(a.generation!=o.generation){a=(CrimeAgent)0;a.generation=o.generation;a.target=0xffffffffu;_CrimeAgents[i]=a;}
+ if((c.flags&1u)==0&&(c.flags&512u)==0)return;uint old;InterlockedExchange(_CrimeHeads[Cell((int3)floor(c.body.xyz/32))],i,old);_CrimeNext[i]=old;}
+[numthreads(128,1,1)]void CrimeEncounters(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_CrimeCount)return;CrimeOrder o=_CrimeOrders[i];CrimeAgent a=_CrimeAgents[i];CivicAgent c=_CivicStates[i];if(o.generation!=c.generation)return;a.cooldown=max(0,a.cooldown-_CrimeDelta);
+ // Custody is routed over the same GPU road flows. Containment starts only at arrival.
+ if((o.flags&16u)!=0&&c.health>0){Walker w=_CrimeWalkers[i];Pose p=_CrimePoses[i];if(((c.flags&1024u)!=0||w.node==w.next&&p.properties.w==0)&&o.facility<32){Facility f=_CrimeFacilities[o.facility];if(f.size.w>.5){float phase=frac(_CrimeClock/90+i*.381966);bool yard=frac(_CrimeClock/240)<.4;float x=yard?(frac(i*.618)*2-1)*f.size.x*.35:((float)(i%4)-1.5)*2.5;float z=yard?f.size.z*.38:((float)(i/4%4)-1.5)*3;float3 at=f.position.xyz+f.right.xyz*x+f.forward.xyz*z;
+    if(f.forward.w>.5&&a.pending==0){c.flags&=~1024u;Event(a,9,0xffffffffu);}else{c.flags|=1024u;p.position=float4(at,1);c.body=float4(at,0);p.up=f.up;p.right=f.right;p.forward=f.forward;p.properties=float4(0,f.position.w,_CrimeClock,1);_CrimePoses[i]=p;}
+ } }_CivicStates[i]=c;_CrimeAgents[i]=a;return;}
+ if(c.health==0&&(c.flags&128u)!=0&&(a.status&1u)==0){Event(a,8,a.target);a.status|=1u;_CrimeAgents[i]=a;return;}
+ if((c.flags&512u)!=0){if((c.flags&256u)==0||a.pending!=0){_CrimeAgents[i]=a;return;}}
+ else if(c.health==0||(c.flags&1u)==0||a.pending!=0){_CrimeAgents[i]=a;return;}
+ uint closest=0xffffffffu,witness=0xffffffffu;float best=1e12;int3 cell=(int3)floor(c.body.xyz/32);uint examined=0;
+ [loop]for(int z=-1;z<=1;z++)[loop]for(int y=-1;y<=1;y++)[loop]for(int x=-1;x<=1;x++){uint j=_CrimeHeads[Cell(cell+int3(x,y,z))];[loop]for(uint k=0;k<24&&j!=0xffffffffu&&examined<96;k++){uint other=j;j=_CrimeNext[j];examined++;if(other==i)continue;CivicAgent v=_CivicStates[other];if(v.health==0||(v.flags&1u)==0)continue;float d=distance(v.body.xyz,c.body.xyz);
+    if((c.flags&256u)!=0&&d<8){witness=other;break;}
+    CrimeOrder q=_CrimeOrders[other];bool police=(o.flags&2u)!=0;bool candidate=(c.flags&4096u)!=0?(q.flags&2u)!=0:police?(q.flags&2u)==0:((o.flags&8u)!=0?(q.flags&2u)==0:((o.flags&4u)!=0||(o.flags&64u)!=0)?(q.flags&1u)==0:false);
+    if(candidate&&d<best){best=d;closest=other;}
+ }}
+ if((c.flags&256u)!=0){if(witness!=0xffffffffu){c.flags&=~256u;Event(a,5,witness);}_CivicStates[i]=c;_CrimeAgents[i]=a;return;}
+ if(closest==0xffffffffu||a.cooldown>0){_CrimeAgents[i]=a;return;}
+ CrimeOrder otherOrder=_CrimeOrders[closest];CivicAgent victim=_CivicStates[closest];uint old;InterlockedExchange(_CrimeClaims[closest],_CrimeFrame,old);if(old==_CrimeFrame){_CrimeAgents[i]=a;return;}
+ if((o.flags&2u)!=0&&best<((victim.flags&4096u)!=0?32:4)){
+   if((victim.flags&4096u)!=0){if(Armed(c)){c.pad+=2;Event(a,7,closest);a.cooldown=1;}}
+   else if((Hash(i^closest^(_CrimeFrame/90))&255u)<18){Event(a,1,closest);a.cooldown=8;}
+ }else if((o.flags&8u)!=0&&best<3){Event(a,3,closest);a.cooldown=15;}
+ else if((o.flags&4u)!=0&&best<4){Event(a,4,closest);a.cooldown=12;}
+ else if((o.flags&64u)!=0&&best<4){Event(a,6,closest);a.cooldown=20;}
+ if((c.flags&4096u)!=0&&Armed(c)&&best<30){c.pad+=2;Event(a,7,closest);a.cooldown=1;}
+ _CivicStates[i]=c;_CrimeAgents[i]=a;
+}
+[numthreads(128,1,1)]void DrainCrimeEvents(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_CrimeCount)return;CrimeAgent a=_CrimeAgents[i];if(a.pending==0)return;uint rank;InterlockedAdd(_CrimeEvents[0].slot,1,rank);if(rank>=256)return;CrimeEvent e;e.slot=i;e.generation=a.generation;e.action=a.pending;e.other=a.other;e.body=float4(_CivicStates[i].body.xyz,a.time);_CrimeEvents[rank+1]=e;}
+[numthreads(128,1,1)]void AckCrimeEvents(uint3 id:SV_DispatchThreadID){if(id.x>=_CrimeAckCount)return;uint2 ack=_CrimeAcks[id.x];CrimeAgent a=_CrimeAgents[ack.x];if(a.generation==ack.y){a.pending=0;a.status&=~2u;_CrimeAgents[ack.x]=a;}}
+
+[numthreads(128,1,1)]void ApplyCrimeShots(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_CrimeCount)return;CrimeAgent a=_CrimeAgents[i];if((a.pending!=7&&a.pending!=3)||(a.status&2u)!=0||a.other>=_CrimeCount)return;uint target=a.other;a.status|=2u;_CrimeAgents[i]=a;uint damage=35;
+ if(a.pending==3){uint random=Hash(i^_CrimeFrame);if((random&255u)>=12)return;CivicAgent shooter=_CivicStates[i];damage=Armed(shooter)?110u:100u;if(Armed(shooter)){uint spent;InterlockedAdd(_CivicStates[i].pad,2u,spent);}}
+ uint ignored;InterlockedAdd(_CivicStates[target].damage,damage,ignored);InterlockedOr(_CivicStates[target].flags,128u|((_CrimeOrders[i].flags&2u)!=0?8192u:0u),ignored);_CrimeAgents[target].target=i;}
+
+[numthreads(128,1,1)]void ApplyCrimeReplies(uint3 id:SV_DispatchThreadID){if(id.x>=_CrimeReplyCount)return;uint4 r=_CrimeReplies[id.x];if(r.x>=_CrimeCount||_CivicStates[r.x].generation!=r.y)return;CivicAgent c=_CivicStates[r.x];if(r.z==1)c.flags=(c.flags&~6144u)|1024u;else if(r.z==2)c.flags|=Armed(c)?4096u:2048u;else if(r.z==3)c.flags|=2048u;else c.flags&=~7168u;_CivicStates[r.x]=c;}

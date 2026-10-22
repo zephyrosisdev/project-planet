@@ -8,7 +8,7 @@ namespace MassiveArmy.Planetary {
         public BuildingViewStatistics BuildingViews {get;private set;}
         internal readonly bool LegacyCityPresentation=Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-city-legacy-presentation")>=0;
         sealed class BuildingView {
-            public RtsBuilding building;public Transform root;public MeshFilter shell;public MeshRenderer renderer;public Renderer[] accessories;public Mesh near,far,proxy;public Bounds bounds,warpedBounds;public Vector3 modelScale;public ShadowCastingMode shadows=(ShadowCastingMode)(-1);public int lod=-2;public bool visible=true;public float scale=1;public ConstructionPose pose;
+            public ModularBuildingLayout modular;public RtsBuilding building;public Transform root;public MeshFilter shell;public MeshRenderer renderer;public Renderer[] accessories;public Mesh near,far,proxy;public Bounds bounds,warpedBounds;public Vector3 modelScale;public ShadowCastingMode shadows=(ShadowCastingMode)(-1);public int lod=-2;public bool visible=true;public float scale=1,detailRadius,plotRadius;public ConstructionPose pose;
         }
         readonly List<BuildingView> buildingViews=new List<BuildingView>(),pendingConstructionViews=new List<BuildingView>();
         readonly Dictionary<RtsModelArt.Building,Mesh> proxyMeshes=new Dictionary<RtsModelArt.Building,Mesh>();
@@ -24,7 +24,7 @@ namespace MassiveArmy.Planetary {
             return buildingIndex.TryGetValue(id,out cached)&&(includeRemoved||!cached.removed)?cached:null;
         }
         void RegisterBuildingView(RtsBuilding b,RtsModelArt.Building model){
-            if(LegacyCityPresentation)return;var state=new BuildingView{building=b,root=b.visual.transform,near=model.near,far=model.far??model.near};var shell=state.root.Find("Current RTS shell");if(shell!=null){state.shell=shell.GetComponent<MeshFilter>();state.renderer=shell.GetComponent<MeshRenderer>();state.shell.sharedMesh=model.near;}
+            if(model.modular!=null)hasModular=true;if(LegacyCityPresentation)return;var state=new BuildingView{building=b,modular=model.modular,root=b.visual.transform,near=model.near,far=model.far??model.near};var shell=state.root.Find("Current RTS shell");if(shell!=null){state.shell=shell.GetComponent<MeshFilter>();state.renderer=shell.GetComponent<MeshRenderer>();state.shell.sharedMesh=model.near;}
             state.accessories=state.root.GetComponentsInChildren<Renderer>(true);state.bounds=model.near.bounds;state.bounds.Encapsulate(state.far.bounds);if(model.gateLeaf!=null)state.bounds.Encapsulate(model.gateLeaf.bounds);
             if(state.shell!=null){if(!proxyMeshes.TryGetValue(model,out state.proxy)){state.proxy=BuildingProxy(state.bounds);proxyMeshes.Add(model,state.proxy);}if(model.customLods){state.proxy=model.distant??state.proxy;state.bounds.Encapsulate(state.proxy.bounds);state.shell.sharedMesh=state.near;}else{state.near=state.far=state.proxy;state.shell.sharedMesh=state.proxy;}}
             state.pose=PrepareConstruction(state.root,b.definition,CubeSphere.Decode(b.position),b.rotation);CacheBuildingBounds(state);buildingViews.Add(state);if(!b.Complete)pendingConstructionViews.Add(state);viewCount=-1;
@@ -52,7 +52,7 @@ namespace MassiveArmy.Planetary {
                 for(int i=0;i<markers.Count;i++){var position=fixture.RenderBodyPosition(markerBodies[i]);if(markers[i].transform.position!=position)markers[i].transform.SetPositionAndRotation(position,Quaternion.FromToRotation(Vector3.up,CubeSphere.Decode(Nodes[i].position)));}
                 rebasedMarkers=markers.Count;rebasedCount=Buildings.Count;rebasedCentre=centre;rebasedTerrain=terrain;rebasedRevision=Revision;
             }
-            if(ghost!=null)PlaceTransform(ghost.transform,Placing,ghostDirection,PlacementRotation);UpdateBuildingViews();
+            if(ghost!=null)PlaceTransform(ghost.transform,Placing,ghostDirection,PlacementRotation);UpdateBuildingViews();UpdateModularViews();
         }
         void UpdateBuildingViews(){
             var camera=fixture.View;if(camera==null)return;var matrix=camera.projectionMatrix*camera.worldToCameraMatrix;var centre=fixture.PlanetRenderCentre;int height=camera.pixelHeight;
@@ -76,7 +76,7 @@ namespace MassiveArmy.Planetary {
                 state.lod=lod;
             }BuildingViews=stats;
         }
-        void CacheBuildingBounds(BuildingView state){Grid.WarpAxes(state.pose.area,out var x,out var z,out float plane);state.modelScale=ModelScale(state.building.definition);state.warpedBounds=WarpBounds(state.bounds,state.modelScale,x,z,plane,state.pose.foundation);}
-        void DisposeBuildingViews(){foreach(var mesh in proxyMeshes.Values)ArmyLifetime.Destroy(mesh);proxyMeshes.Clear();buildingViews.Clear();pendingConstructionViews.Clear();buildingIndex.Clear();}
+        void CacheBuildingBounds(BuildingView state){state.plotRadius=Grid.FootprintRadius(state.building.definition);Grid.WarpAxes(state.pose.area,out var x,out var z,out float plane);state.modelScale=ModelScale(state.building.definition);state.detailRadius=state.bounds.extents.magnitude+state.bounds.center.magnitude;state.warpedBounds=state.modular!=null?state.bounds:WarpBounds(state.bounds,state.modelScale,x,z,plane,state.pose.foundation);}
+        void DisposeBuildingViews(){foreach(var detail in modularDetails)detail.Dispose();modularDetails.Clear();foreach(var mesh in proxyMeshes.Values)ArmyLifetime.Destroy(mesh);proxyMeshes.Clear();buildingViews.Clear();pendingConstructionViews.Clear();buildingIndex.Clear();}
     }
 }

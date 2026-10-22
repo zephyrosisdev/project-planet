@@ -7,6 +7,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
+using UnityEngine.UIElements;
 namespace MassiveArmy.Planetary
 {
     public sealed class PlanetWeatherValidation:MonoBehaviour
@@ -52,6 +53,10 @@ namespace MassiveArmy.Planetary
                     }
                     Check(Math.Abs(alpha[0]-alpha[1])<.01,"Cloud base has no circular opacity cutoff at "+height+" m above its lower boundary");
                 }
+                material.SetVector("_WeatherCloud",new Vector4(1,200,1,1));material.SetVector("_WeatherSun",Vector3.down);
+                RenderTexture.active=result;GL.Clear(false,true,Color.clear);material.SetPass(1);Graphics.DrawProceduralNow(MeshTopology.Triangles,6);read.ReadPixels(new Rect(0,0,8,8),0,0);read.Apply();
+                float nightAlpha=read.GetPixels().Average(c=>c.a);Check(Math.Abs(nightAlpha-.88f)<.005f,"Dense night clouds retain twelve percent transmission for city glow");
+                material.SetVector("_WeatherSun",Vector3.up);GL.Clear(false,true,Color.clear);material.SetPass(1);Graphics.DrawProceduralNow(MeshTopology.Triangles,6);read.ReadPixels(new Rect(0,0,8,8),0,0);read.Apply();Check(read.GetPixels().Average(c=>c.a)>.98f,"Daytime clouds retain their full opaque density");
             }finally{RenderTexture.active=previous;result.Release();Destroy(result);Destroy(read);Destroy(depth);Destroy(noise);Destroy(material);}
         }
         Color32[] ReadColour(){var read=AsyncGPUReadback.Request(target,0,TextureFormat.RGBA32);read.WaitForCompletion();if(read.hasError)throw new InvalidOperationException("First-person colour readback failed");return read.GetData<Color32>().ToArray();}
@@ -91,7 +96,7 @@ namespace MassiveArmy.Planetary
         IEnumerator CharacterOcclusion(PlanetWeatherRenderer renderer){
             var player=world.PlayerForValidation;var ship=world.ShipForValidation;float haze=world.definition.weather.haze;world.definition.weather.haze=0;world.AutomaticPlayerStep=false;player.CaptureCursor=false;
             world.SetFirstPerson(true);var building=world.Base.Buildings[0];var up=CubeSphere.Decode(building.position);var side=Vector3.Cross(up,Vector3.up).normalized;if(side.sqrMagnitude<.1f)side=Vector3.Cross(up,Vector3.right).normalized;
-            player.Enter((up+side*(60/world.definition.radius)).normalized,-side);world.Base.Rebase();yield return null;
+            player.Enter((up+side*(60/world.definition.radius)).normalized,-side);Check(player.PreciseBodyPosition.Magnitude+.02>=world.Base.PlayerEntryRadius(player.Direction),"Entering first person places the player above a raised building plot");world.Base.Rebase();yield return null;
             var targetBuilding=building.visual.GetComponentInChildren<Renderer>().bounds.center;world.View.transform.rotation=Quaternion.LookRotation(targetBuilding-world.View.transform.position,up);yield return null;
             Check(world.IsFirstPerson&&world.View.nearClipPlane==.05f,"Building weather check uses the real first-person camera");CheckNearSolids("first-person-building",renderer,200);
             world.SetShipControl(true);for(int i=0;i<8;i++)yield return null;Check(world.IsPiloting,"Cockpit weather check uses pilot control");CheckNearSolids("pilot-cockpit",renderer,20);
@@ -143,7 +148,20 @@ namespace MassiveArmy.Planetary
             deltas.Sort();report.nearWeatherMedianMs=deltas[deltas.Count/2];report.nearWeatherP95Ms=deltas[(int)((deltas.Count-1)*.95)];report.weatherGpuMs=renderer.GpuMilliseconds;report.weatherTextureBytes=renderer.TextureBytes;
             Check(report.nearWeatherP95Ms<=3,"Near-cloud weather incremental fenced render cost stays within 3 ms p95");Check(renderer.VisibleBodies<=17&&renderer.TextureBytes<32*1024*1024,"Weather draw count and render memory remain bounded");
             definition.hasAtmosphere=false;Capture("airless-local");Check(!renderer.LocalAtmosphereDrawn,"Airless worlds skip local atmospheric and cloud rendering");definition.hasAtmosphere=true;definition.weather.clouds=PlanetCloudSystem.None;Capture("clear-atmosphere");Check(renderer.VolumetricBodies==0,"A clear atmosphere does not march cloud volumes");foreach(var body in world.SystemRuntime.Bodies)if(body!=definition){Check(body.edits==null&&body.stampField==null,"Distant weather does not allocate gameplay terrain for "+body.displayName);var environment=world.SystemRuntime.Civilisation.Planet(body.bodyId).environment;Check(body.hasAtmosphere==environment.atmosphere&&Math.Abs(body.surfacePressure-environment.pressure)<.0001,"Rendered atmosphere matches strategic environment for "+body.displayName);}
+            var travel=TravelClouds();while(travel.MoveNext())yield return travel.Current;
             Check(report.runtimeErrors==0,"Weather rendering produces no runtime or shader errors");
+        }
+        IEnumerator TravelClouds(){var runtime=world.SystemRuntime;if(runtime.Bodies.Length<2)yield break;const int destination=1;runtime.PreparePlanet(destination);double deadline=Time.realtimeSinceStartupAsDouble+120;while(!runtime.IsPreparedForValidation(destination)&&Time.realtimeSinceStartupAsDouble<deadline)yield return null;Check(runtime.IsPreparedForValidation(destination),"Second planet prepares for travelled-world weather regression");
+            var body=runtime.Bodies[destination];world.SetShipControl(true);var pose=world.ShipForValidation.Pose;pose.position=body.position.Add(new Double3(0,0,-body.radius*3)).RelativeTo(world.definition.position);pose.linearVelocity=body.velocity-world.definition.velocity+new Double3(Math.Sqrt(body.gravitationalParameter/(body.radius*3)),0,0);pose.rotation=Quaternion.identity;world.ShipForValidation.ResetForSystemValidation(pose);runtime.EnterPlanet(destination);world=runtime.ActiveWorld;world.Paused=true;Check(world.definition==body,"Cloud regression enters a different planet through the real ship handoff");
+            for(int i=0;i<5;i++)yield return null;Check(world.ShipForValidation.PilotRootForValidation.Q("pilot-altimeter")!=null&&world.ShipForValidation.PilotRootForValidation.Q("pilot-bank")!=null&&world.ShipForValidation.PilotRootForValidation.Q("pilot-velocity")!=null,"Travelled-world cockpit builds altitude, roll and velocity instruments");
+            world.ShipForValidation.SetFlightAssistance(true);body.hasAtmosphere=true;body.surfacePressure=1;body.weather=new PlanetWeather{clouds=PlanetCloudSystem.Overcast,coverage=1,haze=0};world.View.enabled=false;world.View.targetTexture=target;
+            double forecastDeadline=Time.realtimeSinceStartupAsDouble+15;while(world.ShipForValidation.TrajectoryPointsForValidation<3&&Time.realtimeSinceStartupAsDouble<forecastDeadline)yield return null;Render();
+            Check(world.ShipForValidation.FlightAssistEnabled&&world.ShipForValidation.TrajectoryPointsForValidation>2,"Coast trajectory remains available with flight assist enabled near a travelled planet (samples "+world.ShipForValidation.TrajectoryPointsForValidation+", forecast "+world.ShipForValidation.PredictionForValidation?.Count+", status "+world.ShipForValidation.PredictionForValidation?.Status+")");
+            Check(world.ShipForValidation.LocalOrbitPointsForValidation>2,"Nearby travelled planet has a local osculating orbit reference curve");
+            var weather=world.WeatherForValidation;var ship=world.ShipForValidation;var savedPose=ship.Pose;
+            var hud=new RenderTexture(2560,1440,0,RenderTextureFormat.ARGB32);hud.Create();ship.SetPilotRenderTarget(hud);for(int i=0;i<8;i++)yield return null;var previous=RenderTexture.active;RenderTexture.active=hud;var hudImage=new Texture2D(2560,1440,TextureFormat.RGBA32,false);hudImage.ReadPixels(new Rect(0,0,2560,1440),0,0);hudImage.Apply();File.WriteAllBytes(Path.Combine(output,"travel-flight-instruments.png"),hudImage.EncodeToPNG());Destroy(hudImage);RenderTexture.active=previous;ship.SetPilotRenderTarget(null);hud.Release();Destroy(hud);
+            foreach(float angle in new[]{-25f,-12f,0f,12f,25f}){var angled=savedPose;angled.rotation=savedPose.rotation*Quaternion.Euler(0,angle,0);ship.ResetForSystemValidation(angled);ship.SetFlightAssistance(true);yield return null;weather.Enabled=false;var control=Capture("travel-cloud-control-"+angle);weather.Enabled=true;var clouds=Capture("travel-cloud-weather-"+angle);Check(Difference(control,clouds)>100,"Clouds remain visible after planetary travel with camera yaw "+angle);}
+            ship.ResetForSystemValidation(savedPose);
         }
         void OnDestroy(){if(logging)Application.logMessageReceived-=Log;if(target!=null){target.Release();Destroy(target);}if(small!=null){small.Release();Destroy(small);}}
     }

@@ -135,7 +135,7 @@ namespace MassiveArmy.EditorTools
         public static Result Compile(RtsModelPack pack){
             if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play mode before baking model packs.");var original=Original;var c=Catalogue();var result=new Result();result.catalogue=result.Own(Object.Instantiate(original));result.catalogue.name=pack.name+" catalogue";
             try{
-                var entries=original.buildings.ToDictionary(x=>x.id,x=>new RtsModelArt.Building{id=x.id,near=x.near,far=x.far,distant=x.distant,customLods=x.customLods,material=x.material,walls=x.walls,gateLeaf=x.gateLeaf});
+                var entries=original.buildings.ToDictionary(x=>x.id,x=>new RtsModelArt.Building{id=x.id,near=x.near,far=x.far,distant=x.distant,customLods=x.customLods,modular=x.modular,material=x.material,walls=x.walls,gateLeaf=x.gateLeaf});
                 var ids=new HashSet<string>();foreach(var b in pack.buildings.Where(x=>x.enabled)){
                     if(!ids.Add(b.id)||!c.Buildings.TryGetValue(b.id,out var d))throw new InvalidOperationException("Unknown or duplicate building: "+b.id);
                     if(b.size.x>d.footprintWidth*8||b.size.z>d.footprintDepth*8)throw new InvalidOperationException(b.id+": model dimensions exceed its reserved construction footprint.");

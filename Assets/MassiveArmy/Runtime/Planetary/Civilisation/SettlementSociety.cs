@@ -2,15 +2,16 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 namespace MassiveArmy.Planetary {
-    public enum CivilianRole {Survivor,Worker,Gatherer,Engineer}
+    public enum CivilianRole {Survivor,Worker,Gatherer,Engineer,Officer}
     public enum HomeTenure {OwnerOccupied,PrivateRental,SocialHousing}
     public enum CivicPriority {Education,Infrastructure,Defence}
-    public enum ResidentRoutine {Home,Work,Shopping,School,Community}
+    public enum ResidentRoutine {Home,Work,Shopping,School,Community,Funeral,Patrol,StreetTrade,Detention}
     [Serializable] public sealed class GatheringRegion {public string key;public double timber=3000,scrap=1500;}
     [Serializable] public sealed class ResidentState {
+        public ResidentCrime crime=new ResidentCrime();
         public long id,household,workplace,parentA,parentB,partner;public string name,background,relationship;
         public double age,education,reputation=.5,savings,wage,lastPay;
-        public bool alive=true;public CivilianRole role;public int workShift;
+        [NonSerialized]public bool patrolDuty;public bool servedPolice;public bool alive=true;public CivilianRole role;public int workShift;
     }
     [Serializable] public sealed class HouseholdState {
         public long id,home,owner,shopper;public string surname;public HomeTenure tenure;
@@ -44,7 +45,8 @@ namespace MassiveArmy.Planetary {
                 }
             }
             // Migration is explicit family reunification, rather than an invisible aggregate increment.
-            while(c.residents.Count<c.population){HouseholdState h=null;foreach(var family in c.households)if(family.members.Count<6){h=family;break;}if(h==null){h=NewFamily(c,c.households.Count%3);c.households.Add(h);}AddPerson(c,h,18+Random(State.nextId,"arrival")*22);}
+            int living=0;foreach(var resident in c.residents)if(resident.alive)living++;
+            while(living++<c.population){HouseholdState h=null;foreach(var family in c.households)if(family.members.Count<6){h=family;break;}if(h==null){h=NewFamily(c,c.households.Count%3);c.households.Add(h);}AddPerson(c,h,18+Random(State.nextId,"arrival")*22);}
         }
         // Migration uses serviced local vacancies. One delayed food delivery elsewhere
         // cannot veto the town; newcomers never get assigned to that unfed home.
@@ -74,31 +76,32 @@ namespace MassiveArmy.Planetary {
                     c.societyRevision++;}
             }
         }
-        internal static CivilianRole JobRole(BuildingDefinition d){if(d.extraction>0||d.id=="civil_gathering_camp"||d.id.StartsWith("civil_farm_"))return CivilianRole.Gatherer;if(d.category==BuildingCategory.Research||d.id=="civil_fabricator"||d.id=="civil_council"||d.id=="civil_school")return CivilianRole.Engineer;return CivilianRole.Worker;}
+        internal static CivilianRole JobRole(BuildingDefinition d){if(d.id==PoliceHeadquarters)return CivilianRole.Officer;if(d.extraction>0||d.id=="civil_gathering_camp"||d.id.StartsWith("civil_farm_"))return CivilianRole.Gatherer;if(d.category==BuildingCategory.Research||d.id=="civil_fabricator"||d.id=="civil_council"||d.id=="civil_school")return CivilianRole.Engineer;return CivilianRole.Worker;}
         internal static void MatchResidentJobs(PlanetRtsBase local,ColonyState c){
             var slots=new Dictionary<long,int>();foreach(var b in local.Buildings)if(b.team==c.faction&&!b.removed&&b.WorkersAssigned>0)slots[b.persistentId]=b.WorkersAssigned;
             bool changed=false;int eligible=c.workforce;
             // Retain valid jobs so commuters are not reassigned whenever a new factory opens.
-            foreach(var p in c.residents){if(!p.alive||p.age<18||p.age>=75||eligible--<=0){if(p.workplace!=0){p.workplace=0;changed=true;}continue;}
-                if(p.workplace!=0&&slots.TryGetValue(p.workplace,out int remaining)&&remaining>0){slots[p.workplace]=remaining-1;var employer=SocietyBuilding(local,p.workplace);var role=JobRole(employer.definition);double wage=role==CivilianRole.Engineer?18:role==CivilianRole.Gatherer?10:8;if(p.role!=role||p.wage!=wage)changed=true;p.role=role;p.wage=wage;}
+            foreach(var p in c.residents){if(!p.alive||Confined(p)||p.age<18||p.age>=75||eligible--<=0){if(p.workplace!=0){p.workplace=0;changed=true;}continue;}
+                if(p.workplace!=0&&slots.TryGetValue(p.workplace,out int remaining)&&remaining>0){slots[p.workplace]=remaining-1;var employer=SocietyBuilding(local,p.workplace);var role=JobRole(employer.definition);double wage=role==CivilianRole.Engineer?18:role==CivilianRole.Gatherer?10:8;if(p.role!=role||p.wage!=wage)changed=true;p.role=role;p.wage=wage;if(role==CivilianRole.Officer)p.servedPolice=true;}
                 else if(p.workplace!=0){p.workplace=0;changed=true;}
             }
             foreach(var b in local.Buildings){if(!slots.TryGetValue(b.persistentId,out int remaining)||remaining==0)continue;var role=JobRole(b.definition);
                 // Open qualifications: education and experience improve selection; background never forbids a job.
-                while(remaining-->0){ResidentState best=null;double score=double.MinValue;foreach(var p in c.residents)if(p.alive&&p.age>=18&&p.age<75&&p.workplace==0){double value=p.education*(role==CivilianRole.Engineer?3:1)+p.reputation+Random(p.id,b.definition.id)*.1;if(value>score){score=value;best=p;}}if(best==null)break;
-                    best.workplace=b.persistentId;best.role=role;best.wage=role==CivilianRole.Engineer?18:role==CivilianRole.Gatherer?10:8;changed=true;
+                while(remaining-->0){ResidentState best=null;double score=double.MinValue;foreach(var p in c.residents)if(p.alive&&!Confined(p)&&p.age>=18&&p.age<75&&p.workplace==0){double value=p.education*(role==CivilianRole.Engineer?3:1)+p.reputation+Random(p.id,b.definition.id)*.1;if(value>score){score=value;best=p;}}if(best==null)break;
+                    best.workplace=b.persistentId;best.role=role;if(role==CivilianRole.Officer)best.servedPolice=true;best.wage=role==CivilianRole.Engineer?18:role==CivilianRole.Gatherer?10:8;changed=true;
                 }
             }
             var projects=new List<RtsBuilding>();foreach(var b in local.Buildings)if(b.team==c.faction){b.constructionWorkers=0;if(!b.removed&&!b.paused&&!b.roadSuspended&&b.powered&&!b.awaitingProjectMaterials&&(!b.Complete||b.repairing&&b.health<b.MaxHealth))projects.Add(b);}
             if(projects.Count>1){var ordinals=new Dictionary<int,int>();for(int i=0;i<projects.Count;i++)ordinals[projects[i].index]=i;int start=(int)(local.Civilisation.SimulationTime/15)%projects.Count;projects.Sort((a,b)=>{int rank=ConstructionPriority(a).CompareTo(ConstructionPriority(b));return rank!=0?rank:((ordinals[a.index]-start+projects.Count)%projects.Count).CompareTo((ordinals[b.index]-start+projects.Count)%projects.Count);});}
             // Share builders one per project before assigning a second builder to any project.
-            for(int pass=0;pass<2;pass++)foreach(var b in projects){ResidentState builder=null;foreach(var p in c.residents)if(p.alive&&p.age>=18&&p.age<75&&p.workplace==0&&(builder==null||p.education>builder.education))builder=p;if(builder==null||c.employed>=c.workforce)break;builder.workplace=b.persistentId;builder.role=b.definition.id=="wall"||b.definition.id=="civil_fence"||b.definition.id=="gate"?CivilianRole.Worker:CivilianRole.Engineer;builder.wage=12;b.constructionWorkers++;c.employed++;changed=true;}
+            for(int pass=0;pass<2;pass++)foreach(var b in projects){ResidentState builder=null;foreach(var p in c.residents)if(p.alive&&!Confined(p)&&p.age>=18&&p.age<75&&p.workplace==0&&(builder==null||p.education>builder.education))builder=p;if(builder==null||c.employed>=c.workforce)break;builder.workplace=b.persistentId;builder.role=b.definition.id=="wall"||b.definition.id=="civil_fence"||b.definition.id=="gate"?CivilianRole.Worker:CivilianRole.Engineer;builder.wage=12;b.constructionWorkers++;c.employed++;changed=true;}
             foreach(var p in c.residents)if(p.workplace==0){p.wage=0;p.role=CivilianRole.Survivor;}
             if(changed)c.societyRevision++;
         }
         public double LocalHour=>((SimulationTime/Math.Max(60,Settings.settlementDaySeconds)*24+8)%24+24)%24;
         internal double WorkStart(ResidentState p)=>7+Math.Clamp(p.workShift,0,2)*.5+Random(p.id,"departure")*.4;
         internal ResidentRoutine Routine(ColonyState c,ResidentState p,double time){
+            if(Confined(p))return ResidentRoutine.Detention;if(p.crime!=null&&p.crime.activity!=CrimeActivity.None&&LocalHour>=16&&LocalHour<23&&p.age>=18)return ResidentRoutine.StreetTrade;if(FuneralDestination(c,p,time)!=0)return ResidentRoutine.Funeral;if(p.patrolDuty)return ResidentRoutine.Patrol;
             double hour=((time/Math.Max(60,Settings.settlementDaySeconds)*24+8)%24+24)%24;
             if(hour<6.5||hour>=21)return ResidentRoutine.Home;
             if(p.age<18)return p.age>=5&&hour>=7.25&&hour<15?ResidentRoutine.School:ResidentRoutine.Home;
@@ -112,6 +115,7 @@ namespace MassiveArmy.Planetary {
             return ResidentRoutine.Home;
         }
         internal long Destination(PlanetRtsBase local,ColonyState c,ResidentState p,double time){
+            long crimeGoal=CrimeDestination(local,c,p,time);if(crimeGoal!=0)return crimeGoal;long funeral=FuneralDestination(c,p,time);if(funeral!=0)return funeral;
             var h=Family(c,p.household);long home=h?.home??0;var routine=Routine(c,p,time);var start=SocietyBuilding(local,home);if(start==null)return 0;
             if(routine==ResidentRoutine.Home)return home;
             if(routine==ResidentRoutine.Work){var work=SocietyBuilding(local,p.workplace);return work!=null&&!work.paused&&work.powered&&local.Roads.Connected(start,work)?p.workplace:home;}
@@ -139,6 +143,7 @@ namespace MassiveArmy.Planetary {
             bool schoolAvailable=local.Buildings.Exists(b=>b.team==c.faction&&!b.removed&&b.Complete&&b.powered&&!b.paused&&b.definition.id=="civil_school"&&b.WorkersAssigned>0);
             for(int d=0;d<days;d++){long civicDay=firstDay+d;
                 foreach(var p in c.residents)if(p.alive){p.age+=1.0/Math.Max(1,Settings.calendarDaysPerYear);p.lastPay=0;
+                    if(p.age>=72+Random(p.id,"lifespan")*28){var home=SocietyBuilding(local,Family(c,p.household)?.home??0);RecordDeath(c,p,DeathCause.OldAge,civicDay*Math.Max(60,Settings.settlementDaySeconds),home?.position??Vector2.zero);continue;}
                     var family=Family(c,p.household);var schoolHome=SocietyBuilding(local,family?.home??0);var educationProvider=schoolAvailable&&schoolHome!=null?local.Buildings.Find(b=>b.team==c.faction&&!b.removed&&b.Complete&&b.powered&&!b.paused&&b.definition.id=="civil_school"&&local.Roads.Connected(schoolHome,b)):null;var schoolBusiness=educationProvider==null?null:c.enterprises.Find(e=>e.building==educationProvider.persistentId);
                     if(p.age<18&&p.age>=5&&schoolBusiness!=null){double tuition=Math.Min(c.council.treasury,c.council.priority==CivicPriority.Education?.35:.15);c.council.treasury-=tuition;c.council.educationSpent+=tuition;schoolBusiness.balance+=tuition;p.education=Math.Min(1,p.education+tuition*.003);}
                     if(p.workplace!=0){var business=c.enterprises.Find(e=>e.building==p.workplace);if(business!=null){double gross=Math.Min(business.balance,p.wage),tax=gross*Math.Clamp(c.council.taxRate,0,.6);business.balance-=gross;business.wagesPaid+=gross;p.savings+=gross-tax;p.lastPay=gross-tax;c.council.treasury+=tax;c.council.taxesCollected+=tax;p.reputation=Math.Min(1,p.reputation+.001);p.education=Math.Min(1,p.education+.0003);}}

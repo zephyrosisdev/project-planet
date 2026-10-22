@@ -36,7 +36,7 @@ namespace MassiveArmy.Planetary
                 if(i!=0)PlanetWeather.Generate(definition,environment.atmosphere,environment.breathable,(float)environment.pressure,(float)environment.oxygen);
                 State.planets.Add(new PlanetState{body=node.stableId,planetId=definition.bodyId,navigationContext=definition.bodyId,constructionTileSize=settings.roadTileSize,composition=profile,environment=environment});
             }
-            for(int team=0;team<2;team++){var faction=new CivilisationFaction{id=team,name=team==0?"Cyan":"Red",autonomous=team==1||system.ActiveWorld.sessionMode==PlanetGameMode.AiTest};State.factions.Add(faction);var home=faction.knowledge.Record(bodyIds[system.Bodies[0].bodyId]);home.level=DiscoveryLevel.Surveyed;home.confidence=1;foreach(var abundance in State.planets[0].composition.abundance)home.resources.Add(new ResourceEstimate{resource=abundance.resource,estimate=abundance.amount,uncertainty=0});}
+            for(int team=0;team<system.ActiveWorld.CountryCount;team++){var faction=new CivilisationFaction{id=team,name=PlanetCountries.Names[team],autonomous=team!=0||system.ActiveWorld.sessionMode==PlanetGameMode.AiTest};State.factions.Add(faction);var home=faction.knowledge.Record(bodyIds[system.Bodies[0].bodyId]);home.level=DiscoveryLevel.Surveyed;home.confidence=1;foreach(var abundance in State.planets[0].composition.abundance)home.resources.Add(new ResourceEstimate{resource=abundance.resource,estimate=abundance.amount,uncertainty=0});}
         }
         public string BodyId(int planetId)=>bodyIds.TryGetValue(planetId,out var id)?id:null;
         public string BodyName(string body)=>body!=null&&bodyNames.TryGetValue(body,out var name)?name:body;
@@ -46,17 +46,17 @@ namespace MassiveArmy.Planetary
         public bool IsHome(int planetId)=>system.Bodies[0].bodyId==planetId;
         public void ObserveArrival(int planetId,int faction){var planet=Planet(planetId);var known=State.Faction(faction).knowledge.Record(planet.body);if(known.level<DiscoveryLevel.Environment)known.level=DiscoveryLevel.Environment;known.confidence=Math.Max(known.confidence,.95);known.lastObserved=State.time;Revision++;}
         public void Attach(PlanetRtsBase local,int planetId){
-            var planet=Planet(planetId);var binding=new LocalColony{local=local,colonies=new ColonyState[2]};
+            var planet=Planet(planetId);var binding=new LocalColony{local=local,colonies=new ColonyState[local.Factions.Length]};
             local.Roads=new SettlementRoadNetwork(local.World,local,planet.roads,Settings.roadTileSize);local.Rails=new SettlementRoadNetwork(local.World,local,planet.rails,Settings.roadTileSize,true);
             bool seedRoads=planet.roads.Count==0;
-            for(int team=0;team<2;team++){
+            for(int team=0;team<system.ActiveWorld.CountryCount;team++){
                 var colony=Colony(planet.body,team);bool fresh=colony==null;
                 if(fresh&&IsHome(planetId)&&(team==0||system.ActiveWorld.sessionMode!=PlanetGameMode.Swarm)){colony=new ColonyState{id=State.AllocateId(),faction=team,body=planet.body,name=State.Faction(team).name+" home base",stage=ColonyStage.Industrial,population=Settings.startingPopulation};State.colonies.Add(colony);planet.colonies.Add(colony.id);}
                 if(colony==null)continue;colony.inventory.Bind(Catalogue,local.Factions[team].wallet);
                 if(fresh){foreach(var resource in Catalogue.resources)if(resource.startingStock>0)colony.inventory.Deposit(resource.id,resource.startingStock);}else colony.inventory.RestoreWallet();
                 foreach(var tech in State.Faction(team).technologies)local.Factions[team].technologies.Add(tech);binding.colonies[team]=colony;
             }local.Settlements=binding.colonies;locals.Add(planetId,binding);TickLocal(binding,0);if(planet.colonies.Count==0||State.time==0)planet.lastSimulatedTime=State.time;
-            for(int team=0;team<2;team++){
+            for(int team=0;team<system.ActiveWorld.CountryCount;team++){
                 var colony=binding.colonies[team];if(colony==null)continue;RtsBuilding warehouse=null;foreach(var b in local.Buildings)if(b.team==team&&b.definition.id=="civil_warehouse"){warehouse=b;break;}
                 if(warehouse!=null&&colony.cargoVehicles.Count==0)colony.cargoVehicles.Add(new CargoVehicleState{id=State.AllocateId(),warehouse=warehouse.persistentId});
                 if(IsHome(planetId)&&seedRoads&&warehouse!=null)local.SeedResidentialStreet(team);
@@ -85,7 +85,7 @@ namespace MassiveArmy.Planetary
         }
         void TickLocal(LocalColony binding,double step){
             var local=binding.local;
-            for(int team=0;team<2;team++){
+            for(int team=0;team<system.ActiveWorld.CountryCount;team++){
                 var colony=binding.colonies[team];if(colony==null)continue;var faction=State.Faction(team);foreach(var tech in local.Factions[team].technologies)if(!faction.technologies.Contains(tech))faction.technologies.Add(tech);
                 foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&b.persistentId==0)b.persistentId=State.AllocateId();
                 using(SettlementPerformance.Sample("Residents")){EnsureResidents(colony);BindHouseholds(local,colony);}
@@ -101,7 +101,7 @@ namespace MassiveArmy.Planetary
                     if(building.persistentId==0)building.persistentId=State.AllocateId();liveInstallations.Add(building.persistentId);installationIndex.TryGetValue(building.persistentId,out var installation);
                     if(installation==null){installation=new SurfaceInstallation{id=building.persistentId,definition=building.definition.id};installation.inventory.Bind(Catalogue);colony.installations.Add(installation);installationIndex.Add(installation.id,installation);State.Planet(colony.body).surfaceInstallations.Add(installation.id);}
                     if(building.definition.id=="civil_warehouse"&&!primaryWarehouse){installation.inventory=colony.inventory;primaryWarehouse=true;}
-                    installation.position=building.position;installation.health=building.health;installation.construction=building.construction;installation.level=building.level;installation.paused=building.paused;installation.powered=building.powered;installation.workersAssigned=building.WorkersAssigned;installation.workersRequired=building.definition.workers*building.level;
+                    installation.modularDoors=building.modularDoors;installation.position=building.position;installation.health=building.health;installation.construction=building.construction;installation.level=building.level;installation.paused=building.paused;installation.powered=building.powered;installation.workersAssigned=building.WorkersAssigned;installation.workersRequired=building.definition.workers*building.level;
                     if(!building.Complete||building.paused||!building.powered||building.roadSuspended)continue;
                     int residents=0;if(building.definition.housingCapacity>0)foreach(var household in colony.households)if(household.home==building.persistentId)residents+=household.members.Count;residents=Math.Min(unhoused,residents);unhoused-=residents;
                     double demand=building.definition.foodUse*building.level+residents*Settings.populationFoodPerSecond;colony.foodDemand+=demand;
@@ -126,6 +126,7 @@ namespace MassiveArmy.Planetary
                 for(int i=colony.installations.Count-1;i>=0;i--){if(!liveInstallations.Contains(colony.installations[i].id)){State.Planet(colony.body).surfaceInstallations.Remove(colony.installations[i].id);colony.installations.RemoveAt(i);}}
                 using(SettlementPerformance.Sample("Retail"))ServeRetail(local,colony,step);
                 using(SettlementPerformance.Sample("Society"))TickSociety(local,colony,step);
+                TickCivicServices(local,colony);
                 colony.inventory.CaptureWallet();
                 using(SettlementPerformance.Sample("Logistics"))Logistics.Tick(local,colony,step);Orbitals.Tick(local,colony,step);
                 if(unhoused>0){double demand=unhoused*Settings.populationFoodPerSecond,food=Math.Min(colony.inventory.Get("food"),demand*step);colony.inventory.Spend("food",food);colony.foodDemand+=demand;colony.foodSupplied+=step>0?food/step:demand;}

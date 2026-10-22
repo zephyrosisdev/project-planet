@@ -490,6 +490,62 @@
       "mass": 20,
       "startingStock": 0,
       "symbol": "OK"
+    },
+    {
+      "id": "industrial_chemicals",
+      "name": "Industrial feedstock",
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "alcohol",
+      "name": "Alcohol",
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "illicit_compounds",
+      "name": "Illicit compounds",
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "illegal_weapons",
+      "name": "Unlicensed weapons",
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "service_weapons",
+      "name": "Licensed service weapons",
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "ammunition",
+      "name": "Ammunition",
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
+    },
+    {
+      "id": "stolen_goods",
+      "name": "Stolen goods",
+      "legacy": -1,
+      "capacity": 20000,
+      "mass": 1,
+      "startingStock": 0
     }
   ],
   "recipes": [
@@ -1171,6 +1227,98 @@
       ],
       "seconds": 60,
       "requiredTech": "civil_rocketry"
+    },
+    {
+      "id": "industrial_feedstock",
+      "name": "Industrial feedstock",
+      "building": "civil_chemical_plant",
+      "inputs": [
+        {
+          "resource": "plastics",
+          "amount": 1
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "industrial_chemicals",
+          "amount": 2
+        }
+      ],
+      "seconds": 20,
+      "requiredTech": ""
+    },
+    {
+      "id": "alcohol_supply",
+      "name": "Alcohol production",
+      "building": "civil_distillery",
+      "inputs": [
+        {
+          "resource": "grain",
+          "amount": 2
+        },
+        {
+          "resource": "water",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "alcohol",
+          "amount": 2
+        }
+      ],
+      "seconds": 20,
+      "requiredTech": ""
+    },
+    {
+      "id": "service_equipment",
+      "name": "Service equipment",
+      "building": "civil_fabricator",
+      "inputs": [
+        {
+          "resource": "steel",
+          "amount": 2
+        },
+        {
+          "resource": "machine_parts",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "service_weapons",
+          "amount": 1
+        }
+      ],
+      "seconds": 20,
+      "requiredTech": ""
+    },
+    {
+      "id": "ammunition_supply",
+      "name": "Ammunition supply",
+      "building": "civil_fabricator",
+      "inputs": [
+        {
+          "resource": "steel",
+          "amount": 1
+        },
+        {
+          "resource": "machine_parts",
+          "amount": 1
+        }
+      ],
+      "outputs": [
+        {
+          "resource": "ammunition",
+          "amount": 12
+        }
+      ],
+      "seconds": 20,
+      "requiredTech": ""
     }
   ],
   "archetypes": [
@@ -2448,7 +2596,7 @@
       "upgrades": [],
       "foodUse": 0.02,
       "workers": 3,
-      "district": 3
+      "district": 4
     },
     {
       "id": "civil_chemistry",
@@ -3723,6 +3871,327 @@
       "foodUse": 0.001,
       "workers": 0,
       "district": 5
+    },
+    {
+      "id": "civil_police_hq",
+      "name": "Police HQ",
+      "description": "Officers patrol connected streets and protect residents from zombies. Set patrol strength and routes here.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 180
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 8,
+      "district": 0,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_graveyard",
+      "name": "Graveyard",
+      "description": "Mortuary, hearse service and funerals. Keeps named death records; fallen police receive next-day honours.",
+      "mesh": "lab",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 4,
+      "footprintDepth": 4,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 2,
+      "district": 0,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_county_jail",
+      "name": "County Jail",
+      "description": "County Jail uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 200
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 3,
+      "footprintDepth": 3,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 6,
+      "district": 0,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_courthouse",
+      "name": "Courthouse",
+      "description": "Courthouse uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 220
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 3,
+      "footprintDepth": 3,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 4,
+      "district": 0,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_federal_prison",
+      "name": "Federal Prison",
+      "description": "Federal Prison uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 400
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 4,
+      "footprintDepth": 4,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 8,
+      "district": 0,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_prison_wing",
+      "name": "Prison Cell Wing",
+      "description": "Prison Cell Wing uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 240
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 3,
+      "footprintDepth": 3,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 4,
+      "district": 0,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_prison_yard",
+      "name": "Prison Recreation Yard",
+      "description": "Prison Recreation Yard uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 120
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 3,
+      "footprintDepth": 3,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 2,
+      "district": 0,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_customs",
+      "name": "Customs House",
+      "description": "Customs House uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 150
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 4,
+      "district": 0,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_distillery",
+      "name": "Distillery",
+      "description": "Distillery uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 160
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 3,
+      "district": 3,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_chemical_plant",
+      "name": "Industrial Chemical Plant",
+      "description": "Industrial Chemical Plant uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 180
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 2,
+      "footprintDepth": 2,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 4,
+      "district": 3,
+      "researchRate": 0
+    },
+    {
+      "id": "civil_off_licence",
+      "name": "Off Licence",
+      "description": "Off Licence uses staffed, supplied and road-connected facilities.",
+      "mesh": "command",
+      "category": 5,
+      "terrain": 0,
+      "nodes": [],
+      "cost": {
+        "materials": 90
+      },
+      "requiredTech": "",
+      "tier": 1,
+      "time": 20,
+      "radius": 10,
+      "health": 2400,
+      "armour": 20,
+      "consumption": 2,
+      "maxLevel": 3,
+      "footprintWidth": 1,
+      "footprintDepth": 1,
+      "production": [],
+      "upgrades": [],
+      "housingCapacity": 0,
+      "foodUse": 0.01,
+      "workers": 2,
+      "district": 2,
+      "researchRate": 0,
+      "retailResource": "alcohol",
+      "retailPerResident": 0.001
     }
   ],
   "technologies": [

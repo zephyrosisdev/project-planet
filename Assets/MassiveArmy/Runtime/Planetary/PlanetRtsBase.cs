@@ -15,20 +15,22 @@ namespace MassiveArmy.Planetary
         public SettlementRoadNetwork Roads {get;internal set;}
         public SettlementRoadNetwork Rails {get;internal set;}
         public ColonyState[] Settlements {get;internal set;}
-        public readonly RtsFaction[] Factions={new RtsFaction(),new RtsFaction()};
+        public readonly RtsFaction[] Factions;
         public RtsFaction Faction=>Factions[0];
-        public readonly Vector3[] Homes=new Vector3[2];
+        public readonly Vector3[] Homes;
         public readonly List<RtsBuilding> Buildings=new List<RtsBuilding>();
         public PlanetProceduralResources Natural {get;private set;}
         internal int ResolveResourceNode(int id)=>id>=-1?id:Natural.Materialize(-id-1)?.id??-1;
         public readonly List<ResourceNode> Nodes=new List<ResourceNode>();
+        public CargoVehicleState SelectedHearse {get;private set;}
+        public void SelectHearse(CargoVehicleState vehicle){Selected=null;SelectedHearse=vehicle;Revision++;}
         public RtsBuilding Selected {get;private set;}
         public BuildingDefinition Placing {get;private set;}
         public string Outcome {get;private set;}="";
         public string Notice="Select a building to train units, construct or research.";
         public int Revision {get;private set;}
         public int PlacementRotation {get;private set;}
-        public void ClearSelection(){if(Selected!=null){Selected=null;Revision++;}}
+        public void ClearSelection(){if(Selected!=null||SelectedHearse!=null){Selected=null;SelectedHearse=null;Revision++;}}
         readonly PlanetDevelopment fixture;readonly PlanetSurface surface;readonly RtsModelArt art;
         readonly GameObject root;readonly MaterialPropertyBlock properties=new MaterialPropertyBlock();
         readonly GraphicsBuffer aim;readonly Material nodeMaterial,ghostMaterial;
@@ -36,16 +38,18 @@ namespace MassiveArmy.Planetary
         readonly Vector3 anchor,right,forward;bool manualPlacementRotation;
         public PlanetRtsBase(PlanetDevelopment fixture,PlanetSurface surface)
         {
+            Factions=new RtsFaction[fixture.CountryCount];Homes=new Vector3[fixture.CountryCount];for(int team=0;team<Factions.Length;team++)Factions[team]=new RtsFaction{team=team};
             this.fixture=fixture;this.surface=surface;var planet=Civilisation?.Planet(fixture.definition.bodyId);float tileSize=planet!=null&&planet.constructionTileSize>0?planet.constructionTileSize:planet!=null&&(planet.roads.Count>0||planet.rails.Count>0)?PlanetConstructionGrid.AuthoredTileSize:Civilisation?.Settings.roadTileSize??PlanetConstructionGrid.DefaultTileSize;if(planet!=null)planet.constructionTileSize=tileSize;Grid=new PlanetConstructionGrid(fixture.definition.bodyId,fixture.definition.radius,tileSize);anchor=fixture.Rig.FocusDirection;right=Vector3.Cross(Vector3.up,anchor).normalized;forward=Vector3.Cross(anchor,right);
             Civilisation?.Catalogue.Extend(Catalog);foreach(var definition in Catalog.buildings)definition.buildRadius*=Grid.PresentationScale;
             art=RtsModelArt.Load();if(art==null)throw new InvalidOperationException("Missing current RTS model art");
             root=new GameObject("Planet RTS infrastructure");root.transform.SetParent(fixture.transform,false);aim=new GraphicsBuffer(GraphicsBuffer.Target.Structured,128,16);aim.SetData(new Vector4[128]);
             ghostMaterial=new Material(Resources.Load<Shader>("MassiveArmy/Ghost"));nodeMaterial=new Material(Resources.Load<Shader>("MassiveArmy/Structure"));nodeMaterial.SetColor("_Tint",new Color(.65f,.48f,.04f));
-            Factions[0].team=0;Factions[1].team=1;foreach(var faction in Factions){faction.wallet.Capacity=new ResourceCost{materials=3000,fuel=1800,rareElements=900,isotopes=200,research=2000};faction.wallet.Stock=new ResourceCost{materials=1800,fuel=350,rareElements=160,research=100};}
+            foreach(var faction in Factions){faction.wallet.Capacity=new ResourceCost{materials=3000,fuel=1800,rareElements=900,isotopes=200,research=2000};faction.wallet.Stock=new ResourceCost{materials=1800,fuel=350,rareElements=160,research=100};}
             Homes[0]=anchor;Homes[1]=fixture.OpposingHome.sqrMagnitude>.5f?fixture.OpposingHome:Offset(new Vector2(Mathf.Min(4500,fixture.definition.radius*.9f),0));
-            bool starter=Civilisation==null||Civilisation.IsHome(fixture.definition.bodyId);if(starter){Seed("command",new Vector2(-65,-55));Seed("barracks",new Vector2(30,-75));Seed("light_depot",new Vector2(90,-30));Seed("solar",new Vector2(-90,15));if(Civilisation!=null){Seed("civil_warehouse",new Vector2(-10,40));SeedFamilyHomes(0);}}else foreach(var faction in Factions)faction.wallet.Stock=new ResourceCost();
+            bool starter=Civilisation==null||Civilisation.IsHome(fixture.definition.bodyId);if(starter){Seed("command",new Vector2(-65,-55));Seed("barracks",new Vector2(30,-75));Seed("light_depot",new Vector2(90,-30));Seed("solar",new Vector2(-90,15));if(Civilisation!=null){Seed("civil_warehouse",fixture.ClassicCountryFixture?new Vector2(-10,40):new Vector2(-160,-120));SeedFamilyHomes(0);}}else foreach(var faction in Factions)faction.wallet.Stock=new ResourceCost();
             SeedResourceNodes(0);
-            if(starter&&fixture.StrategyEnabled&&fixture.sessionMode!=PlanetGameMode.Swarm){FindEnemyHome();Seed("command",new Vector2(-65,-55),1);Seed("barracks",new Vector2(30,-75),1);Seed("light_depot",new Vector2(90,-30),1);Seed("solar",new Vector2(-90,15),1);if(Civilisation!=null){Seed("civil_warehouse",new Vector2(-10,40),1);SeedFamilyHomes(1);}SeedResourceNodes(1);}
+            if(starter&&fixture.StrategyEnabled&&fixture.sessionMode!=PlanetGameMode.Swarm){FindEnemyHome();Seed("command",new Vector2(-65,-55),1);Seed("barracks",new Vector2(30,-75),1);Seed("light_depot",new Vector2(90,-30),1);Seed("solar",new Vector2(-90,15),1);if(Civilisation!=null){Seed("civil_warehouse",fixture.ClassicCountryFixture?new Vector2(-10,40):new Vector2(-160,-120),1);SeedFamilyHomes(1);}SeedResourceNodes(1);}
+            if(starter&&fixture.StrategyEnabled&&fixture.sessionMode!=PlanetGameMode.Swarm){SelectAdditionalHomes();for(int team=2;team<Factions.Length;team++){Seed("command",new Vector2(-65,-55),team);Seed("barracks",new Vector2(30,-75),team);Seed("light_depot",new Vector2(90,-30),team);Seed("solar",new Vector2(-90,15),team);if(Civilisation!=null){Seed("civil_warehouse",new Vector2(-160,-120),team);SeedFamilyHomes(team);}SeedResourceNodes(team);}}
             InitializeGeology();Natural=new PlanetProceduralResources(this,fixture.definition);Civilisation?.Attach(this,fixture.definition.bodyId);
             Selected=Buildings.FirstOrDefault();fixture.RefreshBuildingCosts(Buildings);Rebase();
         }
@@ -76,6 +80,7 @@ namespace MassiveArmy.Planetary
             if(requireAccess&&!Faction.HasTech(d.requiredTech))return new PlacementResult(false,"Requires "+d.requiredTech);
             if(requireAccess&&!ConstructionCost(team,direction,d.cost,false))return new PlacementResult(false,"Insufficient resources");
             float radius=FootprintRadius(d);
+            if(requireAccess&&!DistrictClear(d,direction,team))return new PlacementResult(false,"Keep farms and industry on the outskirts; leave six tiles between industry and homes, shops or farms");
             if(!GridClear(area,out var gridReason,d))return new PlacementResult(false,gridReason);
             if(requireAccess&&!CivilianExpansion(d)&&!ProtectionAccess(d,direction,team)&&!Buildings.Any(b=>b.team==team&&b.Complete&&b.definition.buildRadius>0&&Distance(direction,CubeSphere.Decode(b.position))<b.definition.buildRadius))return new PlacementResult(false,"Outside construction radius");
             float min=float.MaxValue,max=float.MinValue;bool land=false,water=false;
@@ -97,6 +102,7 @@ namespace MassiveArmy.Planetary
         void AddMesh(Transform parent,Mesh mesh,Material material,string name){var go=new GameObject(name);go.transform.SetParent(parent,false);go.AddComponent<MeshFilter>().sharedMesh=mesh;var renderer=go.AddComponent<MeshRenderer>();renderer.sharedMaterial=material;renderer.shadowCastingMode=ShadowCastingMode.On;properties.Clear();properties.SetBuffer("_StructureAim",aim);properties.SetFloat("_HasTurret",0);properties.SetColor("_TeamColor",parent.name.StartsWith("Enemy ")?new Color(1,.12f,.04f):new Color(.02f,.72f,1));renderer.SetPropertyBlock(properties);}
         Vector3 ModelScale(BuildingDefinition definition){
             // WarpAxes expands horizontal authoring units with the grid. Match vertical scale once.
+            if(art.Find(definition.id)?.modular!=null)return Vector3.one;
             var scale=new Vector3(1,Grid.PresentationScale,1);if(art.Find(definition.id)?.customLods==true)return scale;
             if(!definition.id.StartsWith("civil_")||!Catalog.Buildings.TryGetValue(definition.mesh,out var source))return scale;
             float x=definition.footprintWidth/(float)source.footprintWidth,z=definition.footprintDepth/(float)source.footprintDepth;
@@ -113,7 +119,7 @@ namespace MassiveArmy.Planetary
             foreach(var b in Buildings){if(b.removed)continue;var p=fixture.RenderBodyPosition(surface.GetSurfacePositionPrecise(CubeSphere.Decode(b.position)));float t=Vector3.Dot(p-ray.origin,ray.direction);if(t<0||t>=best)continue;float radius=FootprintRadius(b.definition);if((ray.GetPoint(t)-p).sqrMagnitude>radius*radius)continue;
                 // Reject infrastructure on the opposite side of the planet.
                 if(fixture.Rig.GroundPoint(pixel,out var ground)&&Distance(ground,CubeSphere.Decode(b.position))>radius+15)continue;best=t;picked=b;}
-            if(picked==null)return false;if(picked.team!=0&&fixture.sessionMode!=PlanetGameMode.AiTest){Notice="Enemy "+picked.definition.name;return true;}Selected=picked;Revision++;Notice=picked.definition.name;return true;
+            if(picked==null)return false;if(picked.team!=0&&fixture.sessionMode!=PlanetGameMode.AiTest){Notice="Enemy "+picked.definition.name;return true;}Selected=picked;SelectedHearse=null;Revision++;Notice=picked.definition.name;return true;
         }
         public bool QueueUnit(RtsBuilding building,string id){if(Civilisation!=null&&!Civilisation.Logistics.Connected(this,building)){Notice="Production requires a warehouse connection or air cargo";return false;}var Faction=Factions[building.team];var d=Catalog.Units[id];if(!building.Complete||Array.IndexOf(building.definition.production,id)<0||!Faction.HasTech(d.requiredTech)||building.level<d.producerLevel||building.queue.Count>=16||!ConstructionCost(building.team,CubeSphere.Decode(building.position),d.cost,true))return false;
             building.queue.Add(new QueueOrder{id=id,paid=d.cost,duration=d.time});Revision++;return true;}
@@ -126,7 +132,7 @@ namespace MassiveArmy.Planetary
         public void CancelUpgrade(RtsBuilding b){if(!b.Upgrading)return;var Faction=Factions[b.team];RefundConstruction(b.team,CubeSphere.Decode(b.position),b.definition.cost*(.65f*b.level)*(1-b.UpgradeFraction));b.upgradeTime=b.upgradeProgress=0;Revision++;}
         public void Sell(RtsBuilding b){if(b.removed)return;var Faction=Factions[b.team];if(b.awaitingProjectMaterials)RefundPendingProject(b);else RefundConstruction(b.team,CubeSphere.Decode(b.position),b.definition.cost*(b.Complete?.45f:.8f));bool wasCommand=b.definition.id=="command";CancelSiteRecovery(b);Damage(b,(uint)Mathf.CeilToInt(b.health),false);if(wasCommand)fixture.Paused=false;}
         public void Tick(float dt){
-            for(int team=0;team<2;team++){var Faction=Factions[team];
+            for(int team=0;team<Factions.Length;team++){var Faction=Factions[team];
             Faction.tier=Buildings.Where(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.id=="command").Select(b=>b.level).DefaultIfEmpty(1).Max();
             RefreshSettlementPower(team);
             Faction.efficiency=Faction.demand<=0?1:Mathf.Clamp(Faction.generation/Faction.demand,Civilisation==null?.25f:0,1);

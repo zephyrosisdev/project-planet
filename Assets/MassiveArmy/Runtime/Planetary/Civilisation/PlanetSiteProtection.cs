@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace MassiveArmy.Planetary {
     public sealed partial class PlanetRtsBase {
-        readonly double[] nextResponse=new double[2];readonly int[] recoveryCursor=new int[2];double nextRecoveryThink;ProtectionSite placingProtection;
+        readonly double[] nextResponse=new double[PlanetCountries.Maximum];readonly int[] recoveryCursor=new int[PlanetCountries.Maximum];double nextRecoveryThink;ProtectionSite placingProtection;
         double ProtectionTime=>Civilisation?.SimulationTime??fixture.SimulationTicks*BattleSettings.Tick;
         internal void RecordSiteAttack(RtsBuilding b,bool lethal){
             if(!fixture.StrategyEnabled||Civilisation==null||Settlements?[b.team]==null)return;
@@ -46,7 +46,7 @@ namespace MassiveArmy.Planetary {
         }
         internal void TickSiteProtection(){
             if(!fixture.StrategyEnabled||Civilisation==null||Settlements==null||ProtectionTime<nextRecoveryThink)return;nextRecoveryThink=ProtectionTime+3;
-            for(int team=0;team<2;team++){var colony=Settlements[team];if(colony==null||colony.protectionSites.Count==0)continue;
+            for(int team=0;team<Factions.Length;team++){var colony=Settlements[team];if(colony==null||colony.protectionSites.Count==0)continue;
                 var site=colony.protectionSites[recoveryCursor[team]++%colony.protectionSites.Count];if(site.finished||site.cancelled)continue;
                 if(!site.destroyed){var original=ProtectionBuilding(site.original);if(original!=null&&ProtectionTime-site.lastHit>45){site.finished=original.health>=original.MaxHealth*.99f;}continue;}
                 if(ProtectionTime-site.lastHit<20||ProtectionTime<site.nextAttempt){site.status="Defenders securing site before reconstruction";continue;}

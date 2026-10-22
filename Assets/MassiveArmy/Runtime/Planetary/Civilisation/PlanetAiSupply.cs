@@ -21,7 +21,7 @@ namespace MassiveArmy.Planetary {
             var budget=definition.cost;budget.materials+=Catalog.Buildings["outpost"].cost.materials+80;
             budget.materials+=Civilisation.Settings.aiConstructionReserve;if(!Factions[team].wallet.CanAfford(budget))return false;
             foreach(var node in Nodes.Where(n=>n.claimedBy<0&&n.remaining>0&&Array.IndexOf(definition.nodes,n.kind)>=0&&string.Equals(n.elementId??"",definition.extractedResource??"",StringComparison.Ordinal)).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position)))){
-                var target=CubeSphere.Decode(node.position);if(Distance(target,Homes[team])>Distance(target,Homes[1-team]))continue;
+                var target=CubeSphere.Decode(node.position);if(!OwnDeposit(team,target))continue;
                 var closest=Buildings.Where(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.buildRadius>0).OrderBy(b=>Distance(CubeSphere.Decode(b.position),target)).FirstOrDefault();if(closest==null)continue;
                 var start=CubeSphere.Decode(closest.position);float distance=Distance(start,target);if(distance<=closest.definition.buildRadius)continue;
                 var next=Vector3.Slerp(start,target,Mathf.Min(.7f,(closest.definition.buildRadius-40)/distance));var east=Vector3.Cross(Mathf.Abs(next.y)>.95f?Vector3.right:Vector3.up,next).normalized;

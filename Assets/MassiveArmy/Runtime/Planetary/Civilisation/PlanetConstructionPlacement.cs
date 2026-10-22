@@ -15,15 +15,41 @@ namespace MassiveArmy.Planetary
         readonly Dictionary<RtsBuilding,CachedBuildingArea> buildingAreas=new Dictionary<RtsBuilding,CachedBuildingArea>();
         internal PlanetConstructionGrid.Footprint Area(RtsBuilding building){if(buildingAreas.TryGetValue(building,out var cached)&&cached.Matches(building))return cached.area;var area=Grid.Area(building.definition,CubeSphere.Decode(building.position),building.rotation);buildingAreas[building]=new CachedBuildingArea(building,area);return area;}
         public float FoundationRadius(RtsBuilding building){var pose=PrepareConstruction(building.visual.transform,building.definition,CubeSphere.Decode(building.position),building.rotation);return pose.foundation;}
+        internal Vector3 PlotPoint(RtsBuilding building,Vector3 direction,float offset=0){
+            float radius=FoundationRadius(building)+offset;
+            return direction*(IsModularBuilding(building)?radius/Mathf.Max(.1f,Vector3.Dot(direction,Grid.Centre(Area(building)))):radius);
+        }
+        // Called only when entering planet first-person mode. Normal walking uses
+        // the bounded nearby collision pool; no infrastructure scan per frame.
+        internal double PlayerEntryRadius(Vector3 direction){
+            double radius=0;var cell=Grid.Cell(direction);foreach(var building in Buildings)if(!building.removed&&Area(building).Contains(cell))radius=System.Math.Max(radius,PlotPoint(building,direction,.02f).magnitude+.05);return radius;
+        }
+        // The driveway runs from the lot boundary to the adjoining road's centre.
+        // Both the renderer and the bounded interior collision pool use these vertices.
+        internal bool PlotEntrance(RtsBuilding building,out Vector3 a,out Vector3 b,out Vector3 c,out Vector3 d){
+            var area=Area(building);var port=Grid.Port(area);a=b=c=d=default;
+            if(Roads==null||!Roads.HasRoad(port))return false;
+            var door=Grid.Door(area);float x=door.x+.5f,y=door.y+.5f,half=Grid.CarriagewayWidth*.5f;
+            var centre=Grid.Centre(area);var road=Grid.Direction(port);var across=Vector3.Cross(centre,road).normalized;
+            Vector3 edge=area.rotation==0?Grid.Point(area.face,x,area.y+area.depth):area.rotation==1?Grid.Point(area.face,area.x,y):area.rotation==2?Grid.Point(area.face,x,area.y):Grid.Point(area.face,area.x+area.width,y);
+            a=PlotPoint(building,(edge-across*(half/fixture.definition.radius)).normalized,-.02f);b=PlotPoint(building,(edge+across*(half/fixture.definition.radius)).normalized,-.02f);
+            c=surface.GetSurfacePositionPrecise((road+across*(half/fixture.definition.radius)).normalized,.13).Float;d=surface.GetSurfacePositionPrecise((road-across*(half/fixture.definition.radius)).normalized,.13).Float;return true;
+        }
         ConstructionPose PrepareConstruction(Transform target,BuildingDefinition definition,Vector3 direction,int rotation){
             var area=Grid.Area(definition,direction,rotation);int terrain=fixture.definition.Edits.Revision;
             if(constructionPoses.TryGetValue(target,out var previous)&&previous.terrain==terrain&&previous.area.face==area.face&&previous.area.x==area.x&&previous.area.y==area.y&&previous.area.rotation==area.rotation)return previous;
-            float height=surface.SampleHeight(Grid.Centre(area));for(int i=0;i<4;i++)height=Mathf.Max(height,surface.SampleHeight(Grid.Point(area,i&1,(i>>1)&1)));
+            // A rigid modular floor needs a tangent plane above the entire plot, not a
+            // constant-radius sphere which falls away beneath its corners.
+            bool planar=art.FindBuilding(definition)?.modular!=null;var centre=Grid.Centre(area);
+            float radius=fixture.definition.radius+surface.SampleHeight(centre);
+            int samplesX=Mathf.Max(2,Mathf.CeilToInt(area.width*Grid.TileSize/8)),samplesY=Mathf.Max(2,Mathf.CeilToInt(area.depth*Grid.TileSize/8));
+            for(int sy=0;sy<=samplesY;sy++)for(int sx=0;sx<=samplesX;sx++){var d=Grid.Point(area,sx/(float)samplesX,sy/(float)samplesY);float ground=fixture.definition.radius+surface.SampleHeight(d);radius=Mathf.Max(radius,planar?ground*Vector3.Dot(d,centre):ground);}
+            float height=radius-fixture.definition.radius;
             var pose=new ConstructionPose{area=area,terrain=terrain,foundation=fixture.definition.radius+height+.15f,rotation=Grid.Rotation(area),direction=Grid.Centre(area),renderers=previous?.renderers??target.GetComponentsInChildren<Renderer>()};
-            Grid.WarpAxes(area,out var x,out var z,out float plane);var scale=ModelScale(definition);
-            foreach(var renderer in pose.renderers){renderer.GetPropertyBlock(properties);properties.SetVector("_ConstructionPlane",new Vector4(plane,pose.foundation,1,0));properties.SetVector("_ConstructionX",x);properties.SetVector("_ConstructionZ",z);properties.SetVector("_ConstructionScale",scale);renderer.SetPropertyBlock(properties);
-                var source=renderer.GetComponent<MeshFilter>().sharedMesh.bounds;var warpedBounds=WarpBounds(source,scale,x,z,plane,pose.foundation);var inverseScale=new Vector3(1/scale.x,1/scale.y,1/scale.z);renderer.localBounds=new Bounds(Vector3.Scale(warpedBounds.center,inverseScale),Vector3.Scale(warpedBounds.size,inverseScale));}
-            var collision=target.GetComponent<BoxCollider>();if(collision!=null){var model=art.FindBuilding(definition);var warped=WarpBounds(model.near.bounds,scale,x,z,plane,pose.foundation);collision.center=warped.center;collision.size=Vector3.Max(warped.size,Vector3.one*.5f);}
+            Grid.WarpAxes(area,out var x,out var z,out float plane);var scale=ModelScale(definition);bool modular=art.FindBuilding(definition)?.modular!=null;
+            foreach(var renderer in pose.renderers){renderer.GetPropertyBlock(properties);properties.SetVector("_ConstructionPlane",new Vector4(plane,pose.foundation,modular?0:1,0));properties.SetVector("_ConstructionX",x);properties.SetVector("_ConstructionZ",z);properties.SetVector("_ConstructionScale",scale);renderer.SetPropertyBlock(properties);
+                var source=renderer.GetComponent<MeshFilter>().sharedMesh.bounds;var warpedBounds=modular?source:WarpBounds(source,scale,x,z,plane,pose.foundation);var inverseScale=new Vector3(1/scale.x,1/scale.y,1/scale.z);renderer.localBounds=new Bounds(Vector3.Scale(warpedBounds.center,inverseScale),Vector3.Scale(warpedBounds.size,inverseScale));}
+            var collision=target.GetComponent<BoxCollider>();if(collision!=null){var model=art.FindBuilding(definition);var warped=modular?model.near.bounds:WarpBounds(model.near.bounds,scale,x,z,plane,pose.foundation);collision.center=warped.center;collision.size=Vector3.Max(warped.size,Vector3.one*.5f);}
             constructionPoses[target]=pose;return pose;
         }
         static Bounds WarpBounds(Bounds source,Vector3 scale,Vector3 x,Vector3 z,float plane,float foundation){
