@@ -538,3 +538,28 @@ Standalone checks and matched million-unit timings are recorded in `TestResults/
 The galaxy background now includes 30,000 decorative star points and a cached nebula layer, independently configurable in DefaultGalaxy.asset. Decorative stars do not add visitable destinations or gravity sources. The nebula integrates a seeded 3D cloud/dust field into two 512×256 RGBAHalf textures (2 MiB total GPU texels), over eight small dispatches. Looking around samples the cache; substantial travel schedules a refresh with a crossfade, no more often than every 30 seconds. This distant overlay is not local volumetric fog. Star density supports 0–100,000 points; the physical travel catalogue remains 48 systems / 192 planets by default. See TestResults/Planetary/Sky/RESULTS.md for render checks and matched standalone timings.
 
 Building and unit mesh packs can be assigned through **Massive Army > Art > Model packs**. See [MODEL_PACKS.md](MODEL_PACKS.md) for per-LOD sources, material baking, GPU budgets and switching back to defaults.
+
+
+Settlement construction now uses a nominal 32-metre lattice (formerly 8). Building
+meshes, construction radii, collision and army obstacle footprints follow the new
+scale. Original HQ-derived family-home placeholders use a smaller, roughly
+two-storey presentation inside their larger plots. Model-pack overrides remain
+specific to their own IDs and retain their authored proportions.
+
+Roads have a physical 12-metre carriageway with two marked 6-metre lanes. Road
+mesh metrics compensate for cube-face distortion, so the width stays consistent
+around the planet. Cargo is 2.4 metres wide (up to 3.36 metres for upgraded freight)
+and uses GPU right-hand lane offsets with continuous corner joins; pedestrians
+use the shoulders. Rails keep centreline travel. This separates opposing road
+traffic; junction priority, traffic lights and same-lane vehicle following are
+not added by this change.
+
+`Massive Army > Planetary > Validate street scale and GPU lanes` checks road width
+across cube faces, opposing traffic, turns, blocked roads and rail alignment.
+The dense-city benchmark retains 1,024 requested buildings and its 8,192-slot army
+path; near/distant cameras scale with the lattice to preserve projected building
+size for the before/after comparison. The orbital camera remains unchanged.
+
+The lattice size is stored per planet with saved road cell addresses. Existing
+8-metre layouts retain their narrow centreline roads; new sessions use the wider
+32-metre two-lane layout. This avoids moving saved roads through buildings.

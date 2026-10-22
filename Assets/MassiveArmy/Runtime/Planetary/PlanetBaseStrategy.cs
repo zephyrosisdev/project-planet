@@ -26,7 +26,7 @@ namespace MassiveArmy.Planetary
                 float angle=attempt*2.3999632f;var candidate=(wanted+(right*Mathf.Cos(angle)+forward*Mathf.Sin(angle))*(Mathf.Sqrt(attempt)*65/fixture.definition.radius)).normalized;
                 bool clear=true;foreach(var offset in new[]{new Vector2(-65,-55),new Vector2(30,-75),new Vector2(90,-30),new Vector2(-90,15)}){
                     Homes[1]=candidate;string id=offset.x==-65?"command":offset.x==30?"barracks":offset.x==90?"light_depot":"solar";
-                    if(!Validate(Catalog.Buildings[id],TeamOffset(1,offset),0,false,1).valid){clear=false;break;}}
+                    if(!Validate(Catalog.Buildings[id],TeamOffset(1,offset*Grid.PresentationScale),0,false,1).valid){clear=false;break;}}
                 if(clear)return;
             }throw new InvalidOperationException("No safe land for the second faction's complete starter base");
         }
@@ -34,8 +34,8 @@ namespace MassiveArmy.Planetary
         void SeedResourceNodes(int team){var kinds=new[]{NodeKind.Metal,NodeKind.Oil,NodeKind.RareEarth,NodeKind.Uranium};
             for(int reserve=0;reserve<4;reserve++)for(int i=0;i<4;i++){
                 for(int attempt=0;attempt<48;attempt++){float angle=(reserve*4+i)*2.3999632f+attempt*.61f;float range=reserve==0?155+attempt*2:reserve==1?160+attempt*2:360+reserve*170+attempt*4;
-                    var d=TeamOffset(team,reserve==0&&attempt==0?new Vector2((i-1.5f)*65,115):new Vector2(Mathf.Cos(angle)*range,Mathf.Sin(angle)*range)+(reserve==1?new Vector2(-65,-55):Vector2.zero));
-                    if(surface.SampleHeight(d)<fixture.definition.oceanHeight)continue;bool clear=true;foreach(var node in Nodes)if(Distance(d,CubeSphere.Decode(node.position))<40){clear=false;break;}if(!clear)continue;
+                    var d=TeamOffset(team,(reserve==0&&attempt==0?new Vector2((i-1.5f)*65,115):new Vector2(Mathf.Cos(angle)*range,Mathf.Sin(angle)*range)+(reserve==1?new Vector2(-65,-55):Vector2.zero))*Grid.PresentationScale);
+                    if(surface.SampleHeight(d)<fixture.definition.oceanHeight)continue;bool clear=true;foreach(var node in Nodes)if(Distance(d,CubeSphere.Decode(node.position))<40*Grid.PresentationScale){clear=false;break;}if(!clear)continue;
                     Nodes.Add(new ResourceNode{id=Nodes.Count,kind=kinds[i],resource=(ResourceKind)i,position=CubeSphere.Encode(d),capacity=20000,remaining=20000,rateMultiplier=1,quality=1});break;
                 }
             }

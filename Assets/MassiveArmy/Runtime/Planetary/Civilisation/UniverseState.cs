@@ -40,6 +40,7 @@ namespace MassiveArmy.Planetary
         public List<ResourceNode> frontierDeposits=new List<ResourceNode>();public List<FrontierSurvey> frontierSurveys=new List<FrontierSurvey>();
         public List<RoadTile> roads=new List<RoadTile>(),rails=new List<RoadTile>();
         public List<GatheringRegion> gatheringRegions=new List<GatheringRegion>();
+        public float constructionTileSize;
         public double lastSimulatedTime;
     }
     [Serializable] public sealed class CivilisationFaction {

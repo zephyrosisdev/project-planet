@@ -12,7 +12,7 @@ StructuredBuffer<Node> _Nodes;StructuredBuffer<Goal> _Goals;StructuredBuffer<Ord
 RWStructuredBuffer<uint> _Parents,_Queue;RWStructuredBuffer<uint4> _Search;
 RWStructuredBuffer<Walker> _Walkers;StructuredBuffer<Walker> _PreviousWalkers;RWStructuredBuffer<Pose> _CargoPoses;
 RWStructuredBuffer<uint> _CitizenVisible,_DrawArgs;float4 _Frustum[6];
-uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount,_StorageWidth;float _Delta,_Speed,_Clock,_DrawRange;float3 _CameraBody;
+uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount,_StorageWidth;float _Delta,_Speed,_Clock,_DrawRange,_SidewalkOffset;float3 _CameraBody;
 #define INVALID 0xffffffffu
 [numthreads(1,1,1)]void ResetDraw(uint3 id:SV_DispatchThreadID){_DrawArgs[1]=0;}
 [numthreads(128,1,1)] void ClearFlows(uint3 id:SV_DispatchThreadID){uint i=id.x+id.y*_StorageWidth;if(i<_NodeStride*_GoalCount)_Parents[i]=INVALID;if(i<_GoalCount)_Search[i]=0;}
@@ -40,7 +40,7 @@ uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount,_StorageWidth
  }
  float3 up=normalize(w.position.xyz);float3 f=forward-up*dot(forward,up);if(dot(f,f)<.001){f=cross(up,abs(up.y)>.95?float3(1,0,0):float3(0,1,0));}f=normalize(f);float3 right=normalize(cross(up,f));
  // Deterministic lane offset separates pedestrians from the cargo lane without CPU transforms.
- float lane=((i*1664525u+1013904223u)&255)/255.0*1.4-.7;
+ float lane=_SidewalkOffset+(((i*1664525u+1013904223u)&255)/255.0-.5)*.6;
  pose.position=float4(w.position.xyz+right*lane-up*.8,1);float scale=order.parameters.w;pose.up=float4(up*scale,0);pose.forward=float4(f*scale,0);pose.right=float4(right*scale,0);
  float visible=order.parameters.z>0&&distance(_CameraBody,w.position.xyz)<_DrawRange&&dot(normalize(_CameraBody),up)>.0?1:0;
  for(uint plane=0;plane<6;plane++)if(dot(_Frustum[plane].xyz,pose.position.xyz)+_Frustum[plane].w < -2)visible=0;

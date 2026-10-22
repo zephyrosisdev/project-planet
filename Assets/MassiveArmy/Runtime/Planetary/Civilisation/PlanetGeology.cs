@@ -17,9 +17,9 @@ namespace MassiveArmy.Planetary
                     // First complete material set is inside the starting construction area; reserves extend outwards.
                     for(int attempt=0;attempt<96;attempt++){
                         float angle=at*2.3999632f+attempt*.61f,range=reserve==0?140+(attempt%20)*3:360+reserve*180+attempt*3;
-                        var direction=TeamOffset(team,new Vector2(Mathf.Cos(angle)*range,Mathf.Sin(angle)*range)+(reserve==0?new Vector2(-65,-55):Vector2.zero));
+                        var direction=TeamOffset(team,(new Vector2(Mathf.Cos(angle)*range,Mathf.Sin(angle)*range)+(reserve==0?new Vector2(-65,-55):Vector2.zero))*Grid.PresentationScale);
                         if(surface.SampleHeight(direction)<fixture.definition.oceanHeight)continue;bool clear=true;
-                        foreach(var existing in Nodes)if(Distance(direction,CubeSphere.Decode(existing.position))<40){clear=false;break;}if(!clear)continue;
+                        foreach(var existing in Nodes)if(Distance(direction,CubeSphere.Decode(existing.position))<40*Grid.PresentationScale){clear=false;break;}if(!clear)continue;
                         double richness=profile.LocalAbundance(element.id,direction,fixture.definition.terrainSeed);
                         float capacity=(float)(civilisation.Settings.depositCapacity*Math.Max(.1,richness));
                         Nodes.Add(new ResourceNode{id=Nodes.Count,kind=element.id=="crude_oil"?NodeKind.Oil:element.id=="methane"?NodeKind.Gas:NodeKind.Metal,resource=ResourceKind.Materials,elementId=element.id,position=CubeSphere.Encode(direction),capacity=capacity,remaining=capacity,quality=(float)richness,rateMultiplier=(float)Math.Max(civilisation.Settings.geologicalMinimumEfficiency,richness*2)});

@@ -36,8 +36,8 @@ namespace MassiveArmy.Planetary
         readonly Vector3 anchor,right,forward;bool manualPlacementRotation;
         public PlanetRtsBase(PlanetDevelopment fixture,PlanetSurface surface)
         {
-            this.fixture=fixture;this.surface=surface;Grid=new PlanetConstructionGrid(fixture.definition.bodyId,fixture.definition.radius,Civilisation?.Settings.roadTileSize??8);anchor=fixture.Rig.FocusDirection;right=Vector3.Cross(Vector3.up,anchor).normalized;forward=Vector3.Cross(anchor,right);
-            Civilisation?.Catalogue.Extend(Catalog);
+            this.fixture=fixture;this.surface=surface;var planet=Civilisation?.Planet(fixture.definition.bodyId);float tileSize=planet!=null&&planet.constructionTileSize>0?planet.constructionTileSize:planet!=null&&(planet.roads.Count>0||planet.rails.Count>0)?PlanetConstructionGrid.AuthoredTileSize:Civilisation?.Settings.roadTileSize??PlanetConstructionGrid.DefaultTileSize;if(planet!=null)planet.constructionTileSize=tileSize;Grid=new PlanetConstructionGrid(fixture.definition.bodyId,fixture.definition.radius,tileSize);anchor=fixture.Rig.FocusDirection;right=Vector3.Cross(Vector3.up,anchor).normalized;forward=Vector3.Cross(anchor,right);
+            Civilisation?.Catalogue.Extend(Catalog);foreach(var definition in Catalog.buildings)definition.buildRadius*=Grid.PresentationScale;
             art=RtsModelArt.Load();if(art==null)throw new InvalidOperationException("Missing current RTS model art");
             root=new GameObject("Planet RTS infrastructure");root.transform.SetParent(fixture.transform,false);aim=new GraphicsBuffer(GraphicsBuffer.Target.Structured,128,16);aim.SetData(new Vector4[128]);
             ghostMaterial=new Material(Resources.Load<Shader>("MassiveArmy/Ghost"));nodeMaterial=new Material(Resources.Load<Shader>("MassiveArmy/Structure"));nodeMaterial.SetColor("_Tint",new Color(.65f,.48f,.04f));
@@ -55,7 +55,7 @@ namespace MassiveArmy.Planetary
             // Validate the whole block before committing: two rows share a single one-cell street.
             var d=Catalog.Buildings["civil_housing"];int width=d.footprintWidth,depth=d.footprintDepth;
             for(int attempt=0;attempt<32;attempt++){
-                var origin=Grid.Area(d,TeamOffset(team,new Vector2(55+(attempt%4)*24,55-(attempt/4)*16)),0);
+                var origin=Grid.Area(d,TeamOffset(team,new Vector2(55+(attempt%4)*24,55-(attempt/4)*16)*Grid.PresentationScale),0);
                 var points=new Vector3[6];bool valid=true;
                 for(int i=0;i<6;i++){int row=i/3;points[i]=Grid.Point(origin.face,origin.x+(i%3)*width+width*.5,origin.y+row*(depth+1)+depth*.5);if(!Validate(d,points[i],row==0?0:2,false,team).valid){valid=false;break;}}
                 if(!valid)continue;
@@ -68,25 +68,25 @@ namespace MassiveArmy.Planetary
             RtsBuilding first=null,last=null;foreach(var b in Buildings)if(b.team==team&&b.definition.housingCapacity>0){if(first==null)first=b;last=b;}
             if(first!=null&&last!=null)Roads.Connect(first,last,out _,true);
         }
-        void Seed(string id,Vector2 offset,int team=0){var d=Catalog.Buildings[id];for(int ring=0;ring<8;ring++){var direction=TeamOffset(team,offset+new Vector2(0,-ring*15));int rotation=Civilisation==null||id=="command"?0:EntranceRotation(d,direction,team);if(Validate(d,direction,rotation,false,team).valid){Create(d,direction,rotation,true,team);return;}}throw new InvalidOperationException("No valid starter footprint for "+id);}
+        void Seed(string id,Vector2 offset,int team=0){var d=Catalog.Buildings[id];for(int ring=0;ring<8;ring++){var direction=TeamOffset(team,(offset+new Vector2(0,-ring*15))*Grid.PresentationScale);int rotation=Civilisation==null||id=="command"?0:EntranceRotation(d,direction,team);if(Validate(d,direction,rotation,false,team).valid){Create(d,direction,rotation,true,team);return;}}throw new InvalidOperationException("No valid starter footprint for "+id);}
         public PlacementResult Validate(BuildingDefinition d,Vector3 direction,int rotation,bool requireAccess=true,int team=0)
         {
             direction=SnapBuilding(d,direction,rotation);var area=Grid.Area(d,direction,rotation);var Faction=Factions[team];
             if(requireAccess&&Faction.tier<d.tier)return new PlacementResult(false,"Requires command tier "+d.tier);
             if(requireAccess&&!Faction.HasTech(d.requiredTech))return new PlacementResult(false,"Requires "+d.requiredTech);
             if(requireAccess&&!ConstructionCost(team,direction,d.cost,false))return new PlacementResult(false,"Insufficient resources");
-            float radius=Mathf.Sqrt(d.footprintWidth*d.footprintWidth+d.footprintDepth*d.footprintDepth)*4;
+            float radius=FootprintRadius(d);
             if(!GridClear(area,out var gridReason,d))return new PlacementResult(false,gridReason);
             if(requireAccess&&!CivilianExpansion(d)&&!ProtectionAccess(d,direction,team)&&!Buildings.Any(b=>b.team==team&&b.Complete&&b.definition.buildRadius>0&&Distance(direction,CubeSphere.Decode(b.position))<b.definition.buildRadius))return new PlacementResult(false,"Outside construction radius");
             float min=float.MaxValue,max=float.MinValue;bool land=false,water=false;
             for(int i=0;i<5;i++){var p=i==4?direction:Grid.Point(area,i&1,(i>>1)&1);float height=surface.SampleHeight(p);min=Mathf.Min(min,height);max=Mathf.Max(max,height);land|=height>=fixture.definition.oceanHeight;water|=height<fixture.definition.oceanHeight;}
             if(d.terrain==TerrainRule.Coast){if(!land||!water)return new PlacementResult(false,"Requires a coastline");}
             else if(water)return new PlacementResult(false,"Footprint must be on dry land");
-            if(max-min>8)return new PlacementResult(false,"Footprint slope is too steep");
-            if(d.terrain==TerrainRule.Node){foreach(var node in Nodes)if(node.claimedBy<0&&node.remaining>0&&!RecoveryNodeReserved(node.id,team)&&Array.IndexOf(d.nodes,node.kind)>=0&&string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)&&Distance(direction,CubeSphere.Decode(node.position))<12)return new PlacementResult(true,"",node.id);var natural=Natural?.At(direction,d);if(natural!=null&&natural.claimedBy<0&&natural.remaining>0)return new PlacementResult(true,"",-natural.proceduralKey-1);return new PlacementResult(false,"Requires a matching unclaimed resource deposit");}
+            if(max-min>8*Grid.PresentationScale)return new PlacementResult(false,"Footprint slope is too steep");
+            if(d.terrain==TerrainRule.Node){foreach(var node in Nodes)if(node.claimedBy<0&&node.remaining>0&&!RecoveryNodeReserved(node.id,team)&&Array.IndexOf(d.nodes,node.kind)>=0&&string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)&&Distance(direction,CubeSphere.Decode(node.position))<12*Grid.PresentationScale)return new PlacementResult(true,"",node.id);var natural=Natural?.At(direction,d);if(natural!=null&&natural.claimedBy<0&&natural.remaining>0)return new PlacementResult(true,"",-natural.proceduralKey-1);return new PlacementResult(false,"Requires a matching unclaimed resource deposit");}
             return new PlacementResult(true,"");
         }
-        static float FootprintRadius(BuildingDefinition d)=>Mathf.Sqrt(d.footprintWidth*d.footprintWidth+d.footprintDepth*d.footprintDepth)*4;
+        internal float FootprintRadius(BuildingDefinition d)=>Grid.FootprintRadius(d);
         RtsBuilding Create(BuildingDefinition d,Vector3 direction,int rotation,bool complete=false,int team=0)
         {
             direction=SnapBuilding(d,direction,rotation);var b=new RtsBuilding{team=team,index=Buildings.Count,definition=d,MinimumFoodEfficiency=CivilisationRuntime.RecoveryEssential(d)?.25f:0,position=CubeSphere.Encode(direction),rotation=rotation,health=d.health,construction=complete?d.time:0,rally=CubeSphere.Encode((direction+right*(50/fixture.definition.radius)).normalized)};
@@ -95,7 +95,14 @@ namespace MassiveArmy.Planetary
             var scale=ModelScale(d);foreach(Transform child in b.visual.transform)child.localScale=scale;collision.center=Vector3.Scale(collision.center,scale);collision.size=Vector3.Scale(collision.size,scale);Buildings.Add(b);RegisterPlanningSite(b);RegisterBuildingView(b,model);Roads?.RefreshBuildings();Rails?.RefreshBuildings();Revision++;return b;
         }
         void AddMesh(Transform parent,Mesh mesh,Material material,string name){var go=new GameObject(name);go.transform.SetParent(parent,false);go.AddComponent<MeshFilter>().sharedMesh=mesh;var renderer=go.AddComponent<MeshRenderer>();renderer.sharedMaterial=material;renderer.shadowCastingMode=ShadowCastingMode.On;properties.Clear();properties.SetBuffer("_StructureAim",aim);properties.SetFloat("_HasTurret",0);properties.SetColor("_TeamColor",parent.name.StartsWith("Enemy ")?new Color(1,.12f,.04f):new Color(.02f,.72f,1));renderer.SetPropertyBlock(properties);}
-        Vector3 ModelScale(BuildingDefinition definition){if(art.Find(definition.id)?.customLods==true)return Vector3.one;if(!definition.id.StartsWith("civil_")||!Catalog.Buildings.TryGetValue(definition.mesh,out var source))return Vector3.one;float x=definition.footprintWidth/(float)source.footprintWidth,z=definition.footprintDepth/(float)source.footprintDepth;return new Vector3(x,Mathf.Min(x,z),z);}
+        Vector3 ModelScale(BuildingDefinition definition){
+            // WarpAxes expands horizontal authoring units with the grid. Match vertical scale once.
+            var scale=new Vector3(1,Grid.PresentationScale,1);if(art.Find(definition.id)?.customLods==true)return scale;
+            if(!definition.id.StartsWith("civil_")||!Catalog.Buildings.TryGetValue(definition.mesh,out var source))return scale;
+            float x=definition.footprintWidth/(float)source.footprintWidth,z=definition.footprintDepth/(float)source.footprintDepth;
+            // Default HQ-derived house placeholders should remain family homes, not forty-metre towers.
+            return definition.housingCapacity>0?new Vector3(x*Mathf.Min(1,2/Grid.PresentationScale),Mathf.Min(x,z)*Grid.PresentationScale*Mathf.Min(1,.8f/Grid.PresentationScale),z*Mathf.Min(1,2/Grid.PresentationScale)):new Vector3(x,Mathf.Min(x,z)*Grid.PresentationScale,z);
+        }
         public void BeginPlacement(BuildingDefinition definition){if(definition.id=="civil_road"||definition.id=="civil_rail"){BeginRoadPlacement(definition.id=="civil_rail");return;}CancelRoadPlacement();CancelPlacement();Placing=definition;ghostDirection=fixture.Rig.FocusDirection;manualPlacementRotation=false;PlacementRotation=Civilisation==null?0:EntranceRotation(definition,ghostDirection,0);var model=art.FindBuilding(definition);ghost=new GameObject("Planet building preview");ghost.transform.SetParent(root.transform,false);AddMesh(ghost.transform,model.near,ghostMaterial,"Footprint shell");foreach(Transform child in ghost.transform)child.localScale=ModelScale(definition);Notice="Place "+definition.name+" on the terrain • R rotate • right-click cancel";Revision++;}
         public void Rotate(){manualPlacementRotation=true;PlacementRotation=(PlacementRotation+1)&3;if(Placing!=null)ghostDirection=SnapBuilding(Placing,ghostDirection,PlacementRotation);Revision++;}
         public void CancelPlacement(){Placing=null;if(ghost!=null)constructionPoses.Remove(ghost.transform);ArmyLifetime.Destroy(ghost);ghost=null;Revision++;}

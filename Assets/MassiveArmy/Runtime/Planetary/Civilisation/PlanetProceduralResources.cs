@@ -36,7 +36,7 @@ namespace MassiveArmy.Planetary
         }
         internal ResourceNode Materialize(int key){var node=Get(key);if(node==null)return null;if(node.id>=0)return node;node.id=world.Nodes.Count;world.Nodes.Add(node);world.Civilisation?.Planet(definition.bodyId).frontierDeposits.Add(node);Sync();return node;}
         internal ResourceNode At(Vector3 direction,BuildingDefinition building=null){int key=Key(direction);if(building!=null&&(!Description(key,out var type,out _)||Array.IndexOf(building.nodes,type.kind)<0||(type.elementId??"")!=(building.extractedResource??"")))return null;
-            var node=Get(key);return node!=null&&node.id<0&&CubeSphere.ArcDistance(direction,CubeSphere.Decode(node.position),definition.radius)<12?node:null;}
+            var node=Get(key);return node!=null&&node.id<0&&CubeSphere.ArcDistance(direction,CubeSphere.Decode(node.position),definition.radius)<12*world.Grid.PresentationScale?node:null;}
         internal bool Survey(BuildingDefinition building,int team,FrontierSurvey survey){
             var centre=CubeSphere.Cell(0,world.Homes[team],Resolution);
             for(int work=0;work<64;work++){

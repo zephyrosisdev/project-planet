@@ -22,7 +22,8 @@ namespace MassiveArmy.Planetary
         [Header("Settlement logistics")]
         public bool autoExtendSettlementRoads=true;
         [Min(1)]public int roadExtensionsPerTick=1;
-        public float roadTileSize=8,roadTileCost=1,roadMaximumStepHeight=3;
+        [Min(32)]public float roadTileSize=32;
+        public float roadTileCost=1,roadMaximumStepHeight=3;
         public int roadSearchBudget=4096,maximumRoadTiles=0,maximumCargoVehicles=64;
         public float groundCargoSpeed=12,airCargoSpeed=55,cargoCapacity=80,cargoHandlingSeconds=3;
         public float railTileCost=2,trainCargoCapacity=480,trainCargoSpeed=35,trainCargoCost=750;

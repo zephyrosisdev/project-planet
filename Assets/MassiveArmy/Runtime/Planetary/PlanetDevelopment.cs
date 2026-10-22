@@ -158,7 +158,7 @@ namespace MassiveArmy.Planetary
 
             if(d.movement!=MovementClass.Air&&(d.movement==MovementClass.Water?land:!land))return false;
 
-            if(d.movement!=MovementClass.Air){var cellDirection=navigation.Regional!=null?direction:CubeSphere.Direction(CubeSphere.Cell(definition.bodyId,direction,navigationResolution),navigationResolution);foreach(var b in Base.Buildings){float radius=Mathf.Sqrt(b.definition.footprintWidth*b.definition.footprintWidth+b.definition.footprintDepth*b.definition.footprintDepth)*4+2+(navigation.Regional!=null?d.radius:definition.radius/navigationResolution);if(!b.removed&&CubeSphere.ArcDistance(cellDirection,CubeSphere.Decode(b.position),definition.radius)<radius)return false;}}
+            if(d.movement!=MovementClass.Air){var cellDirection=navigation.Regional!=null?direction:CubeSphere.Direction(CubeSphere.Cell(definition.bodyId,direction,navigationResolution),navigationResolution);foreach(var b in Base.Buildings){float radius=(Base?.FootprintRadius(b.definition)??Mathf.Sqrt(b.definition.footprintWidth*b.definition.footprintWidth+b.definition.footprintDepth*b.definition.footprintDepth)*(SystemRuntime?.Civilisation?.Settings.roadTileSize??PlanetConstructionGrid.DefaultTileSize)*.5f)+2+(navigation.Regional!=null?d.radius:definition.radius/navigationResolution);if(!b.removed&&CubeSphere.ArcDistance(cellDirection,CubeSphere.Decode(b.position),definition.radius)<radius)return false;}}
 
             if(!IsFootprintClear(direction,d.radius,d.movement==MovementClass.Air))return false;
 
@@ -176,7 +176,7 @@ namespace MassiveArmy.Planetary
 
             int cells=navigation.CellCount;int generate=movement.FindKernel("GenerateCosts");movement.Dispatch(generate,(cells+127)/128,1,1);
 
-            var footprints=new Vector4[buildings.Count];for(int i=0;i<buildings.Count;i++){var b=buildings[i];var d=CubeSphere.Decode(b.position);footprints[i]=new Vector4(d.x,d.y,d.z,b.removed||b.definition.id=="gate"&&b.gateOpen?0:Mathf.Sqrt(b.definition.footprintWidth*b.definition.footprintWidth+b.definition.footprintDepth*b.definition.footprintDepth)*4+2);}
+            var footprints=new Vector4[buildings.Count];for(int i=0;i<buildings.Count;i++){var b=buildings[i];var d=CubeSphere.Decode(b.position);footprints[i]=new Vector4(d.x,d.y,d.z,b.removed||b.definition.id=="gate"&&b.gateOpen?0:(Base?.FootprintRadius(b.definition)??Mathf.Sqrt(b.definition.footprintWidth*b.definition.footprintWidth+b.definition.footprintDepth*b.definition.footprintDepth)*(SystemRuntime?.Civilisation?.Settings.roadTileSize??PlanetConstructionGrid.DefaultTileSize)*.5f)+2);}
 
             if(buildingFootprints.count<Mathf.Max(1,buildings.Count)){buildingFootprints.Dispose();buildingFootprints=new GraphicsBuffer(GraphicsBuffer.Target.Structured,Mathf.NextPowerOfTwo(buildings.Count),16);}
             buildingFootprints.SetData(footprints);int stamp=movement.FindKernel("StampBuildings");movement.SetBuffer(stamp,"_PlanetBuildings",buildingFootprints);movement.SetBuffer(stamp,"_PlanetCosts",costs);movement.SetInt("_PlanetBuildingCount",buildings.Count);movement.Dispatch(stamp,(cells+127)/128,1,1);navigation.SetRegionalBuildings(buildingFootprints,buildings.Count);navigation.Regional?.Bind(movement,moveKernel);if(asynchronous)navigation.InvalidateAsync();else navigation.Invalidate();

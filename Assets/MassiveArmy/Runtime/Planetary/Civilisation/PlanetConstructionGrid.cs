@@ -4,8 +4,13 @@ namespace MassiveArmy.Planetary
 {
     /// <summary>One cube-sphere lattice for roads, rotated building footprints and farm parcels.</summary>
     public sealed class PlanetConstructionGrid {
-        public readonly int Planet,Resolution;public readonly float Radius;
-        public PlanetConstructionGrid(int planet,float radius,float tileSize){Planet=planet;Radius=radius;Resolution=Math.Max(8,(int)Math.Ceiling(2*radius/Math.Max(1,tileSize)));}
+        public const float DefaultTileSize=32,AuthoredTileSize=8,RoadWidth=12,LaneOffset=RoadWidth*.25f;
+        public readonly int Planet,Resolution;public readonly float Radius,TileSize;
+        public float PresentationScale=>TileSize/AuthoredTileSize;
+        public float CarriagewayWidth=>RoadWidth*Mathf.Min(1,TileSize/DefaultTileSize);
+        public float RoadLaneOffset=>TileSize>=DefaultTileSize?CarriagewayWidth*.25f:0;
+        public float FootprintRadius(BuildingDefinition definition)=>Mathf.Sqrt(definition.footprintWidth*definition.footprintWidth+definition.footprintDepth*definition.footprintDepth)*TileSize*.5f;
+        public PlanetConstructionGrid(int planet,float radius,float tileSize){Planet=planet;Radius=radius;TileSize=Math.Max(1,tileSize);Resolution=Math.Max(8,(int)Math.Ceiling(2*radius/Math.Max(1,tileSize)));}
         public readonly struct Footprint {
             public readonly CubeFace face;public readonly int x,y,width,depth,rotation;
             public Footprint(CubeFace face,int x,int y,int width,int depth,int rotation){this.face=face;this.x=x;this.y=y;this.width=width;this.depth=depth;this.rotation=rotation&3;}

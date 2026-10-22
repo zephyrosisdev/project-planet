@@ -14,7 +14,7 @@ namespace MassiveArmy.Planetary
         int roadRevision=-1,railRevision=-1,nodeCapacity,vehicleCapacity;uint serial=1;bool readbackPending,disposed;uint nextReadbackTick;
         public int Count=>vehicles.Count;public GraphicsBuffer Poses=>poses;
         public long SearchStorageBytes=>(long)nodeCapacity*vehicleCapacity*16;
-        public SettlementCargoNavigation(PlanetDevelopment world){this.world=world;shader=UnityEngine.Object.Instantiate(Resources.Load<ComputeShader>("MassiveArmy/SettlementRoad"));kernel=shader.FindKernel("Navigate");}
+        public SettlementCargoNavigation(PlanetDevelopment world){this.world=world;shader=UnityEngine.Object.Instantiate(Resources.Load<ComputeShader>("MassiveArmy/SettlementRoad"));kernel=shader.FindKernel("Navigate");shader.SetFloat("_RoadLaneOffset",world.Base.Grid.RoadLaneOffset);}
         static RtsBuilding Find(PlanetRtsBase local,long id)=>local.FindBuilding(id,true);
         static GraphicsBuffer Buffer(int count,int stride)=>new GraphicsBuffer(GraphicsBuffer.Target.Structured,Math.Max(1,count),stride);
         // 2D storage passes avoid the DX11 65,535-group limit as the road graph grows.

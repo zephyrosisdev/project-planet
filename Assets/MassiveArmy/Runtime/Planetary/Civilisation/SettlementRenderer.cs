@@ -9,9 +9,11 @@ namespace MassiveArmy.Planetary
     public sealed class SettlementRenderer:IDisposable {
         readonly PlanetDevelopment world;readonly PlanetSurface surface;readonly Material land,cargo,district,citizenMaterial;
         readonly SettlementCargoNavigation navigation;readonly SettlementCitizens citizens;Mesh mesh;IEnumerator rebuild;Mesh pending;Mesh districtMesh,pendingDistrict;
+        readonly List<Vector2> roadMetrics=new List<Vector2>();
         int roadRevision=-1,fieldSignature=-1,terrainRevision=-1,cargoCount;double nextFields;
         public SettlementRenderer(PlanetDevelopment world,PlanetCatalogRenderer catalogue){
             this.world=world;surface=new PlanetSurface(world.definition);land=new Material(Resources.Load<Shader>("MassiveArmy/SettlementLandUse"));cargo=new Material(Resources.Load<Shader>("MassiveArmy/SettlementCargo"));
+            land.SetFloat("_RoadWidth",world.Base.Grid.CarriagewayWidth);
             district=new Material(land);district.SetFloat("_DistrictOverlay",1);
             var library=Resources.Load<TerrainSurfaceLibrary>("MassiveArmy/TerrainArt/SurfaceLibrary");land.SetTexture("_SurfaceAlbedo",library.albedo);land.SetTexture("_SurfaceData",library.surfaceData);district.SetTexture("_SurfaceAlbedo",library.albedo);district.SetTexture("_SurfaceData",library.surfaceData);catalogue.BindArt(cargo);
             navigation=new SettlementCargoNavigation(world);world.Base.CargoNavigation=navigation;
@@ -32,7 +34,7 @@ namespace MassiveArmy.Planetary
             if(cargoCount>0)cargo.SetBuffer("_CargoPoses",navigation.Poses);
         }
         IEnumerator BuildMesh(){
-            var vertices=new List<Vector3>();var normals=new List<Vector3>();var uv=new List<Vector4>();var colours=new List<Color>();var indices=new List<int>();int work=0;
+            roadMetrics.Clear();var vertices=new List<Vector3>();var normals=new List<Vector3>();var uv=new List<Vector4>();var colours=new List<Color>();var indices=new List<int>();int work=0;
             var roadSnapshot=new RoadTile[world.Base.Roads.Tiles.Count];for(int i=0;i<roadSnapshot.Length;i++)roadSnapshot[i]=world.Base.Roads.Tiles[i];
             foreach(var tile in roadSnapshot){AddRoad(tile,vertices,normals,uv,colours,indices);if(++work%16==0)yield return null;}
             var railSnapshot=new RoadTile[world.Base.Rails.Tiles.Count];for(int i=0;i<railSnapshot.Length;i++)railSnapshot[i]=world.Base.Rails.Tiles[i];foreach(var tile in railSnapshot){AddRoad(tile,vertices,normals,uv,colours,indices,true);if(++work%16==0)yield return null;}
@@ -45,16 +47,17 @@ namespace MassiveArmy.Planetary
                 if(overlay)AddDistrict(building,districtVertices,districtNormals,districtUv,districtColours,districtIndices);
                 AddParcel(building,farm?6:8,growth,colour,vertices,normals,uv,colours,indices);yield return null;
             }
-            pending=new Mesh{name="Batched spherical roads and farmland",indexFormat=IndexFormat.UInt32};pending.SetVertices(vertices);pending.SetNormals(normals);pending.SetUVs(0,uv);pending.SetColors(colours);pending.SetTriangles(indices,0);pending.RecalculateBounds();
+            pending=new Mesh{name="Batched spherical roads and farmland",indexFormat=IndexFormat.UInt32};while(roadMetrics.Count<vertices.Count)roadMetrics.Add(Vector2.one);pending.SetVertices(vertices);pending.SetNormals(normals);pending.SetUVs(0,uv);pending.SetUVs(1,roadMetrics);pending.SetColors(colours);pending.SetTriangles(indices,0);pending.RecalculateBounds();
             if(overlay){pendingDistrict=new Mesh{name="Batched district overlay",indexFormat=IndexFormat.UInt32};pendingDistrict.SetVertices(districtVertices);pendingDistrict.SetNormals(districtNormals);pendingDistrict.SetUVs(0,districtUv);pendingDistrict.SetColors(districtColours);pendingDistrict.SetTriangles(districtIndices,0);pendingDistrict.RecalculateBounds();}
         }
         void AddRoad(RoadTile tile,List<Vector3> vertices,List<Vector3> normals,List<Vector4> uv,List<Color> colours,List<int> indices,bool rail=false){
             int start=vertices.Count;
             for(int y=0;y<2;y++)for(int x=0;x<2;x++){var d=world.Base.Roads.Corner(tile,x,y);vertices.Add(surface.GetSurfacePositionPrecise(d,.35).Float);normals.Add(d);uv.Add(new Vector4(x,y,rail?9:8,tile.connections));colours.Add(Color.white);}
+            var metrics=new Vector2((Vector3.Distance(vertices[start],vertices[start+1])+Vector3.Distance(vertices[start+2],vertices[start+3]))*.5f,(Vector3.Distance(vertices[start],vertices[start+2])+Vector3.Distance(vertices[start+1],vertices[start+3]))*.5f);for(int i=0;i<4;i++)roadMetrics.Add(metrics);
             indices.Add(start);indices.Add(start+2);indices.Add(start+1);indices.Add(start+1);indices.Add(start+2);indices.Add(start+3);
         }
         void AddParcel(RtsBuilding building,int layer,float growth,Color colour,List<Vector3> vertices,List<Vector3> normals,List<Vector4> uv,List<Color> colours,List<int> indices){
-            var grid=world.Base.Grid;var area=world.Base.Area(building);float foundation=world.Base.FoundationRadius(building)+.02f;float span=Mathf.Sqrt(8*foundation*.01f);int nx=layer==6||world.Base.LegacyCityPresentation?Math.Max(2,area.width*2):Math.Max(2,Mathf.CeilToInt(area.width*(world.SystemRuntime.Civilisation.Settings.roadTileSize)/span)),ny=layer==6||world.Base.LegacyCityPresentation?Math.Max(2,area.depth*2):Math.Max(2,Mathf.CeilToInt(area.depth*(world.SystemRuntime.Civilisation.Settings.roadTileSize)/span)),start=vertices.Count;
+            var grid=world.Base.Grid;var area=world.Base.Area(building);float foundation=world.Base.FoundationRadius(building)+.02f;float span=Mathf.Sqrt(8*foundation*.01f);int nx=layer==6||world.Base.LegacyCityPresentation?Math.Max(2,area.width*2):Math.Max(2,Mathf.CeilToInt(area.width*(world.Base.Grid.TileSize)/span)),ny=layer==6||world.Base.LegacyCityPresentation?Math.Max(2,area.depth*2):Math.Max(2,Mathf.CeilToInt(area.depth*(world.Base.Grid.TileSize)/span)),start=vertices.Count;
             for(int y=0;y<=ny;y++)for(int x=0;x<=nx;x++){float u=x/(float)nx,v=y/(float)ny;var d=grid.Point(area,u,v);vertices.Add(layer==6?surface.GetSurfacePositionPrecise(d,.15).Float:d*foundation);normals.Add(d);Vector2 texture=area.rotation==0?new Vector2(u,v):area.rotation==1?new Vector2(v,1-u):area.rotation==2?new Vector2(1-u,1-v):new Vector2(1-v,u);uv.Add(new Vector4(texture.x,texture.y,layer,growth));colours.Add(colour);}
             for(int y=0;y<ny;y++)for(int x=0;x<nx;x++){int a=start+y*(nx+1)+x,b=a+1,c=a+nx+1,d=c+1;indices.Add(a);indices.Add(c);indices.Add(b);indices.Add(b);indices.Add(c);indices.Add(d);}
         }

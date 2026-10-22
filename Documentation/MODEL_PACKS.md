@@ -46,3 +46,9 @@ Measure representative standalone scenes when choosing a pack for release.
 copying, generated impostors, prefab combining, GPU bank upload and invalid
 assignments without changing the active pack. The report is written to
 `TestResults/ArtPass/ModelPacks/validation.json`.
+
+Planet construction now scales the original 8-metre authoring lattice to the
+32-metre construction grid. Pack dimensions remain in authoring metres; the
+planet presentation expands them with the grid (including height). Flat RTS
+presentation keeps its original scale. Default inherited home placeholders
+retain a separate human-scale presentation.

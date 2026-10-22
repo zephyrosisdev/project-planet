@@ -37,7 +37,7 @@ MonoBehaviour:
   aiMaximumMaterialMines: 4
   autoExtendSettlementRoads: 1
   roadExtensionsPerTick: 1
-  roadTileSize: 8
+  roadTileSize: 32
   roadTileCost: 1
   roadMaximumStepHeight: 3
   roadSearchBudget: 4096

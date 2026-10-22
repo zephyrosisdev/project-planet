@@ -34,7 +34,7 @@ namespace MassiveArmy.Planetary
                 var environment=new CelestialEnvironment{atmosphere=i==0?definition.hasAtmosphere:archetype.pressure>0,breathable=i==0?definition.breathable:archetype.breathable,pressure=i==0?definition.surfacePressure:archetype.pressure,oxygen=i==0?definition.oxygenLevel:archetype.breathable?.21:0,temperature=archetype.temperature,habitability=archetype.breathable?1:.15};
                 node.composition=profile;node.environment=environment;node.rotationRate=definition.rotationRate;
                 if(i!=0)PlanetWeather.Generate(definition,environment.atmosphere,environment.breathable,(float)environment.pressure,(float)environment.oxygen);
-                State.planets.Add(new PlanetState{body=node.stableId,planetId=definition.bodyId,navigationContext=definition.bodyId,composition=profile,environment=environment});
+                State.planets.Add(new PlanetState{body=node.stableId,planetId=definition.bodyId,navigationContext=definition.bodyId,constructionTileSize=settings.roadTileSize,composition=profile,environment=environment});
             }
             for(int team=0;team<2;team++){var faction=new CivilisationFaction{id=team,name=team==0?"Cyan":"Red",autonomous=team==1||system.ActiveWorld.sessionMode==PlanetGameMode.AiTest};State.factions.Add(faction);var home=faction.knowledge.Record(bodyIds[system.Bodies[0].bodyId]);home.level=DiscoveryLevel.Surveyed;home.confidence=1;foreach(var abundance in State.planets[0].composition.abundance)home.resources.Add(new ResourceEstimate{resource=abundance.resource,estimate=abundance.amount,uncertainty=0});}
         }

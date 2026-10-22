@@ -17,7 +17,7 @@ RWStructuredBuffer<float> _RoadDistances;
 RWStructuredBuffer<Summary> _RoadSummary;
 RWStructuredBuffer<Pose> _CargoPoses;
 uint _RoadCount,_RoadStride,_CargoCount,_RoadRevision;
-float _CargoDelta;
+float _CargoDelta,_RoadLaneOffset;
 StructuredBuffer<uint> _PreviousSeen,_PreviousParents,_PreviousQueue;
 StructuredBuffer<float> _PreviousDistances;
 StructuredBuffer<Work> _PreviousWork;
@@ -31,6 +31,9 @@ void CopySearch(uint3 id:SV_DispatchThreadID){uint index=id.x+id.y*_StorageWidth
  _RoadSeen[target]=_PreviousSeen[index];_RoadParents[target]=_PreviousParents[index];_RoadQueue[target]=_PreviousQueue[index];_RoadDistances[target]=_PreviousDistances[index];
  if(cell==0){_RoadWork[slot]=_PreviousWork[slot];_CargoPoses[slot]=_PreviousPoses[slot];}
 }
+// Bevelled lane joins use the same route parents as the centreline search.
+float3 LaneRight(float3 direction,float3 up){direction-=up*dot(up,direction);return normalize(cross(up,normalize(direction)));}
+float3 LaneJoin(float3 a,float3 b){float3 sum=a+b;float lengthSum=length(sum);if(lengthSum<.001)return b*_RoadLaneOffset;float3 m=sum/lengthSum;return m*(_RoadLaneOffset/max(.7071,dot(m,b)));}
 [numthreads(32,1,1)]
 void Navigate(uint slot:SV_DispatchThreadID){
  if(slot>=_CargoCount)return;
@@ -82,14 +85,30 @@ void Navigate(uint slot:SV_DispatchThreadID){
    float edgeLength=max(.001,length(RouteNode(w.next,job.flags).position.xyz-RouteNode(w.node,job.flags).position.xyz));
    float travel=min(remaining,max(0,edgeLength-w.progress));w.progress+=travel;remaining-=travel;
    if(w.progress<edgeLength)break;
-   w.node=w.next;w.next=_RoadParents[baseIndex+w.node];w.progress=0;
+   w.pad=w.node+2;w.node=w.next;w.next=_RoadParents[baseIndex+w.node];w.progress=0;
   }
   if(w.node<routeCount){position=RouteNode(w.node,job.flags).position.xyz;
    if(w.phase==1){float3 delta=RouteNode(w.next,job.flags).position.xyz-position;forward=delta;position+=delta*(w.progress/max(.001,length(delta)));}}
  }
- if((w.phase==0||w.phase==3)&&w.pad!=0)position=_CargoPoses[slot].position.xyz;w.pad=1;
- float3 up=normalize(position);forward-=up*dot(forward,up);
+ bool frozen=(w.phase==0||w.phase==3)&&w.pad!=0;
+ float3 up=normalize(position);
+ bool ground=(job.flags&30)==0;
+ if(ground&&w.node<routeCount&&(w.phase==1||w.phase==2)){
+  float3 centre=RouteNode(w.node,job.flags).position.xyz;
+  if(w.phase==1&&w.next<routeCount){
+   float3 end=RouteNode(w.next,job.flags).position.xyz;forward=end-centre;float3 right=LaneRight(forward,up),incoming=right,outgoing=right;
+   if(w.pad>=2&&w.pad-2<routeCount)incoming=LaneRight(centre-RouteNode(w.pad-2,job.flags).position.xyz,up);
+   uint after=_RoadParents[baseIndex+w.next];if(w.next!=job.goalNode&&after<routeCount&&after!=w.next)outgoing=LaneRight(RouteNode(after,job.flags).position.xyz-end,up);
+   float t=saturate(w.progress/max(.001,length(end-centre)));position+=lerp(LaneJoin(incoming,right),LaneJoin(right,outgoing),t);
+  }else{
+   if(w.pad>=2&&w.pad-2<routeCount)forward=centre-RouteNode(w.pad-2,job.flags).position.xyz;
+   if(dot(forward,forward)>.00001)position+=LaneRight(forward,up)*_RoadLaneOffset;
+  }
+ }
+ if(ground&&!frozen)position-=up*.65;
+ w.pad=max(1,w.pad);
+ forward-=up*dot(forward,up);
  if(dot(forward,forward)<.00001)forward=cross(abs(up.y)>.95?float3(1,0,0):float3(0,1,0),up);
  forward=normalize(forward);Pose pose;pose.position=float4(position,1);float scale=max(1,job.start.w);pose.up=float4(up*scale,0);pose.forward=float4(forward*scale,0);pose.right=float4(normalize(cross(up,forward))*scale,0);pose.properties=float4(job.parameters.w>0?job.parameters.w:11,job.parameters.y,(job.flags&16)!=0?1:0,0);
- _CargoPoses[slot]=pose;_RoadWork[slot]=w;Summary summary;summary.version=job.version;summary.arrived=w.arrived;summary.distance=w.distance;summary.status=w.phase;_RoadSummary[slot]=summary;
+ if(frozen)pose=_CargoPoses[slot];_CargoPoses[slot]=pose;_RoadWork[slot]=w;Summary summary;summary.version=job.version;summary.arrived=w.arrived;summary.distance=w.distance;summary.status=w.phase;_RoadSummary[slot]=summary;
 }

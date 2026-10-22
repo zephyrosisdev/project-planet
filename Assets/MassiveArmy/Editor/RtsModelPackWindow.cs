@@ -40,7 +40,7 @@ namespace MassiveArmy.EditorTools
                 detailScroll=EditorGUILayout.BeginScrollView(detailScroll);
                 var rows=serialized.FindProperty(tab==0?"buildings":"units");if(rows.arraySize>0){var row=rows.GetArrayElementAtIndex(selected);EditorGUILayout.LabelField(row.FindPropertyRelative("id").stringValue,EditorStyles.boldLabel);EditorGUILayout.PropertyField(row.FindPropertyRelative("enabled"),new GUIContent("Override this model"));
                     using(new EditorGUI.DisabledScope(!row.FindPropertyRelative("enabled").boolValue)){
-                        EditorGUILayout.PropertyField(row.FindPropertyRelative("size"),new GUIContent("Size in metres", "All LODs fit this box; centred horizontally with their base at ground level."));
+                        EditorGUILayout.PropertyField(row.FindPropertyRelative("size"),new GUIContent("Authored size (metres)", "Before planet construction-grid scaling; flat RTS stays unscaled. All LODs fit this box, centred horizontally with their base at ground level."));
                         Lod(row.FindPropertyRelative("lod0"),tab==0?"LOD0 · near · 4,096 triangles max":"LOD0 · near · 512 triangles max");
                         Lod(row.FindPropertyRelative("lod1"),tab==0?"LOD1 · middle · 512 triangles max":"LOD1 · middle · 128 triangles max");
                         if(tab==0)Lod(row.FindPropertyRelative("lod2"),"LOD2 · distant · 128 triangles max");
