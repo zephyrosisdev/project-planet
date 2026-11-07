@@ -18,7 +18,7 @@ namespace MassiveArmy.Planetary {
             if(ShipPrototypeLibrary.Find("hangar")==null)return false;
             assembly=ShipModules.Starter(1);modularMaterial=ColonyPrototypeLibrary.Material("Socketed ship armor");RebuildModularSections();
             // These moving contacts keep the established carrier/door frame contract.
-            HatchAt("REAR HATCH",-38.25f,25.5f);HatchAt("INNER AIRLOCK",-31,8);
+            HatchAt("REAR HATCH",-38.25f,25.5f,aftControlStandOff:1.2f);HatchAt("INNER AIRLOCK",-31,8);
             Part("Bridge upper pressure bulkhead",new Vector3(0,4.25f,10),new Vector3(18.5f,3.5f,.5f),steel);
             foreach(int side in new[]{-1,1})Part("Hangar shoulder pressure bulkhead",new Vector3(side*17.5f,1,10),new Vector3(16.5f,10,.5f),steel);
             ramp=Part("Boarding ramp",new Vector3(0,-6,-44),new Vector3(12,.4f,13),steel,Quaternion.identity,true);
