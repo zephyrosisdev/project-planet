@@ -1,3 +1,13 @@
+#pragma kernel PickPersonalArmy
+#pragma kernel PickPersonalCivilian
+#pragma kernel ApplyPersonalStrike
+#pragma multi_compile _ PLANET_COMPANIONS
+#pragma kernel CountOutbreakActors
+#pragma kernel InitialiseActorOrigin
+#pragma multi_compile _ PLANET_BIOWARFARE
+#pragma multi_compile _ PLANET_STRATEGIC_LOD
+#pragma kernel BiologicalBlast
+#pragma multi_compile _ PLANET_VEHICLES
 #pragma kernel InitialiseCivicClaims
 #pragma kernel CivicFindTargets
 #pragma kernel GrowStructureDamage
@@ -58,12 +68,19 @@ StructuredBuffer<float2> _Sites;StructuredBuffer<UnitArchetype> _Types;Structure
 StructuredBuffer<float4> _Structures;RWStructuredBuffer<uint> _StructureDamage;uint _StructureCount;
 struct Remains{float4 centre,tangent,metadata;};RWStructuredBuffer<Remains> _Remains;RWStructuredBuffer<uint> _RemainsIndex,_RemainsCounter;uint _RemainsResolution;
 RWStructuredBuffer<uint> _Presence,_Objectives,_Noise,_Hearing;StructuredBuffer<uint> _Eligibility;StructuredBuffer<float> _NavCosts;float3 _Home;float _Refuge;uint _SpawnSeed;uint _SeparatedFactions;
-float _SpawnLocalRadius;
+float _SpawnLocalRadius;float3 _BioBlast,_StrategicObserver;float _BioRadius,_StrategicDetailRange;
+UnitState InfectedActor(UnitState u){u.packed=2u|(31u<<8);u.flags=ALIVE|ZOMBIE_UNIT|ZOMBIE_WANDERING;u.health=_Types[31].health;u.group=17;u.target=INVALID;u.destination=u.position;u.velocity=0;u.cooldown=0;return u;}
+
 RWStructuredBuffer<float2> _RoamOrigins;
 #include "PlanetZombieRoaming.hlsl"
 float4 _StrategicBlast;float _StrategicRadius,_StrategicHearingRadius;
 uint _Count,_Capacity,_Res,_SiteCount,_SpawnCount,_SpawnWave,_SpawnTeam,_SpawnType,_SpawnGroup,_Serial,_Tick,_AiTest;float _Dt;
 RWStructuredBuffer<uint> _InterestSources,_InterestRegions,_UnitActivity,_ActiveIndices,_ActiveDispatch,_LastSimulationTick;
+#ifdef PLANET_STRATEGIC_LOD
+bool SlowStrategic(UnitState u,uint id){return (u.flags&(RAIDER_UNIT|STRATEGIC_AI))!=0&&length(PlanetDecode(u.position)-_StrategicObserver)*_PlanetRadius>_StrategicDetailRange&&(_Tick&31u)!=(id&31u);}
+#else
+bool SlowStrategic(UnitState u,uint id){return false;}
+#endif
 uint _InterestRes,_UseInterest;float3 _InterestObserver;float _InterestRadius;
 // Neighbour reads are SRVs: RW aliases would exceed the eight UAVs supported by D3D11 and skip detailed steering.
 StructuredBuffer<uint> _ActiveCounts,_ActiveRead,_ActivityRead,_HeadsRead,_NextRead,_NoiseRead,_HearingRead;
@@ -88,7 +105,7 @@ uint ActiveId(uint index){return _UseInterest!=0?(index<_ActiveCounts[3]?_Active
 int2 InterestOffset(int2 cell,int x,int y){for(int i=0;i<abs(x);i++)cell=PlanetNeighbour(cell,int2(x<0?-1:1,0),_InterestRes);for(int j=0;j<abs(y);j++)cell=PlanetNeighbour(cell,int2(0,y<0?-1:1),_InterestRes);return cell;}
 [numthreads(128,1,1)]void InitializeInterest(uint3 id:SV_DispatchThreadID){if(id.x<_Count){_LastSimulationTick[id.x]=_Tick-1;_UnitActivity[id.x]=1;}}
 [numthreads(128,1,1)]void ClearInterest(uint3 id:SV_DispatchThreadID){if(id.x<6*_InterestRes*_InterestRes)_InterestSources[id.x]=0;if(id.x<6)_ActiveDispatch[id.x]=0;}
-[numthreads(128,1,1)]void MarkInterest(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0||(u.flags&ZOMBIE_UNIT)!=0)return;uint cell=PlanetIndex(PlanetPositionCell(u.position,_InterestRes),_InterestRes);if(_InterestSources[cell]==0)InterlockedOr(_InterestSources[cell],1);}
+[numthreads(128,1,1)]void MarkInterest(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0||(u.flags&(ZOMBIE_UNIT|RAIDER_UNIT|VEHICLE_EMBARKED))!=0)return;uint cell=PlanetIndex(PlanetPositionCell(u.position,_InterestRes),_InterestRes);if(_InterestSources[cell]==0)InterlockedOr(_InterestSources[cell],1);}
 [numthreads(128,1,1)]void MarkObservers(uint3 id:SV_DispatchThreadID){if(id.x>=_StructureCount)return;float4 site=_Structures[id.x*3],stats=_Structures[id.x*3+1];if(stats.x<=0)return;
  int2 cell=PlanetPositionCell(PlanetEncode(site.xyz),_InterestRes);int extent=min(16,(int)ceil(max(0,stats.w)/(max(1,2*_PlanetRadius/_InterestRes/3))));
  for(int y=-extent;y<=extent;y++)for(int x=-extent;x<=extent;x++)InterlockedOr(_InterestSources[PlanetIndex(InterestOffset(cell,x,y),_InterestRes)],1);
@@ -96,23 +113,23 @@ int2 InterestOffset(int2 cell,int x,int y){for(int i=0;i<abs(x);i++)cell=PlanetN
 [numthreads(128,1,1)]void ExpandInterest(uint3 id:SV_DispatchThreadID){if(id.x>=6*_InterestRes*_InterestRes)return;int2 cell=PlanetCell(id.x,_InterestRes);uint active=0;
  for(int y=-2;y<=2&&active==0;y++)for(int x=-2;x<=2;x++)if(_InterestSources[PlanetIndex(InterestOffset(cell,x,y),_InterestRes)]!=0){active=1;break;}_InterestRegions[id.x]=active;}
 [numthreads(128,1,1)]void ClassifyInterest(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0){_UnitActivity[id.x]=0;return;}
- bool zombie=(u.flags&ZOMBIE_UNIT)!=0,active=!zombie;float3 direction=PlanetDecode(u.position);
- if(zombie){active=length(direction-_InterestObserver)*_PlanetRadius<=_InterestRadius;
+ bool zombie=(u.flags&ZOMBIE_UNIT)!=0,distant=(u.flags&(ZOMBIE_UNIT|RAIDER_UNIT|STRATEGIC_AI))!=0,active=!distant;float3 direction=PlanetDecode(u.position);
+ if(distant){active=length(direction-_InterestObserver)*_PlanetRadius<=_InterestRadius;
   if(!active)active=_InterestRegions[PlanetIndex(PlanetPositionCell(u.position,_InterestRes),_InterestRes)]!=0;}
  uint previous=_UnitActivity[id.x];_UnitActivity[id.x]=active?1:0;
  if(active){uint rank;InterlockedAdd(_ActiveDispatch[3],1,rank);_ActiveIndices[rank]=id.x;if(zombie)InterlockedAdd(_ActiveDispatch[5],1);}
- else if(previous!=0){u.target=INVALID;u.previous=u.position;u.velocity=0;_Units[id.x]=u;_Steering[id.x]=0;}
+ else if(previous!=0){u.target=INVALID;if((u.flags&PLANET_POSITION_RESIDUAL)==0)u.previous=u.position;u.velocity=0;_Units[id.x]=u;_Steering[id.x]=0;}
 }
 [numthreads(128,1,1)]void BuildActiveDispatch(uint3 id:SV_DispatchThreadID){if(id.x!=0)return;_ActiveDispatch[0]=(_ActiveDispatch[3]+127)/128;_ActiveDispatch[1]=1;_ActiveDispatch[2]=1;}
 #include "PlanetCrowd.hlsl"
 [numthreads(128,1,1)]void Snapshot(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;_Damage[id.x]=0;if(_UseInterest!=0&&_UnitActivity[id.x]==0)return;_Snapshot[id.x]=_Units[id.x];}
 [numthreads(128,1,1)]void ClearCells(uint3 id:SV_DispatchThreadID){if(_CrowdEnabled!=0)ClearCrowdCell(id.x);if(_CrowdEnabled!=0&&id.x<6*_ContactRes*_ContactRes)_ContactHeads[id.x]=INVALID;if(id.x<_HeadCount)_Heads[id.x]=INVALID;if(id.x<6*_Res*_Res){_Presence[id.x]=0;if(_Noise[id.x]>0&&_Tick+1-_Noise[id.x]>450)_Noise[id.x]=0;}}
-[numthreads(128,1,1)]void BuildCells(uint3 id:SV_DispatchThreadID){if(id.x>=_Count||(_UnitRead[id.x].flags&ALIVE)==0)return;UnitState u=_UnitRead[id.x];uint cell=PlanetIndex(PlanetPositionCell(u.position,_Res),_Res),old;InterlockedOr(_Presence[cell],1u<<min(Team(u),2u));if(_UseInterest!=0&&_ActivityRead[id.x]==0)return;for(uint level=0;level<(SPARSE_SPATIAL!=0?3u:1u);level++){InterlockedExchange(_Heads[SpatialIndex(SpatialCell(u.position,level),level)],id.x,old);_Next[level*_Capacity+id.x]=old;}if(_CrowdEnabled!=0){uint contact=PlanetIndex(PlanetPositionCell(u.position,_ContactRes),_ContactRes);InterlockedExchange(_ContactHeads[contact],id.x,old);_ContactNext[id.x]=old;SplatCrowdUnit(u);}}
+[numthreads(128,1,1)]void BuildCells(uint3 id:SV_DispatchThreadID){if(id.x>=_Count||(_UnitRead[id.x].flags&ALIVE)==0||(_UnitRead[id.x].flags&VEHICLE_EMBARKED)!=0)return;UnitState u=_UnitRead[id.x];uint cell=PlanetIndex(PlanetPositionCell(u.position,_Res),_Res),old;InterlockedOr(_Presence[cell],1u<<min(Team(u),2u));if(_UseInterest!=0&&_ActivityRead[id.x]==0)return;for(uint level=0;level<(SPARSE_SPATIAL!=0?3u:1u);level++){InterlockedExchange(_Heads[SpatialIndex(SpatialCell(u.position,level),level)],id.x,old);_Next[level*_Capacity+id.x]=old;}if(_CrowdEnabled!=0){uint contact=PlanetIndex(PlanetPositionCell(u.position,_ContactRes),_ContactRes);InterlockedExchange(_ContactHeads[contact],id.x,old);_ContactNext[id.x]=old;SplatCrowdUnit(u);}}
 int2 OffsetCell(int2 c,int x,int y){int2 q=int2(c.x%_Res+x,c.y+y);if(all(q>=0)&&all(q<(int)_Res))return c+int2(x,y);for(int k=0;k<abs(x);k++)c=PlanetNeighbour(c,int2(x<0?-1:1,0),_Res);for(int j=0;j<abs(y);j++)c=PlanetNeighbour(c,int2(0,y<0?-1:1),_Res);return c;}
 #include "PlanetAvoidance.hlsl"
 [numthreads(128,1,1)]void Steer(uint3 id:SV_DispatchThreadID){
  id.x=ActiveId(id.x);
- if(id.x>=_Count)return;UnitState u=_SnapshotRead[id.x];_Steering[id.x]=0;if((u.flags&ALIVE)==0)return;
+ if(id.x>=_Count)return;UnitState u=_SnapshotRead[id.x];if(SlowStrategic(u,id.x))return;_Steering[id.x]=0;if((u.flags&ALIVE)==0||(u.flags&VEHICLE_EMBARKED)!=0)return;
  UnitArchetype a=_Types[Type(u)];float3 d=PlanetDecode(u.position),push=0;float nearest=a.acquisitionRange;uint target=INVALID;int2 cell=PlanetPositionCell(u.position,_Res);
  uint level=SpatialLevel(a.acquisitionRange);int2 search=SpatialCell(u.position,level);uint examined=0;int rings=SpatialRings(a.acquisitionRange,level);
  for(int ring=SPARSE_SPATIAL!=0?0:1;ring<=rings;ring++)for(int edgeSlot=0;edgeSlot<(SPARSE_SPATIAL!=0?max(1,8*ring):9);edgeSlot++){
@@ -124,9 +141,9 @@ int2 OffsetCell(int2 c,int x,int y){int2 q=int2(c.x%_Res+x,c.y+y);if(all(q>=0)&&
    if(Team(u)!=Team(v)&&chord<nearest&&(_Traits[Type(u)].targetMask&(1u<<b.movement))!=0){float distance=PlanetArc(d,other,_PlanetRadius);if(distance<nearest){nearest=distance;target=otherId;}}
   }
  }
- if(u.target<_Count&&(_UseInterest==0||_ActivityRead[u.target]!=0)){UnitState v=_SnapshotRead[u.target];if((v.flags&ALIVE)!=0&&Team(v)!=Team(u)&&(_Traits[Type(u)].targetMask&(1u<<_Types[Type(v)].movement))!=0){float distance=PlanetArc(d,PlanetDecode(v.position),_PlanetRadius);if(distance<nearest){nearest=distance;target=u.target;}}}
+ if(u.target<_Count&&(_UseInterest==0||_ActivityRead[u.target]!=0)){UnitState v=_SnapshotRead[u.target];if((v.flags&(ALIVE|VEHICLE_EMBARKED))==ALIVE&&Team(v)!=Team(u)&&(_Traits[Type(u)].targetMask&(1u<<_Types[Type(v)].movement))!=0){float distance=PlanetArc(d,PlanetDecode(v.position),_PlanetRadius);if(distance<nearest){nearest=distance;target=u.target;}}}
  if(a.damage>0)for(uint b=0;b<_StructureCount;b++){float4 centre=_Structures[b*3],stats=_Structures[b*3+1];if(stats.x<=0||(uint)stats.z==Team(u))continue;float distance=max(0,PlanetArc(d,centre.xyz,_PlanetRadius)-centre.w);if(distance<nearest){nearest=distance;target=STRUCTURE_TARGET|b;}}
- u.target=target;if(_AiTest!=0&&Team(u)==0){u.group=15;u.flags&=~STOPPED;}
+ u.target=target;if(_AiTest!=0&&Team(u)==0&&(u.flags&VEHICLE_DRIVEN)==0){u.group=15;u.flags&=~STOPPED;}
  float3 pursuit=0;float mode=0;bool roaming=(u.flags&ZOMBIE_WANDERING)!=0;
  if(a.damage>0&&target!=INVALID&&(Team(u)==2||(u.flags&ATTACK_MOVE)!=0||_AiTest!=0)){
   if(nearest<=a.attackRange)mode=-1;
@@ -139,16 +156,39 @@ int2 OffsetCell(int2 c,int x,int y){int2 q=int2(c.x%_Res+x,c.y+y);if(all(q>=0)&&
   else if(PlanetArc(d,destination,_PlanetRadius)<3||(u.flags&ARRIVED)!=0){destination=RoamDestination(id.x,_Tick);u.destination=PlanetEncode(destination);u.flags&=~ARRIVED;}
   pursuit=destination-d*dot(destination,d);if(dot(pursuit,pursuit)>1e-10)pursuit=normalize(pursuit);mode=3;
  }
- float3 desired=push+pursuit*a.speed;
+ float roamingSpeed=a.speed;
+#ifdef PLANET_STRATEGIC_LOD
+ if(roaming&&target==INVALID)roamingSpeed*=.4;
+#endif
+ #ifdef PLANET_COMPANIONS
+ if((u.flags&COMPANION_UNIT)!=0&&target==INVALID){float distance=PlanetArc(d,PlanetDecode(u.destination),_PlanetRadius);float3 toward=PlanetDecode(u.destination)-d*dot(PlanetDecode(u.destination),d);pursuit=distance>2.5&&dot(toward,toward)>1e-10?normalize(toward):0;mode=distance>2.5?3:-1;}
+#endif
+ float3 desired=push+pursuit*roamingSpeed;
  if(_CrowdEnabled!=0){if(mode==0)desired=PlanetRouteVelocity(u,d,a.speed)+(a.movement>=3?push:0);desired=AvoidPlanetTraffic(u,id.x,desired);}
  _Units[id.x]=u;_Steering[id.x]=float4(desired,mode);
 }
-[numthreads(128,1,1)]void Fight(uint3 id:SV_DispatchThreadID){id.x=ActiveId(id.x);if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0)return;u.cooldown=max(0,u.cooldown-_Dt);UnitArchetype a=_Types[Type(u)];
- if(u.target!=INVALID&&(u.target&STRUCTURE_TARGET)!=0&&u.cooldown<=0){uint b=u.target&~STRUCTURE_TARGET;float4 centre=_Structures[b*3],stats=_Structures[b*3+1];if(stats.x>0&&max(0,PlanetArc(PlanetDecode(u.position),centre.xyz,_PlanetRadius)-centre.w)<=a.attackRange){InterlockedAdd(_StructureDamage[b],(uint)max(1,(float)a.damage-stats.y));u.cooldown=max(.033,a.cooldown);InterlockedMax(_Noise[PlanetIndex(PlanetPositionCell(u.position,_Res),_Res)],_Tick+1);}}
- if(u.target<_Count&&(_UseInterest==0||_ActivityRead[u.target]!=0)&&u.cooldown<=0&&a.damage>0){UnitState v=_SnapshotRead[u.target];if((v.flags&ALIVE)!=0&&Team(v)!=Team(u)&&PlanetArc(PlanetDecode(u.position),PlanetDecode(v.position),_PlanetRadius)<=a.attackRange){uint dealt=(uint)max(1,(float)a.damage-_Traits[Type(v)].armour);InterlockedAdd(_Damage[u.target],dealt);u.cooldown=max(.033,a.cooldown);InterlockedMax(_Noise[PlanetIndex(PlanetPositionCell(u.position,_Res),_Res)],_Tick+1);}}
+struct Shot {float4 start,end,data;};RWStructuredBuffer<Shot> _Shots;RWStructuredBuffer<uint> _ShotCounter;
+float3 _ShotCameraLocal;
+void RecordGunfire(float3 up,float startAltitude,float3 end,float endAltitude,uint team,uint visualId){if(length(_ShotCameraLocal-up*_PlanetRadius)>20000)return;if(visualId>=2048&&((visualId+_Tick*8191u)%max(1u,_Count))>=2048)return;uint accepted;InterlockedAdd(_ShotCounter[1],1,accepted);if(accepted>=2048)return;uint slot;InterlockedAdd(_ShotCounter[0],1,slot);Shot shot;shot.start=float4(up,PlanetHeight(up)+startAltitude+2);shot.end=float4(end,PlanetHeight(end)+endAltitude+2);shot.data=float4(_Tick,team,1,0);_Shots[slot%2048]=shot;}
+void EmitGunfire(UnitState u,float3 end,float altitude,uint id){if(_Types[Type(u)].attackRange>=8)RecordGunfire(PlanetDecode(u.position),_Traits[Type(u)].altitude,end,altitude,Team(u),id);}
+[numthreads(128,1,1)]void Fight(uint3 id:SV_DispatchThreadID){id.x=ActiveId(id.x);if(id.x>=_Count)return;UnitState u=_Units[id.x];if(SlowStrategic(u,id.x))return;if((u.flags&ALIVE)==0||(u.flags&(VEHICLE_EMBARKED|VEHICLE_WEAPON_DISABLED))!=0)return;float combatDelta=_Dt;
+#ifdef PLANET_STRATEGIC_LOD
+ if((u.flags&(RAIDER_UNIT|STRATEGIC_AI))!=0&&length(PlanetDecode(u.position)-_StrategicObserver)*_PlanetRadius>_StrategicDetailRange)combatDelta*=32;
+#endif
+ u.cooldown=max(0,u.cooldown-combatDelta);UnitArchetype a=_Types[Type(u)];
+ if(u.target!=INVALID&&(u.target&STRUCTURE_TARGET)!=0&&u.cooldown<=0){uint b=u.target&~STRUCTURE_TARGET;float4 centre=_Structures[b*3],stats=_Structures[b*3+1];if(stats.x>0&&max(0,PlanetArc(PlanetDecode(u.position),centre.xyz,_PlanetRadius)-centre.w)<=a.attackRange){InterlockedAdd(_StructureDamage[b],(uint)max(1,(float)a.damage-stats.y));u.cooldown=max(.033,a.cooldown);EmitGunfire(u,centre.xyz,0,id.x);InterlockedMax(_Noise[PlanetIndex(PlanetPositionCell(u.position,_Res),_Res)],_Tick+1);}}
+ if(u.target<_Count&&(_UseInterest==0||_ActivityRead[u.target]!=0)&&u.cooldown<=0&&a.damage>0){UnitState v=_SnapshotRead[u.target];if((v.flags&(ALIVE|VEHICLE_EMBARKED))==ALIVE&&Team(v)!=Team(u)&&PlanetArc(PlanetDecode(u.position),PlanetDecode(v.position),_PlanetRadius)<=a.attackRange){uint dealt=(uint)max(1,(float)a.damage-_Traits[Type(v)].armour);InterlockedAdd(_Damage[u.target],dealt);
+#ifdef PLANET_BIOWARFARE
+ if((u.flags&ZOMBIE_UNIT)!=0&&_Types[Type(v)].movement==0&&(v.flags&ZOMBIE_UNIT)==0)InterlockedOr(_Damage[u.target],0x80000000u);
+#endif
+u.cooldown=max(.033,a.cooldown);EmitGunfire(u,PlanetDecode(v.position),_Traits[Type(v)].altitude,id.x);InterlockedMax(_Noise[PlanetIndex(PlanetPositionCell(u.position,_Res),_Res)],_Tick+1);}}
  _Units[id.x]=u;
 }
-[numthreads(128,1,1)]void ApplyDamage(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;uint damage=_Damage[id.x];if(_UseInterest!=0&&damage==0)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0)return;u.health=damage>=u.health?0:u.health-damage;if(u.health==0){uint serial;InterlockedAdd(_RemainsCounter[0],1,serial);serial++;float3 up=PlanetDecode(u.position),right=normalize(cross(abs(up.y)>.95?float3(1,0,0):float3(0,1,0),up));Remains stamp;stamp.centre=float4(up,Team(u)==2?4:8);stamp.tangent=float4(right,0);stamp.metadata=float4(Team(u)==2?1:_Types[Type(u)].movement==0?2:4,0,0,serial);_Remains[(serial-1)%512]=stamp;
+[numthreads(128,1,1)]void ApplyDamage(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;uint damage=_Damage[id.x];if(_UseInterest!=0&&damage==0)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0||(u.flags&VEHICLE_EMBARKED)!=0)return;
+#ifdef PLANET_BIOWARFARE
+ if((damage&0x80000000u)!=0&&_Types[Type(u)].movement==0){u=InfectedActor(u);_RoamOrigins[id.x]=u.position;_Units[id.x]=u;return;}
+#endif
+ u.health=damage>=u.health?0:u.health-damage;if(u.health==0){uint serial;InterlockedAdd(_RemainsCounter[0],1,serial);serial++;float3 up=PlanetDecode(u.position),right=normalize(cross(abs(up.y)>.95?float3(1,0,0):float3(0,1,0),up));Remains stamp;stamp.centre=float4(up,(u.flags&ZOMBIE_UNIT)!=0?4:8);stamp.tangent=float4(right,0);stamp.metadata=float4((u.flags&ZOMBIE_UNIT)!=0?1:_Types[Type(u)].movement==0?2:4,0,0,serial);_Remains[(serial-1)%512]=stamp;
  int2 centre=PlanetPositionCell(u.position,_RemainsResolution);for(int y=-2;y<=2;y++)for(int x=-2;x<=2;x++){int2 c=centre;for(int a=0;a<abs(x);a++)c=PlanetNeighbour(c,int2(x<0?-1:1,0),_RemainsResolution);for(int b=0;b<abs(y);b++)c=PlanetNeighbour(c,int2(0,y<0?-1:1),_RemainsResolution);InterlockedMax(_RemainsIndex[PlanetIndex(c,_RemainsResolution)],serial);}
  u.flags=0;u.velocity=0;u.target=INVALID;}_Units[id.x]=u;}
 [numthreads(128,1,1)]void FindFree(uint3 id:SV_DispatchThreadID){if(id.x>=_Count||(_Units[id.x].flags&ALIVE)!=0)return;uint rank;InterlockedAdd(_Counters[1],1,rank);_Free[rank]=id.x;}
@@ -162,12 +202,12 @@ bool SpawnAllowed(float3 d,uint mask){uint cell=PlanetIndex(PlanetPositionCell(P
  if(!found){float2 site=_Sites[ArmyHash(seed)%_SiteCount];int2 c=PlanetPositionCell(site,_Res);uint face=c.x/_Res;direction=PlanetDecode(site);
   for(uint j=0;j<16;j++){float2 uv=(float2(c.x%_Res,c.y)+float2(ArmyRandom(seed+97+j*2),ArmyRandom(seed+98+j*2)))*2/_Res-1;float3 candidate=PlanetDirection(face,uv);if(SpawnAllowed(candidate,mask)){direction=candidate;found=true;break;}}}
  if(!found){_Units[slot]=(UnitState)0;return;}
- UnitState u=(UnitState)0;u.position=PlanetEncode(direction);u.previous=u.position;u.destination=u.position;u.flags=ALIVE|(_SpawnTeam==2?ZOMBIE_UNIT|(_SpawnWave!=0?SWARM_UNIT:ZOMBIE_WANDERING):ATTACK_MOVE);u.packed=_SpawnTeam|(_SpawnType<<8);u.health=_Types[_SpawnType].health;u.target=INVALID;u.group=_SpawnGroup;_Units[slot]=u;_RoamOrigins[slot]=u.position;_LastSimulationTick[slot]=_Tick;_UnitActivity[slot]=1;InterlockedMax(_Counters[0],slot+1);InterlockedAdd(_Counters[2],1);}
-[numthreads(128,1,1)]void Statistics(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)!=0){InterlockedAdd(_Counters[4+min(Team(u),2u)],1);if((u.flags&SWARM_UNIT)!=0)InterlockedAdd(_Counters[7],1);}}
+ UnitState u=(UnitState)0;u.position=PlanetEncode(direction);u.previous=u.position;u.destination=u.position;u.flags=ALIVE|(_SpawnTeam==2&&_SpawnType==31?ZOMBIE_UNIT|(_SpawnWave!=0?SWARM_UNIT:ZOMBIE_WANDERING):(_SpawnTeam==2?RAIDER_UNIT|ATTACK_MOVE:ATTACK_MOVE));u.packed=_SpawnTeam|(_SpawnType<<8);u.health=_Types[_SpawnType].health;u.target=INVALID;u.group=_SpawnGroup;_Units[slot]=u;_RoamOrigins[slot]=u.position;_LastSimulationTick[slot]=_Tick;_UnitActivity[slot]=1;InterlockedMax(_Counters[0],slot+1);InterlockedAdd(_Counters[2],1);}
+[numthreads(128,1,1)]void Statistics(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)!=0){if(Team(u)<2||(u.flags&ZOMBIE_UNIT)!=0)InterlockedAdd(_Counters[4+min(Team(u),2u)],1);if((u.flags&SWARM_UNIT)!=0)InterlockedAdd(_Counters[7],1);}}
 groupshared uint StatisticsLocal[4];
 [numthreads(128,1,1)]void StatisticsBatched(uint3 id:SV_DispatchThreadID,uint lane:SV_GroupIndex){
  if(lane<4)StatisticsLocal[lane]=0;GroupMemoryBarrierWithGroupSync();
- if(id.x<_Count){UnitState u=_Units[id.x];if((u.flags&ALIVE)!=0){InterlockedAdd(StatisticsLocal[min(Team(u),2u)],1);if((u.flags&SWARM_UNIT)!=0)InterlockedAdd(StatisticsLocal[3],1);}}
+ if(id.x<_Count){UnitState u=_Units[id.x];if((u.flags&ALIVE)!=0){if(Team(u)<2||(u.flags&ZOMBIE_UNIT)!=0)InterlockedAdd(StatisticsLocal[min(Team(u),2u)],1);if((u.flags&SWARM_UNIT)!=0)InterlockedAdd(StatisticsLocal[3],1);}}
  GroupMemoryBarrierWithGroupSync();if(lane<4&&StatisticsLocal[lane]>0)InterlockedAdd(_Counters[4+lane],StatisticsLocal[lane]);
 }
 
@@ -185,7 +225,7 @@ groupshared uint StatisticsLocal[4];
 
 // Opt-in standalone fixtures only; never dispatched by normal session orchestration.
 [numthreads(128,1,1)]void PrepareInterestValidation(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0)return;u.health=1000000000;u.cooldown=1000000;
- if((u.flags&ZOMBIE_UNIT)==0){u.position=PlanetEncode(_Home);u.previous=u.position;u.flags|=STOPPED;u.target=INVALID;}_Units[id.x]=u;}
+ if((u.flags&ZOMBIE_UNIT)==0){u.position=PlanetEncode(_Home);u.previous=u.position;u.flags&=~PLANET_POSITION_RESIDUAL;u.flags|=STOPPED;u.target=INVALID;}_Units[id.x]=u;}
 [numthreads(128,1,1)]void FindDormantValidation(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&(ALIVE|ZOMBIE_UNIT))==(ALIVE|ZOMBIE_UNIT)&&_UnitActivity[id.x]==0&&length(PlanetDecode(u.position)-_Home)*_PlanetRadius>_InterestRadius+500)InterlockedMin(_ActiveDispatch[4],id.x);}
 
 // Event-only dispatch; no extra per-tick army scan for strategic weapons.
@@ -209,11 +249,32 @@ StructuredBuffer<uint> _PreviousStructureDamage;uint _OldStructureCapacity,_NewS
  if(u.target!=INVALID){if((u.target&STRUCTURE_TARGET)!=0){float4 centre=_Structures[(u.target&~STRUCTURE_TARGET)*3];nearest=max(0,PlanetArc(d,centre.xyz,_PlanetRadius)-centre.w);}else if(u.target<_Count)nearest=PlanetArc(d,PlanetDecode(_SnapshotRead[u.target].position),_PlanetRadius);}
  if(distance>=min(a.acquisitionRange,nearest+12))continue;uint old;InterlockedCompareExchange(_CivicClaims[other],stamp,_Tick+1,old);if(old!=stamp)continue;
  u.target=INVALID;u.flags&=~(STOPPED|ARRIVED);float3 delta=direction-d*dot(direction,d);float3 desired=dot(delta,delta)>1e-10?normalize(delta)*a.speed:0;bool melee=distance<=a.attackRange+.5;
- if(melee){desired=0;if(u.cooldown<=_Dt){c.damage+=a.damage;u.cooldown=max(.033,a.cooldown)+_Dt;}}
+ if(melee){desired=0;if(u.cooldown<=_Dt){c.damage+=a.damage;
+#ifdef PLANET_BIOWARFARE
+ if((u.flags&ZOMBIE_UNIT)!=0){c.flags|=16384u;c.damage=max(c.damage,c.health);}
+#endif
+ if((u.flags&RAIDER_UNIT)!=0)c.flags|=32768u;
+u.cooldown=max(.033,a.cooldown)+_Dt;}}
  if(_CrowdEnabled!=0)desired=AvoidPlanetTraffic(u,other,desired);_Units[other]=u;_Steering[other]=float4(desired,melee?-1:3);
  }}
- if((c.flags&2u)!=0&&(c.pad&1u)!=0&&(c.pad>>1)<(c.flags>>16)&&target!=INVALID){c.flags|=8u;if(c.cooldown<=0){InterlockedAdd(_Damage[target],35u);c.pad+=2;c.cooldown=1;}}
+ if((c.flags&2u)!=0&&(c.pad&1u)!=0&&(c.pad>>1)<(c.flags>>16)&&target!=INVALID){c.flags|=8u;if(c.cooldown<=0){InterlockedAdd(_Damage[target],35u);RecordGunfire(direction,0,PlanetDecode(_SnapshotRead[target].position),0,0,i);c.pad+=2;c.cooldown=1;}}
  if(c.damage>0){c.health=c.damage>=c.health?0:c.health-c.damage;c.lastHitTick=_Tick;if(c.health==0){c.body.w=_CivicClock;if((c.flags&128u)!=0)c.flags|=512u|4u|((c.flags&8192u)==0?256u:0u);InterlockedAdd(_Counters[3],1u);}c.damage=0;}
  _CivicStates[i]=c;
 }
 [numthreads(128,1,1)]void InitialiseCivicClaims(uint3 id:SV_DispatchThreadID){if(id.x<_Capacity)_CivicClaims[id.x]=0;}
+
+[numthreads(128,1,1)]void BiologicalBlast(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_Units[id.x];if((u.flags&ALIVE)==0||(u.flags&ZOMBIE_UNIT)!=0||_Types[Type(u)].movement!=0)return;if(length(PlanetDecode(u.position)-_BioBlast)*_PlanetRadius>_BioRadius)return;u=InfectedActor(u);_RoamOrigins[id.x]=u.position;_Units[id.x]=u;}
+
+uint _OriginSlot;float2 _OriginPosition;
+[numthreads(1,1,1)]void InitialiseActorOrigin(uint3 id:SV_DispatchThreadID){_RoamOrigins[_OriginSlot]=_OriginPosition;}
+
+RWStructuredBuffer<uint> _BioCounts;float4 _BioRegions[8];uint _BioRegionCount;
+[numthreads(128,1,1)]void CountOutbreakActors(uint3 id:SV_DispatchThreadID){if(id.x>=_Count)return;UnitState u=_UnitRead[id.x];if((u.flags&(ALIVE|ZOMBIE_UNIT))!=(ALIVE|ZOMBIE_UNIT))return;float3 d=PlanetDecode(u.position);for(uint i=0;i<_BioRegionCount;i++)if(length(d-_BioRegions[i].xyz)*_PlanetRadius<_BioRegions[i].w)InterlockedAdd(_BioCounts[i],1);}
+
+RWStructuredBuffer<uint> _PersonalPick;float4 _PlayerStrikeEye;float3 _PlayerStrikeDirection;float _PlayerStrikeRange,_PlayerStrikeRadius;uint _PlayerStrikeDamage;
+float StrikeDistance(float3 d,float height,float radius){float3 delta=(d-_PlayerStrikeEye.xyz)*_PlanetRadius+d*height-_PlayerStrikeEye.xyz*_PlayerStrikeEye.w;float along=dot(delta,_PlayerStrikeDirection);float3 side=delta-_PlayerStrikeDirection*along;return along>0&&along<=_PlayerStrikeRange&&dot(side,side)<radius*radius?along:1e20;}
+[numthreads(128,1,1)]void PickPersonalArmy(uint3 id:SV_DispatchThreadID){if(id.x>=_Count||id.x>=1048576)return;UnitState u=_UnitRead[id.x];if((u.flags&ALIVE)==0||(u.flags&VEHICLE_EMBARKED)!=0)return;float3 d=PlanetDecode(u.position);float distance=StrikeDistance(d,PlanetHeight(d)+1,_Types[Type(u)].radius+_PlayerStrikeRadius);if(distance<1e19)InterlockedMin(_PersonalPick[0],((uint)distance<<20)|id.x);}
+[numthreads(128,1,1)]void PickPersonalCivilian(uint3 id:SV_DispatchThreadID){if(id.x>=_CivicCount||id.x>=65535)return;CivicAgent c=_CivicStates[id.x];if(c.health==0||(c.flags&1u)==0)return;float lengthBody=length(c.body.xyz);if(lengthBody<1)return;float distance=StrikeDistance(c.body.xyz/lengthBody,lengthBody-_PlanetRadius+1,.45+_PlayerStrikeRadius);if(distance<1e19)InterlockedMin(_PersonalPick[1],((uint)distance<<16)|id.x);}
+[numthreads(1,1,1)]void ApplyPersonalStrike(uint3 id:SV_DispatchThreadID){uint army=_PersonalPick[0],civilian=_PersonalPick[1];float3 end=normalize(_PlayerStrikeEye.xyz*(_PlanetRadius+_PlayerStrikeEye.w)+_PlayerStrikeDirection*_PlayerStrikeRange);RecordGunfire(_PlayerStrikeEye.xyz,_PlayerStrikeEye.w-PlanetHeight(_PlayerStrikeEye.xyz),end,_PlayerStrikeEye.w+dot(_PlayerStrikeDirection,_PlayerStrikeEye.xyz)*_PlayerStrikeRange-PlanetHeight(end),0,0);
+ if(army==INVALID&&civilian==INVALID)return;
+ if(civilian!=INVALID&&(army==INVALID||(civilian>>16)<=(army>>20))){uint slot=civilian&65535u;CivicAgent c=_CivicStates[slot];c.health=c.health>_PlayerStrikeDamage?c.health-_PlayerStrikeDamage:0;c.lastHitTick=0x80000000u|_Tick;if(c.health==0){c.body.w=_CivicClock;InterlockedAdd(_Counters[3],1);}_CivicStates[slot]=c;}else {uint slot=army&1048575u;UnitState u=_Units[slot];u.health=u.health>_PlayerStrikeDamage?u.health-_PlayerStrikeDamage:0;if(u.health==0){u.flags=0;u.velocity=0;u.target=INVALID;}_Units[slot]=u;}}

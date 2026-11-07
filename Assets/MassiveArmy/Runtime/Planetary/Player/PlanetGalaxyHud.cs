@@ -10,7 +10,7 @@ namespace MassiveArmy.Planetary
         Double3 HudVelocity(){var model=world.SystemRuntime?.Galaxy;return model!=null&&galaxyPrediction!=null&&galaxyPrediction.Count>0?pose.linearVelocity+world.definition.velocity-model.Current[galaxyPrediction.FrameNode].velocity:pose.linearVelocity;}
         GalaxyPrediction Prediction(){var model=world.SystemRuntime?.Galaxy;if(model==null)return null;
             if(galaxyPrediction==null)galaxyPrediction=new GalaxyPrediction(model);
-            if(predictionFrame!=Time.frameCount){predictionFrame=Time.frameCount;galaxyPrediction.Tick(world.definition,pose,Landed);}
+            if(predictionFrame!=Time.frameCount){predictionFrame=Time.frameCount;galaxyPrediction.Tick(world.definition,pose,Landed,OrbitHoldPrediction);}
             return galaxyPrediction;
         }
         bool RefreshGalaxyOrbit(){var model=world.SystemRuntime?.Galaxy;if(model==null)return false;var path=Prediction();

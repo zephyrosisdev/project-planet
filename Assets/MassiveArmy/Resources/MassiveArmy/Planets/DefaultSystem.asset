@@ -11,11 +11,16 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e1724ad3e48242c9a09224c8c682a48b, type: 3}
   m_Name: DefaultSystem
-  m_EditorClassIdentifier:
-  galaxy: {fileID: 11400000, guid: ce64fc1293f4473aab0df24a76eddc16, type: 2}
+  m_EditorClassIdentifier: 
+  sizeMultiplier: 10
   seed: 73129
+  galaxy: {fileID: 11400000, guid: ce64fc1293f4473aab0df24a76eddc16, type: 2}
   planetCount: 4
   radiusRange: {x: 80000, y: 160000}
   spacing: 1200000
   activationAltitude: 80000
   sleepHysteresis: 20000
+  preparationDistance: 200000
+  detailActivationAltitude: 500000
+  detailActivationRadius: 1
+  preparationRadius: 1

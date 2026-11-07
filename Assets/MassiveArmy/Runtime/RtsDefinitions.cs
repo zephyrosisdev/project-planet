@@ -114,8 +114,15 @@ namespace MassiveArmy
     public sealed class ResourceWallet
     {
         public ResourceCost Stock,Capacity;
+#if UNITY_EDITOR
+        public static Action<ResourceWallet,ResourceCost> SpendObserver;
+#endif
         public bool CanAfford(ResourceCost cost) { for(int i=0;i<5;i++)if(Stock[i]+.001f<cost[i])return false;return true; }
-        public bool Spend(ResourceCost cost) { if(!CanAfford(cost))return false;for(int i=0;i<5;i++)Stock[i]-=cost[i];return true; }
+        public bool Spend(ResourceCost cost) { if(!CanAfford(cost))return false;for(int i=0;i<5;i++)Stock[i]-=cost[i];
+#if UNITY_EDITOR
+            SpendObserver?.Invoke(this,cost);
+#endif
+            return true; }
         public void Credit(ResourceCost amount) { for(int i=0;i<5;i++)Stock[i]=Mathf.Min(Capacity[i],Stock[i]+amount[i]); }
         public float Deposit(ResourceKind resource,float amount) { int i=(int)resource;float accepted=Mathf.Clamp(amount,0,Mathf.Max(0,Capacity[i]-Stock[i]));Stock[i]+=accepted;return accepted; }
     }
@@ -128,6 +135,10 @@ namespace MassiveArmy
         public ResourceKind resource;
         public Vector2 position;
         public float capacity,remaining,rateMultiplier,quality,radius=12;
+        public bool inexhaustible;
+        public float Available=>inexhaustible?float.MaxValue:remaining;
+        public void MakeInexhaustible(){inexhaustible=true;remaining=Mathf.Max(1,capacity);}
+        public void Consume(float amount){if(!inexhaustible)remaining=Mathf.Max(0,remaining-Mathf.Max(0,amount));}
         public string elementId;
     }
     public sealed class QueueOrder

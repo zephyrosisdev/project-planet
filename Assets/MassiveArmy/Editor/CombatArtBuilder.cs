@@ -10,7 +10,7 @@ using UnityEngine.VFX;
 
 namespace MassiveArmy.EditorTools
 {
-    public static class CombatArtBuilder
+    public static partial class CombatArtBuilder
     {
         const string Root="Assets/MassiveArmy/Resources/MassiveArmy/CombatArt";
         const BindingFlags Flags=BindingFlags.Public|BindingFlags.NonPublic|BindingFlags.Instance|BindingFlags.Static;

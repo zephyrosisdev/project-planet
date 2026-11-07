@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <!-- Separate apphosts/intermediate files so test and benchmark executables cannot overwrite one another. -->
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory)bin/$(MSBuildProjectName)/</BaseOutputPath>
+  </PropertyGroup>
+</Project>

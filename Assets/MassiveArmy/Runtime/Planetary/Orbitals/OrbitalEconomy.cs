@@ -61,7 +61,7 @@ namespace MassiveArmy.Planetary {
             if(!Enum.IsDefined(typeof(OrbitalPayloadKind),kind)||pad==null||pad.team!=faction||pad.removed||pad.definition.id!="civil_launch_pad"||!pad.Complete||pad.paused||!pad.powered||pad.roadSuspended||pad.Efficiency<=0||!sim.Logistics.Connected(local,pad))return false;
             string body=sim.BodyId(local.World.definition.bodyId);var colony=sim.Colony(body,faction);var item=colony?.installations.Find(i=>i.id==pad.persistentId);if(item==null)return false;
             reason="Requires "+RequiredTech(kind);if(!local.Factions[faction].HasTech(RequiredTech(kind)))return false;
-            reason="Launch already in preparation";if(Job(pad.persistentId)!=null)return false;
+            reason="Launch already in preparation or colony kit in flight";if(Job(pad.persistentId)!=null||sim.ColonyPadBusy(pad.persistentId))return false;
             int count=0;foreach(var a in Assets(body))if(a.faction==faction)count++;if(jobs.TryGetValue(body,out var orders))foreach(var j in orders)if(j.faction==faction)count++;
             reason="Orbital capacity reached (32 payloads per faction per planet)";if(count>=32)return false;
             var cost=new[]{new MaterialQuantity("orbital_kit",Kits(kind)),new MaterialQuantity("propellant",Fuel(kind))};
@@ -82,7 +82,7 @@ namespace MassiveArmy.Planetary {
                 // Paid hardware survives as a paused order if its pad is destroyed; there is no free relaunch.
                 if(pad==null||pad.removed||!pad.Complete||pad.paused||!pad.powered||pad.roadSuspended||pad.Efficiency<=0)continue;
                 j.progress=Math.Min(j.seconds,j.progress+seconds*pad.Efficiency);if(j.progress+1e-9<j.seconds)continue;
-                var d=local.World.definition;var up=CubeSphere.Decode(pad.position).normalized;var launchOrigin=new Double3(local.World.Surface.GetSurfacePosition(up,20));var normal=launchOrigin*(1/launchOrigin.Magnitude);var east=Double3.Cross(new Double3(Mathf.Abs(up.y)>.95f?Vector3.forward:Vector3.up),normal);east=east*(1/east.Magnitude);
+                var d=local.World.definition;var up=CubeSphere.Decode(pad.position).normalized;var launchOrigin=local.World.Surface.GetSurfacePositionPrecise(up,20);var normal=launchOrigin*(1/launchOrigin.Magnitude);var east=Double3.Cross(new Double3(Mathf.Abs(up.y)>.95f?Vector3.forward:Vector3.up),normal);east=east*(1/east.Magnitude);
                 double radius=d.radius+Math.Max(20000,Math.Max(d.ReliefBound,d.oceanHeight)+5000);
                 double sweep=Math.Sqrt(d.gravitationalParameter/(radius*radius*radius))*10;
                 var a=new OrbitalAssetState{id=sim.State.AllocateId(),launchPad=j.pad,body=j.body,faction=j.faction,kind=j.kind,radius=radius,mu=d.gravitationalParameter,u=normal*Math.Cos(sweep)+east*Math.Sin(sweep),v=east*Math.Cos(sweep)-normal*Math.Sin(sweep),launchOrigin=launchOrigin,epoch=sim.SimulationTime,insertion=sim.SimulationTime+20,lastAccounted=sim.SimulationTime+20};

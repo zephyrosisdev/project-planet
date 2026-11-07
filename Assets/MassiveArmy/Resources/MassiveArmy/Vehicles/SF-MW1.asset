@@ -1,0 +1,127 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27719f69f40c43d42a2417bfd009d538, type: 3}
+  m_Name: SF-MW1
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.Planetary.VehicleDefinition
+  id: SF-MW1
+  displayName: SF-MW1 Combat walker
+  cameraSettings: {fileID: 11400000, guid: 6903f8391f074c8ba08fb705e6e6199b, type: 2}
+  locomotion: 0
+  prefab: {fileID: 8379021367429595669, guid: 080280a99b045b142a72737591cecf9d, type: 3}
+  size: {x: 4.8, y: 7.5, z: 5.4}
+  chassisCentre: {x: 0, y: 3.9499998, z: 0}
+  chassisSize: {x: 3.4560003, y: 1.875, z: 4.05}
+  centreOfMass: {x: 0, y: 3.9499998, z: 0}
+  mass: 32000
+  maximumSpeed: 8
+  reverseSpeed: 3.2
+  acceleration: 1.8
+  braking: 7
+  turnSpeed: 30
+  turnAcceleration: 54
+  suspensionSpring: 45
+  suspensionDamping: 12
+  grip: 6
+  torsoYaw: 100
+  torsoPitch: 35
+  traversal:
+    maximumSlope: 38
+    maximumStep: 0.7
+    maximumDrop: 1.5
+    clearance: 0.25
+  seats:
+  - name: Driver 1
+    role: 0
+    permissions: 1
+    position: {x: -0.45, y: 5.05, z: 0.2}
+    eye: {x: -0.45, y: 5.7000003, z: 0.5}
+    entry: {x: -3, y: 0, z: 0.2}
+    exit: {x: -3.4, y: 0, z: 0.2}
+    aiByDefault: 0
+  - name: Gunner 2
+    role: 2
+    permissions: 6
+    position: {x: 0.45, y: 5.05, z: 0.2}
+    eye: {x: 0.45, y: 5.7000003, z: 0.5}
+    entry: {x: 3, y: 0, z: 0.2}
+    exit: {x: 3.4, y: 0, z: 0.2}
+    aiByDefault: 1
+  - name: Commander 3
+    role: 4
+    permissions: 8
+    position: {x: -0.45, y: 5.05, z: -0.7}
+    eye: {x: -0.45, y: 5.7000003, z: -0.39999998}
+    entry: {x: -3, y: 0, z: 0.2}
+    exit: {x: -3.4, y: 0, z: 0.2}
+    aiByDefault: 0
+  legs:
+  - name: Left
+    hip: {x: -1.1040001, y: 3.6, z: 0}
+    stance: {x: -1.824, y: 0.08, z: 0}
+    pole: {x: -0.15, y: 0, z: 1}
+    upperLength: 2.0879998
+    lowerLength: 2.0879998
+    footWidth: 1.056
+    footLength: 1.6200001
+    stride: 2.4750001
+    stepHeight: 0.97499996
+    stepDuration: 0.3
+    maxReach: 4.0716
+    compression: 1.125
+    probeHeight: 3
+    probeDepth: 7.5
+    strength: 1
+    minimumKneeAngle: 8
+    maximumKneeAngle: 155
+    damage: 0
+  - name: Right
+    hip: {x: 1.1040001, y: 3.6, z: 0}
+    stance: {x: 1.824, y: 0.08, z: 0}
+    pole: {x: 0.15, y: 0, z: 1}
+    upperLength: 2.0879998
+    lowerLength: 2.0879998
+    footWidth: 1.056
+    footLength: 1.6200001
+    stride: 2.4750001
+    stepHeight: 0.97499996
+    stepDuration: 0.3
+    maxReach: 4.0716
+    compression: 1.125
+    probeHeight: 3
+    probeDepth: 7.5
+    strength: 1
+    minimumKneeAngle: 8
+    maximumKneeAngle: 155
+    damage: 0
+  gaits:
+  - name: Walk
+    groups: 0000000001000000i
+    minimumGrounded: 1
+    cadence: 1.4
+    strideMultiplier: 1
+    maximumSpeed: 4.4
+    bodyBob: 0.04
+  - name: Travel
+    groups: 0000000001000000i
+    minimumGrounded: 1
+    cadence: 2.2
+    strideMultiplier: 1.15
+    maximumSpeed: 8
+    bodyBob: 0.04
+  wheels: []
+  detailDistances: {x: 90, y: 250, z: 650}
+  boostAcceleration: 30
+  boostFuelSeconds: 1.5
+  boostMaximumBurst: 0.65
+  boostRechargeSeconds: 5
+  boostRechargeDelay: 1.25
+  debugDraw: 0

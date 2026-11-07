@@ -43,10 +43,26 @@ MonoBehaviour:
   roadSearchBudget: 4096
   maximumRoadTiles: 0
   maximumCargoVehicles: 64
+  maximumCargoSearches: 256
+  cargoSearchMemoryMiB: 192
+  civilianFlowMemoryMiB: 32
+  maximumCivilianFlowGoals: 128
+  dormantResourceReleaseSeconds: 15
+  recentHistoryRecords: 256
   groundCargoSpeed: 12
   airCargoSpeed: 55
   cargoCapacity: 80
   cargoHandlingSeconds: 3
+  railTileCost: 2
+  trainCargoCapacity: 480
+  trainCargoSpeed: 35
+  trainCargoCost: 750
+  shipCargoCapacity: 240
+  airFreightCapacity: 160
+  shipCargoSpeed: 18
+  freightAircraftSpeed: 90
+  shipCargoCost: 620
+  freightAircraftCost: 900
   inputBufferBatches: 3
   outputBufferBatches: 2
   cargoVehicleSeconds: 30
@@ -60,3 +76,38 @@ MonoBehaviour:
   populationFoodPerSecond: 0.002
   populationGrowthSeconds: 30
   buildingInputReserveSeconds: 120
+  settlementDaySeconds: 600
+  calendarDaysPerYear: 365
+  maximumCivilianAgents: 16384
+  civilianWalkingSpeed: 2.8
+  civilianDrawDistance: 1800
+  backgroundTickSeconds: 5
+  colonyDeliverySeconds: 15
+  colonySupplyMaterials: 600
+  colonySupplyFuel: 100
+  colonySupplyFood: 100
+  startingPrebuildSeconds: 0
+  startingPrebuildMaximumAdditions: 512
+  catchupBudgetMilliseconds: 0.5
+  catchupMaximumStepSeconds: 60
+  catchupStepsPerFrame: 4
+  ambientSettlementLife: 1
+  outdoorCitizensPerSettlement: 64
+  outdoorCitizenLimit: 256
+  ambientCartsPerSettlement: 2
+  ambientCartLimit: 8
+  ambientCartInterval: 30
+  maximumLandTiles: 8192
+  visibleCropTiles: 128
+  cropClumpsPerSide: 6
+  cropDrawDistance: 1200
+  landTileMaterialCost: 1
+  harvestSweepSeconds: 20
+  maximumHarvesters: 4
+  roadMeshBudgetMilliseconds: 0.75
+  regionalSettlements: 1
+  maximumRegionalSettlements: 12
+  regionalExpansionSeconds: 120
+  regionalFoundingReserve: 1200
+  regionalExpansionBuildings: 24
+  regionalTownRadius: 3500

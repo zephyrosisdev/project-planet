@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 namespace MassiveArmy {
-    public enum ModularUse {Home,Office,Workshop,Warehouse,Utility,Prison}
+    public enum ModularUse {Home,Office,Workshop,Warehouse,Utility,Prison,Pub}
     public enum BuildingModuleKind {Wall,Door,Window,Floor,Stairs,GardenWall,Pillar}
     [Serializable]public sealed class BuildingModule {
         public string id;public BuildingModuleKind kind;public Vector3 size=Vector3.one;

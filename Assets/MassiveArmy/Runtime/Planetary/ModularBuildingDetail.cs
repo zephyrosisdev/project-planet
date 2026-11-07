@@ -26,10 +26,10 @@ namespace MassiveArmy.Planetary {
         public void RefreshTerrain(PlanetSurface surface,PlanetDevelopment world){if(rampTerrain==world.definition.Edits.Revision&&rampRoad==world.Base.Roads.Revision)return;rampTerrain=world.definition.Edits.Revision;rampRoad=world.Base.Roads.Revision;rampCollision.sharedMesh=null;if(rampMesh!=null)ArmyLifetime.Destroy(rampMesh);BuildEntranceRamp(surface,world);}
         void BuildEntranceRamp(PlanetSurface surface,PlanetDevelopment world){
             var g=new ModularGeometry();var area=world.Base.Area(Building);
-            Vector3 Local(Vector3 p)=>root.transform.InverseTransformPoint(world.PlanetRenderCentre+p);
-            var p0=Local(world.Base.PlotPoint(Building,world.Base.Grid.Point(area,0,0),-.04f));var p1=Local(world.Base.PlotPoint(Building,world.Base.Grid.Point(area,1,0),-.04f));var p2=Local(world.Base.PlotPoint(Building,world.Base.Grid.Point(area,1,1),-.04f));var p3=Local(world.Base.PlotPoint(Building,world.Base.Grid.Point(area,0,1),-.04f));
+            Vector3 Local(Double3 p)=>root.transform.InverseTransformPoint(world.RenderBodyPosition(p));
+            var p0=Local(world.Base.PlotPointPrecise(Building,world.Base.Grid.PointPrecise(area,0,0),-.04f));var p1=Local(world.Base.PlotPointPrecise(Building,world.Base.Grid.PointPrecise(area,1,0),-.04f));var p2=Local(world.Base.PlotPointPrecise(Building,world.Base.Grid.PointPrecise(area,1,1),-.04f));var p3=Local(world.Base.PlotPointPrecise(Building,world.Base.Grid.PointPrecise(area,0,1),-.04f));
             g.Quad(p0,p1,p2,p3,Color.gray);
-            if(world.Base.PlotEntrance(Building,out var a,out var b,out var c,out var d))g.Quad(Local(a),Local(d),Local(c),Local(b),Color.gray);
+            if(world.Base.PlotEntrancePrecise(Building,out var a,out var b,out var c,out var d))g.Quad(Local(a),Local(d),Local(c),Local(b),Color.gray);
             // This mesh only supplies walking collision. The shared settlement mesh
             // draws the identical pad and driveway without a draw call per building.
             rampMesh=g.Build("Level plot and road access collision");ramp.sharedMesh=null;rampRenderer.enabled=false;rampCollision.sharedMesh=rampMesh;
@@ -37,9 +37,9 @@ namespace MassiveArmy.Planetary {
 
         void ApplyDoors(){if(Building==null||shownDoors==Building.modularDoors)return;shownDoors=Building.modularDoors;for(int i=0;i<Layout.doors.Length;i++){var door=Layout.doors[i];doorViews[i].root.transform.localRotation=Quaternion.Euler(0,door.yaw+((shownDoors&(1u<<i))!=0?95:0),0);}}
         public void Update(Camera camera){if(Building==null)return;ApplyDoors();visibility.Evaluate(Layout,camera,root.transform.localToWorldMatrix,Building.modularDoors);VisibleRooms=0;for(int i=0;i<Layout.rooms.Length;i++){roomRenderers[i].enabled=visibility.visible[i];if(visibility.visible[i])VisibleRooms++;}}
-        public bool Interact(Ray ray){if(Building==null)return false;int selected=-1;float nearest=3.5f;for(int i=0;i<Layout.doors.Length;i++){var centre=doorViews[i].mesh.transform.position;float along=Vector3.Dot(centre-ray.origin,ray.direction);if(along<0||along>nearest||(ray.GetPoint(along)-centre).sqrMagnitude>1.5f*1.5f)continue;
+        public bool Interact(Ray ray,System.Func<int,bool> access=null){if(Building==null)return false;int selected=-1;float nearest=3.5f;for(int i=0;i<Layout.doors.Length;i++){var centre=doorViews[i].mesh.transform.position;float along=Vector3.Dot(centre-ray.origin,ray.direction);if(along<0||along>nearest||(ray.GetPoint(along)-centre).sqrMagnitude>1.5f*1.5f)continue;
                 if(Physics.Raycast(ray,out var hit,along+.15f,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore)&&!hit.transform.IsChildOf(doorViews[i].root.transform)&&hit.distance<along-.3f)continue;nearest=along;selected=i;}
-            if(selected<0)return false;Building.modularDoors^=1u<<selected;ApplyDoors();return true;}
+            if(selected<0)return false;if(access!=null&&!access(selected))return true;Building.modularDoors^=1u<<selected;ApplyDoors();return true;}
         public void Release(){if(Building==null&&!root.activeSelf)return;if(Building!=null&&Building.visual!=null){var box=Building.visual.GetComponent<BoxCollider>();if(box!=null)box.enabled=!Building.removed;}root.SetActive(false);collision.sharedMesh=null;rampCollision.sharedMesh=null;if(rampMesh!=null)ArmyLifetime.Destroy(rampMesh);rampMesh=null;rampTerrain=-1;rampRoad=-1;if(numberMesh!=null)ArmyLifetime.Destroy(numberMesh);numberMesh=null;Building=null;Layout=null;}
         public void Dispose(){Release();ArmyLifetime.Destroy(root);}
     }

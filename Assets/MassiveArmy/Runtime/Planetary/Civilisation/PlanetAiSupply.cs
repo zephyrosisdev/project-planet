@@ -5,14 +5,14 @@ namespace MassiveArmy.Planetary {
     // Only bounded settlement metadata is inspected; army and cargo routing remain on the GPU.
     public sealed partial class PlanetRtsBase {
         internal int ProductiveCount(string id,int team)=>Buildings.Count(b=>b.team==team&&!b.removed&&!b.roadSuspended&&b.definition.id==id&&(b.node<0||Nodes[b.node].remaining>0));
-        internal bool AiCanSpend(int team,ResourceCost cost)=>Factions[team].wallet.CanAfford(cost)&&(Civilisation==null||(Factions[team].wallet.Stock.materials-cost.materials>=Civilisation.Settings.aiConstructionReserve&&Factions[team].wallet.Stock.fuel-cost.fuel>=Civilisation.Settings.aiLogisticsFuelReserve));
+        internal bool AiCanSpend(int team,ResourceCost cost)=>Factions[team].wallet.CanAfford(cost)&&(Civilisation==null||(Factions[team].wallet.Stock.materials-cost.materials>=Civilisation.Settings.aiConstructionReserve&&Factions[team].wallet.Stock.fuel-cost.fuel>=(Civilisation.Settings.ambientSettlementLife&&cost.fuel<=0?0:Civilisation.Settings.aiLogisticsFuelReserve)));
         // Spare vacancies in a growing town must not block research and all new industries.
         internal static bool DevelopmentWorkforceReady(ColonyState colony)=>colony.workforce>=Math.Ceiling(colony.plannedWorkerDemand*.8);
         internal bool AiEconomyReady(int team,bool requireWorkforce=true){
             if(Civilisation==null)return true;var settlement=Settlements?[team];if(requireWorkforce&&settlement!=null&&!DevelopmentWorkforceReady(settlement))return false;if(Factions[team].wallet.Stock.materials<Civilisation.Settings.aiConstructionReserve*(requireWorkforce?2:1))return false;var hq=Buildings.Find(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.id=="command");if(hq==null||Roads==null)return false;
             int mines=0;foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.Complete&&b.definition.id=="mine"&&b.node>=0&&Nodes[b.node].remaining>0&&(Roads.Connected(b,hq)||Civilisation.Logistics.Connected(this,b)))mines++;
-            if(mines<Civilisation.Settings.aiMinimumMaterialMines||Settlements?[team]?.cargoVehicles.Count<3)return false;
-            foreach(string id in new[]{"civil_mine_water","civil_farm_wheat","civil_food_processing"})if(!Buildings.Exists(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.id==id&&(Roads.Connected(b,hq)||Civilisation.Logistics.Connected(this,b))))return false;
+            if(mines<Civilisation.Settings.aiMinimumMaterialMines||!Civilisation.Settings.ambientSettlementLife&&Settlements?[team]?.cargoVehicles.Count<3)return false;
+            foreach(string id in new[]{"civil_mine_water","civil_farm_wheat","civil_food_processing"})if(!(id=="civil_farm_wheat"&&Civilisation.Settings.ambientSettlementLife&&LandUse.CropCount(team,"wheat")>0)&&!Buildings.Exists(b=>b.team==team&&!b.removed&&b.Complete&&b.definition.id==id&&(Roads.Connected(b,hq)||Civilisation.Logistics.Connected(this,b))))return false;
             return true;
         }
         internal double MaterialBacklog(int team){double stock=0;var colony=Settlements?[team];if(colony==null)return 0;foreach(var b in Buildings)if(b.team==team&&!b.removed&&b.definition.id=="mine"){var installation=colony.installations.Find(i=>i.id==b.persistentId);if(installation!=null)stock+=installation.inventory.Get("construction_materials");}return stock;}

@@ -25,15 +25,16 @@ namespace MassiveArmy.Planetary
             if(resourcesView){RefreshResources(simulation,scroll);return;}
             if(simulation.CatchingUp(fixture.definition.bodyId))Label(civilisationContent,"CATCHING UP DORMANT SETTLEMENT ECONOMY","heading");Label(civilisationContent,faction.name+" · "+faction.priority,"subheading");Label(civilisationContent,faction.reason,"muted");
             foreach(var colony in state.colonies){if(colony.faction!=inspectedFaction)continue;Label(civilisationContent,colony.name.ToUpperInvariant(),"heading");
+                RenderRegionalTowns(simulation,colony);
                 Label(civilisationContent,$"POPULATION {colony.population} · HOUSING {colony.housedPopulation}/{colony.housingCapacity} · WORKERS {colony.employed}/{colony.workforce} · JOBS {colony.workerDemand} · {colony.stage}","body");
                 Label(civilisationContent,$"POWER {colony.powerGeneration:0.0} / {colony.powerDemand:0.0} · BALANCE {colony.powerBalance:+0.0;-0.0;0}\nFOOD DEMAND {colony.foodDemand:0.000}/s · DELIVERED {colony.foodSupplied:0.000}/s · {(colony.foodBalance<-.0001?"SHORTAGE":"SUPPLIED")}","body");
                 Label(civilisationContent,$"WAREHOUSE · {colony.cargoVehicles.Count} cargo vehicles · {colony.cargoOrders.Count} in production","subheading");
                 foreach(var resource in simulation.Catalogue.resources){double amount=colony.inventory.Get(resource.id);if(amount>0)Label(civilisationContent,resource.name+": "+amount.ToString("0.0"),"body");}
-                foreach(var installation in colony.installations){var definition=world.Catalog.Buildings[installation.definition];string info=definition.name+(string.IsNullOrEmpty(installation.recipe)?"":" · "+installation.recipe);
+                if(!simulation.Settings.regionalSettlements)foreach(var installation in colony.installations){var definition=world.Catalog.Buildings[installation.definition];string info=definition.name+(string.IsNullOrEmpty(installation.recipe)?"":" · "+installation.recipe);
                     if(!string.IsNullOrEmpty(installation.crop))info+=$" · {installation.growth:P0} grown · soil {installation.soilFertility:P0} · {installation.harvests} harvests";Label(civilisationContent,info,"muted");
                     if(!ReferenceEquals(installation.inventory,colony.inventory))foreach(var resource in installation.inventory.stock)if(resource.amount>.001)Label(civilisationContent,"  Local "+resource.resource+": "+resource.amount.ToString("0.0"),"body");
                 }
-                foreach(var warehouse in colony.installations)if(warehouse.definition=="civil_warehouse")Label(civilisationContent,$"REGIONAL WAREHOUSE #{warehouse.id} · materials {warehouse.inventory.Get("construction_materials"):0.0} · food {warehouse.inventory.Get("food"):0.0} · fuel {warehouse.inventory.Get("propellant"):0.0}","body");
+                if(!simulation.Settings.regionalSettlements)foreach(var warehouse in colony.installations)if(warehouse.definition=="civil_warehouse")Label(civilisationContent,$"REGIONAL WAREHOUSE #{warehouse.id} · materials {warehouse.inventory.Get("construction_materials"):0.0} · food {warehouse.inventory.Get("food"):0.0} · fuel {warehouse.inventory.Get("propellant"):0.0}","body");
                 FreightFleet(simulation,colony);
             }
             Label(civilisationContent,"PLANETARY KNOWLEDGE","heading");
@@ -44,7 +45,7 @@ namespace MassiveArmy.Planetary
                 else foreach(var estimate in known.resources)Label(civilisationContent,estimate.resource+" "+estimate.estimate.ToString("P0")+" ±"+estimate.uncertainty.ToString("P0"),"muted");
             }
         }
-        void FreightFleet(CivilisationRuntime simulation,ColonyState colony){
+        void FreightFleet(CivilisationRuntime simulation,ColonyState colony){if(simulation.Settings.ambientSettlementLife){Label(civilisationContent,"Settlement supplies use the shared stockpile. Road traffic is ambient and capped; production does not wait for trucks.","muted");return;}
             foreach(var site in colony.protectionSites)if(!site.finished&&!site.cancelled)Label(civilisationContent,$"DEFENCE / RECOVERY · {site.definition} · {site.status}","muted");
             Label(civilisationContent,"CARGO FLEET · FINITE LOADS","subheading");
             Label(civilisationContent,"Base capacity: carts 80 · aircraft 160 · ships 240 · trains 480. Ships are slower than aircraft; rail requires connected tracks. Freight tiers double capacity; paid upgrades add 25% per level. Road legs transfer cargo at terminals.","muted");

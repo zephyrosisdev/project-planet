@@ -1,6 +1,32 @@
+#pragma multi_compile _ PLANET_GPU_DOUBLE
+#pragma kernel EditPrecision
 #pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
 #define PLANET_SPECIALIZE_TERRAIN 1
 #pragma kernel Sample
+#pragma kernel Precision
 #include "PlanetSurface.hlsl"
 StructuredBuffer<float4> _Directions;RWStructuredBuffer<float4> _Samples;uint _SampleCount;
 [numthreads(128,1,1)]void Sample(uint3 id:SV_DispatchThreadID){if(id.x>=_SampleCount)return;float3 d=normalize(_Directions[id.x].xyz);_Samples[id.x]=float4(PlanetHeight(d),PlanetSurfaceNormal(d));}
+
+#include "PlanetTopology.hlsl"
+#include "PlanetPrecision.hlsl"
+[numthreads(128,1,1)]void Precision(uint3 id:SV_DispatchThreadID){if(id.x>=_SampleCount)return;float4 input=_Directions[id.x];_Samples[id.x]=float4(StableCubeBase((uint)input.x,input.yz),1);}
+
+StructuredBuffer<float4> _DirectionLow;float3 _PrecisionStamp;
+[numthreads(128,1,1)]void EditPrecision(uint3 id:SV_DispatchThreadID){if(id.x>=_SampleCount)return;
+#ifdef PLANET_GPU_DOUBLE
+ double3 direction=PlanetEditUnit((double3)_Directions[id.x].xyz+(double3)_DirectionLow[id.x].xyz);
+ float h=PlanetHeight(direction);
+ float3 localPosition=(float3)(direction*((double)_PlanetRadius+(double)h)-(double3)_PlanetObserverHigh-(double3)_PlanetObserverLow);
+#else
+ float3 direction=normalize(_Directions[id.x].xyz);float h=PlanetHeight(direction);float3 localPosition=PlanetRelativePoint(direction,h);
+#endif
+ _Samples[id.x]=float4(h,localPosition-PlanetRelativePoint(_PrecisionStamp,0));
+}
+
+#pragma kernel TextureMotion
+#include "PlanetTerrainNoise.hlsl"
+float4 _TerrainNoiseScales;
+[numthreads(128,1,1)]void TextureMotion(uint3 id:SV_DispatchThreadID){if(id.x>=_SampleCount)return;float3 p=_Directions[id.x].xyz;
+ float3 boundary=p/max(1,_TerrainNoiseScales.x)+_TerrainNoisePhase[0].xyz,detail=p/max(1,_TerrainNoiseScales.y)+_TerrainNoisePhase[1].xyz,macro=p/96+_TerrainNoisePhase[2].xyz;
+ _Samples[id.x]=float4(TerrainAnchoredNoise(boundary,0,1),TerrainAnchoredNoise(detail,1,1),TerrainAnchoredNoise(macro,2,1),TerrainAnchoredNoise(boundary*2+31,0,2));}

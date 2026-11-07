@@ -33,11 +33,19 @@ namespace MassiveArmy.Planetary
     [Serializable] public sealed class CelestialEnvironment {
         public bool atmosphere,breathable;public double pressure,oxygen,temperature=288,habitability;
     }
-    [Serializable] public sealed class FrontierSurvey {public int team,cursor;public string resource;}
+    [Serializable] public sealed class FrontierSurvey {public long settlement;public int team,cursor;public string resource;}
     [Serializable] public sealed class PlanetState {
         public string body;public int planetId,navigationContext;public PlanetResourceProfile composition;
         public CelestialEnvironment environment;public List<long> colonies=new List<long>(),orbitalAssets=new List<long>(),surfaceInstallations=new List<long>();
         public List<ResourceNode> frontierDeposits=new List<ResourceNode>();public List<FrontierSurvey> frontierSurveys=new List<FrontierSurvey>();
+        public bool raidersInitialised,biowarfareReleased;
+        public List<RaiderCamp> raiders=new List<RaiderCamp>();public List<FrontierIncident> frontierIncidents=new List<FrontierIncident>();
+        public List<SettlementOutbreak> outbreaks=new List<SettlementOutbreak>();
+        public List<PipelineLink> pipelines=new List<PipelineLink>();public int pipelineRevision;
+        public List<PlanetNavCoordinate> playerBuildLand=new List<PlanetNavCoordinate>();
+        [NonSerialized]internal HashSet<long> playerBuildLandIndex;
+        public List<PlayerBuildSite> playerBuildSites=new List<PlayerBuildSite>();
+        public List<SettlementLandTile> landTiles=new List<SettlementLandTile>();public int landRevision;
         public List<RoadTile> roads=new List<RoadTile>(),rails=new List<RoadTile>();
         public List<GatheringRegion> gatheringRegions=new List<GatheringRegion>();
         public float constructionTileSize;
@@ -53,6 +61,12 @@ namespace MassiveArmy.Planetary
         public List<long> fortifications=new List<long>();
     }
     [Serializable] public sealed class ColonyState {
+        [NonSerialized]public List<ResidentState> outdoorPriority=new List<ResidentState>();
+        [NonSerialized]public double nextAmbientCart;
+        public int archivedDeaths,archivedCases,archivedResidents;
+        public bool civilianWeaponsLegal=true;
+        public bool autoBuild,autoBuildOverride;
+        public List<RegionalSettlement> towns=new List<RegionalSettlement>();
         public List<ProtectionSite> protectionSites=new List<ProtectionSite>();
         public long id;public int faction;public string body,name;public ColonyStage stage;public double selfSufficiency,powerBalance,waterBalance,foodBalance;
         public double retailFoodCoverage,retailDrinksCoverage,retailMedicineCoverage;
@@ -66,10 +80,14 @@ namespace MassiveArmy.Planetary
         public double civicFoodService,civicDrinksService,civicMedicineService,civicServiceSeconds;
         public int societyRevision;public long lastCivicDay=-1;
         public int population,housingCapacity,housedPopulation;public double growthProgress,foodDemand,foodSupplied,powerGeneration,powerDemand;
+        public ResourceInventory transportReserve=new ResourceInventory();
         public ResourceInventory inventory=new ResourceInventory();public List<SurfaceInstallation> installations=new List<SurfaceInstallation>();
         public List<CargoVehicleState> cargoVehicles=new List<CargoVehicleState>();public List<CargoVehicleOrder> cargoOrders=new List<CargoVehicleOrder>();
     }
     [Serializable] public sealed class SurfaceInstallation {
+        public long settlementId;
+        public int playerRentalRoom;public double playerRentUntil;public bool pubOpen;
+        public bool fieldConverted;
         public bool serviceEquipmentIssued;
         public uint modularDoors;
         public int workersAssigned,workersRequired;
@@ -77,9 +95,12 @@ namespace MassiveArmy.Planetary
         public ResourceInventory inventory=new ResourceInventory();public string crop;public double growth,soilFertility=.8;public int harvests;public bool planted;
     }
     [Serializable] public sealed class UniverseState {
+        public List<ColonyDelivery> colonyDeliveries=new List<ColonyDelivery>();
         public List<OrbitalAssetState> orbitals=new List<OrbitalAssetState>();
         public List<OrbitalLaunchJob> orbitalLaunches=new List<OrbitalLaunchJob>();
         public List<OrbitalShipment> orbitalShipments=new List<OrbitalShipment>();
+        public SettlementAlliance alliance=new SettlementAlliance();
+        public string historyArchive="";
         public int schemaVersion=1,galaxySeed;public long nextId=1;public double time;
         public List<PlanetState> planets=new List<PlanetState>();public List<CivilisationFaction> factions=new List<CivilisationFaction>();public List<ColonyState> colonies=new List<ColonyState>();
         public PlanetState Planet(string id){foreach(var planet in planets)if(planet.body==id)return planet;return null;}

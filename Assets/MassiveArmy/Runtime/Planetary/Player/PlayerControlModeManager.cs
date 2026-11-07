@@ -19,28 +19,29 @@ namespace MassiveArmy.Planetary
             Mode=mode;ControlledEntityId=entityId;next(true);Changed?.Invoke(mode);return true;
         }
     }
-    public sealed class PlayerInventory
+    public sealed partial class PlayerInventory
     {
         readonly Dictionary<string,int> items=new Dictionary<string,int>();
-        public int MaxDistinctItems=32;
-        public IReadOnlyDictionary<string,int> Items=>items;
+        public int MaxDistinctItems=64;
+        public IReadOnlyDictionary<string,int> Items=>UnifiedInventory?UnifiedItems():items;
         public bool Add(string id,int count)
         {
-            if(string.IsNullOrWhiteSpace(id)||count<=0)return false;
+            if(string.IsNullOrWhiteSpace(id)||count<=0)return false;if(UnifiedInventory)return inventoryAuthority.ChangePersonalItem(inventoryActor,id,count,true);
             items.TryGetValue(id,out int old);if(old==0&&items.Count>=MaxDistinctItems)return false;
             if(old>int.MaxValue-count)return false;items[id]=old+count;return true;
         }
-        internal void CopyFrom(PlayerInventory other){items.Clear();MaxDistinctItems=other.MaxDistinctItems;foreach(var item in other.items)items.Add(item.Key,item.Value);}
-        public bool Consume(string id,int count){if(count<=0||!items.TryGetValue(id,out int old)||old<count)return false;if(old==count)items.Remove(id);else items[id]=old-count;return true;}
+        internal void CopyFrom(PlayerInventory other){CopyPersonalFrom(other);items.Clear();MaxDistinctItems=other.MaxDistinctItems;foreach(var item in other.Items)items.Add(item.Key,item.Value);}
+        public bool Consume(string id,int count){if(UnifiedInventory)return inventoryAuthority.ChangePersonalItem(inventoryActor,id,count,false);if(count<=0||!items.TryGetValue(id,out int old)||old<count)return false;if(old==count)items.Remove(id);else items[id]=old-count;return true;}
     }
     public sealed class PlayerEnvironmentState
     {
-        public float Health=100,Oxygen=100,ConsumptionPerSecond=.5f;
+        public float Health=100,Oxygen=100,Hunger=100,Thirst=100,ConsumptionPerSecond=.5f;
         public bool Pressurized;
         public void Step(PlanetDefinition body,float altitude,float dt)
         {
-            if(dt<=0)return;
+            if(dt<=0)return;Hunger=UnityEngine.Mathf.Max(0,Hunger-dt*.02f);Thirst=UnityEngine.Mathf.Max(0,Thirst-dt*.035f);if(Hunger==0||Thirst==0)Health=UnityEngine.Mathf.Max(0,Health-dt*.5f);
             if(!Pressurized&&!body.BreathableAt(altitude)){Oxygen=UnityEngine.Mathf.Max(0,Oxygen-ConsumptionPerSecond*dt);if(Oxygen==0)Health=UnityEngine.Mathf.Max(0,Health-5*dt);}
         }
     }
 }
+

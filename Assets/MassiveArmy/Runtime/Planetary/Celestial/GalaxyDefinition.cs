@@ -24,6 +24,7 @@ namespace MassiveArmy.Planetary
         [Min(10)] public float nebulaRefreshSeconds=30;
         [Range(2,16)] public int terrainPreviewBudget=8;
         [Range(.2f,2)] public float predictionBudgetMs=.75f;
+        [Tooltip("Forecast time cap at 60 km body radius. Automatically increases with the square root of the gravity source radius; sample count and per-frame work budget remain fixed.")]
         [Range(60,7200)] public float predictionHorizon=1800;
         [Tooltip("Finite generated catalogue. Visited worlds retain their frozen GPU army state; budget army capacity accordingly.")]
         public bool enabledInGame=true;

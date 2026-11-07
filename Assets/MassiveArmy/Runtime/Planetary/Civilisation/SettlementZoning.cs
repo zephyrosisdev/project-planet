@@ -36,7 +36,7 @@ namespace MassiveArmy.Planetary {
     public sealed partial class PlanetRtsBase {
         SettlementZoning zoning;int zoningIndexedCount;
         internal bool DistrictClear(BuildingDefinition definition,Vector3 direction,int team){
-            if(!SettlementZoning.OutsideCentre(direction,Homes[team],Grid.Radius,Grid.FootprintRadius(definition),Grid.TileSize,definition.district))return false;
+            if(!SettlementZoning.OutsideCentre(direction,Civilisation?.Settings.regionalSettlements==true?Civilisation.RegionalPlanner.Anchor(this,team,direction):Homes[team],Grid.Radius,Grid.FootprintRadius(definition),Grid.TileSize,definition.district))return false;
             if(zoning==null||zoningIndexedCount>Buildings.Count){zoning=new SettlementZoning(Grid.TileSize);zoningIndexedCount=0;}
             for(;zoningIndexedCount<Buildings.Count;zoningIndexedCount++){var building=Buildings[zoningIndexedCount];if(!building.removed)zoning.Add(Grid.Centre(Area(building))*Grid.Radius,Grid.FootprintRadius(building.definition),building.definition.district,building);}
             return zoning.Allows(direction.normalized*Grid.Radius,Grid.FootprintRadius(definition),definition.district);

@@ -46,6 +46,7 @@ namespace MassiveArmy
         void OnEnable()
         {
 
+            if(Industrial.IndustrialGpuProbe.Requested){enabled=false;return;}
             if(View!=null)return;
             Application.runInBackground=true;Application.targetFrameRate=120;
             QualitySettings.vSyncCount=PlayerPrefs.GetInt("Army.VSync",0);

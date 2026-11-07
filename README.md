@@ -1,5 +1,25 @@
 # Synthetic Front
 
+First person space survival prototype for Unity 6000.6.4f1 and HDRP 17.6.0.
+
+Open `Assets/Scenes/MassiveBattle.unity` and select **START SURVIVAL**, or play
+`Assets/Scenes/PlanetDevelopment.unity` directly. Survival starts on foot, with
+procedural planets, a pilotable ship, radial gravity, health, oxygen, hunger,
+thirst, and the personal inventory. Settlements, enemy factions, RTS armies,
+civilian/crime/economy simulation and legacy cargo vehicles are not created in this mode.
+An offline [industrial prototype](Documentation/INDUSTRIAL_IMPLEMENTATION.md) adds
+paid survival construction, finite materials, growing piles, processing, belts,
+manufactured industrial vehicles and radiation. Use **F4** for its console.
+The complete shipbuilding/fleet plan and performance acceptance remain pending.
+
+Online play is planned, not implemented. See the [multiplayer architecture and
+implementation plan](Documentation/SPACE_SURVIVAL_MULTIPLAYER.md). Navigation and
+legacy army fixtures remain available, including the 1M stress option; survival
+allocates no army or navigation buffers. The 60 FPS / 1440p / RTX 3070 acceptance
+target remains unchanged and has not been remeasured for this change.
+
+The material below documents the retained legacy RTS prototype and its fixtures.
+
 Playable base-building RTS and GPU army prototype for Unity 6000.6.4f1 and HDRP 17.6.0.
 
 An opt-in [planetary development scene and migration audit](Documentation/PLANETARY_MIGRATION.md)

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace MassiveArmy.Planetary
 {
     // Untouched deposits have no records: a cell and the planet seed reproduce them on CPU/GPU.
-    // Only surveyed/claimed reserves are materialized, so depletion survives saving and revisiting.
+    // Only surveyed/claimed deposits are materialized; seeded identities survive saving and revisiting.
     public sealed class PlanetProceduralResources : IDisposable
     {
         readonly PlanetRtsBase world;readonly PlanetDefinition definition;readonly PlanetSurface surface;
@@ -32,18 +32,19 @@ namespace MassiveArmy.Planetary
         internal ResourceNode Get(int key){Sync();if(recorded.TryGetValue(key,out var existing))return existing;if(!Description(key,out var type,out var up)||surface.SampleHeight(up)<definition.oceanHeight+.2f)return null;
             string abundance=!string.IsNullOrEmpty(type.elementId)?type.elementId:type.resource==ResourceKind.Fuel?"hydrogen":type.resource==ResourceKind.RareElements?"rare_earth":type.resource==ResourceKind.Isotopes?"uranium":"iron";
             float quality=(float)(world.Civilisation?.Planet(definition.bodyId).composition.LocalAbundance(abundance,up,definition.terrainSeed)??.5);float capacity=(world.Civilisation?.Settings.depositCapacity??20000)*Mathf.Max(.1f,quality);
-            return new ResourceNode{id=-1,proceduralKey=key,kind=type.kind,elementId=type.elementId,resource=type.resource,position=CubeSphere.Encode(up),capacity=capacity,remaining=capacity,quality=quality,rateMultiplier=Mathf.Max(world.Civilisation?.Settings.geologicalMinimumEfficiency??.1f,quality*2)};
+            return new ResourceNode{inexhaustible=true,id=-1,proceduralKey=key,kind=type.kind,elementId=type.elementId,resource=type.resource,position=CubeSphere.Encode(up),capacity=capacity,remaining=capacity,quality=quality,rateMultiplier=Mathf.Max(world.Civilisation?.Settings.geologicalMinimumEfficiency??.1f,quality*2)};
         }
         internal ResourceNode Materialize(int key){var node=Get(key);if(node==null)return null;if(node.id>=0)return node;node.id=world.Nodes.Count;world.Nodes.Add(node);world.Civilisation?.Planet(definition.bodyId).frontierDeposits.Add(node);Sync();return node;}
         internal ResourceNode At(Vector3 direction,BuildingDefinition building=null){int key=Key(direction);if(building!=null&&(!Description(key,out var type,out _)||Array.IndexOf(building.nodes,type.kind)<0||(type.elementId??"")!=(building.extractedResource??"")))return null;
             var node=Get(key);return node!=null&&node.id<0&&CubeSphere.ArcDistance(direction,CubeSphere.Decode(node.position),definition.radius)<12*world.Grid.PresentationScale?node:null;}
         internal bool Survey(BuildingDefinition building,int team,FrontierSurvey survey){
-            var centre=CubeSphere.Cell(0,world.Homes[team],Resolution);
+            if(team<0||team>=world.Homes.Length||world.Homes[team].sqrMagnitude<.5f)return false;
+            var centre=CubeSphere.Cell(0,world.PlanningSettlement!=null?CubeSphere.Decode(world.PlanningSettlement.position):world.Homes[team],Resolution);
             for(int work=0;work<64;work++){
                 int index=survey.cursor++,ring=Mathf.CeilToInt((Mathf.Sqrt(index+1)-1)*.5f),side=ring*2,offset=index-(2*ring-1)*(2*ring-1),x=0,y=0;
                 if(ring>0){if(offset<side){x=ring;y=-ring+offset;}else if(offset<side*2){x=ring-(offset-side);y=ring;}else if(offset<side*3){x=-ring;y=ring-(offset-side*2);}else{x=-ring+(offset-side*3);y=-ring;}}
                 var direction=CubeSphere.Direction(centre.face,new Vector2((centre.x+x+.5f)*2/Resolution-1,(centre.y+y+.5f)*2/Resolution-1));int key=Key(direction);
-                if(!Description(key,out var type,out var up)||Array.IndexOf(building.nodes,type.kind)<0||(type.elementId??"")!=(building.extractedResource??"")||Vector3.Dot(up,world.Homes[team])<Vector3.Dot(up,world.Homes[1-team]))continue;
+                if(!Description(key,out var type,out var up)||!world.InPlanningRange(up)||Array.IndexOf(building.nodes,type.kind)<0||(type.elementId??"")!=(building.extractedResource??"")||!world.OwnDeposit(team,up))continue;
                 var node=Get(key);if(node==null||node.id>=0||node.remaining<=0||node.claimedBy>=0)continue;
                 if(world.Validate(building,up,0,false,team).valid){Materialize(key);world.NotifyChanged();return true;}
             }return false;

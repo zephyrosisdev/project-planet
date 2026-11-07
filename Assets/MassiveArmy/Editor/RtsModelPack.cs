@@ -8,6 +8,7 @@ namespace MassiveArmy.EditorTools
     {
         public ModelSourceKind kind=ModelSourceKind.Cube;
         [Tooltip("A mesh, imported model or prefab. LODGroup levels are selected automatically.")]public UnityEngine.Object model;
+        [Tooltip("Preserve UV2.x articulation tags (1 = independently yawing turret). Only enable for meshes authored with these tags.")]public bool preserveArticulation;
         public Material material;
         public Texture2D albedo;
         public Color tint=Color.white;

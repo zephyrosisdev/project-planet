@@ -60,6 +60,25 @@ namespace MassiveArmy.EditorTools
             File.WriteAllText("TestResults/editor-ready.txt",DateTime.UtcNow.ToString("O"));
         }
         static double nextPoll;
+        const string DiagnosticsMenu="Massive Army/Diagnostics/Runtime Status Polling";
+        static readonly string DiagnosticsPreference="MassiveArmy.RuntimeStatusPolling."+Application.dataPath;
+        static bool diagnosticsEnabled=EditorPrefs.GetBool(DiagnosticsPreference,true);
+
+        [MenuItem(DiagnosticsMenu)]
+        static void ToggleDiagnostics()
+        {
+            diagnosticsEnabled=!diagnosticsEnabled;
+            EditorPrefs.SetBool(DiagnosticsPreference,diagnosticsEnabled);
+            nextPoll=0;
+        }
+        [MenuItem(DiagnosticsMenu,true)]
+        static bool ValidateDiagnostics()
+        {
+            Menu.SetChecked(DiagnosticsMenu,diagnosticsEnabled);
+            return true;
+        }
+        [MenuItem("Massive Army/Planetary/Settlement and Colony Settings")]
+        static void SelectColonySettings(){Selection.activeObject=Resources.Load<MassiveArmy.Planetary.CivilisationSettings>("MassiveArmy/Civilisation/DefaultCivilisation");}
         static void CleanOrphanedValidationFixtures()
         {
             if(EditorApplication.isPlaying)return;
@@ -105,8 +124,11 @@ namespace MassiveArmy.EditorTools
         {
             if(EditorApplication.isCompiling || EditorApplication.isUpdating || EditorApplication.timeSinceStartup<nextPoll)return;
             nextPoll=EditorApplication.timeSinceStartup+.5;
-            try { WriteStatus(); }
-            catch(IOException) { } // A diagnostic reader can briefly hold the status file; retry next poll.
+            if(diagnosticsEnabled)
+            {
+                try { WriteStatus(); }
+                catch(IOException) { } // A diagnostic reader can briefly hold the status file; retry next poll.
+            }
             const string request="TestResults/editor-request.txt";
             if(!File.Exists(request))return;
             string action;
@@ -117,6 +139,7 @@ namespace MassiveArmy.EditorTools
                 switch(action)
                 {
                     case "refresh": AssetDatabase.Refresh();break;
+                    case "daylight-preview": EditorApplication.ExecuteMenuItem("Synthetic Front/Planets/Atmosphere time preview");break;
                     case "ui-assets": RtsUiBuilder.Build();break;
                     case "ui-validate": RtsUiValidation.Run();break;
                     case "ui-runtime-validate": RtsUiValidation.StartRuntime();break;

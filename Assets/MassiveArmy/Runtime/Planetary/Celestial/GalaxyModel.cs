@@ -45,7 +45,7 @@ namespace MassiveArmy.Planetary
             int systems=Mathf.Clamp(settings.starSystems,2,256),perSystem=Mathf.Clamp(settings.planetsPerSystem,1,6);
             var nodes=new List<CelestialBody>();var defs=new List<PlanetDefinition>();var indices=new List<int>();
             int nameSeed=settings.seed^local.seed^home.terrainSeed;var usedNames=new HashSet<string>();string homeName=PlanetNames.Placeholder(home.displayName)?null:home.displayName;if(homeName!=null)usedNames.Add(homeName);
-            nodes.Add(new CelestialBody{id=0,name="Galactic black hole",kind=CelestialKind.BlackHole,mu=Math.Max(1e16,settings.blackHoleMu),radius=Math.Max(1000,2*settings.blackHoleMu/(299792458.0*299792458.0))});
+            nodes.Add(new CelestialBody{id=0,name="Galactic black hole",kind=CelestialKind.BlackHole,mu=Math.Max(1e16,settings.blackHoleMu),radius=local.RuntimeSizeMultiplier*Math.Max(1000,2*settings.blackHoleMu/(local.RuntimeSizeMultiplier*local.RuntimeSizeMultiplier)/(299792458.0*299792458.0))});
             SystemNodes=new int[systems];systemSources=new int[systems][];systemMass=new double[systems];systemExtent=new double[systems];
             for(int s=0;s<systems;s++){
                 double minimumGalaxyRadius=Math.Max(settings.systemOrbitRadius,Math.Max(500000,settings.binarySeparation)*12)*Math.Pow(1.7,perSystem-1)*systems;
@@ -61,12 +61,12 @@ namespace MassiveArmy.Planetary
                     int index=nodes.Count;var type=(StellarClass)(Next()%5);double mu=k==0?massA:massB;
                     double radius=type==StellarClass.RedGiant?160000:type==StellarClass.WhiteDwarf?22000:type==StellarClass.BlueStar?95000:65000;
                     var colour=type==StellarClass.RedDwarf?new Color(1,.3f,.12f):type==StellarClass.RedGiant?new Color(1,.52f,.2f):type==StellarClass.BlueStar?new Color(.4f,.65f,1):type==StellarClass.WhiteDwarf?new Color(.8f,.9f,1):new Color(1,.88f,.58f);
-                    nodes.Add(new CelestialBody{id=index,parent=bary,system=s,name=(s==0?"Home":("S"+s))+" "+(k==0?"A":"B"),kind=CelestialKind.Star,stellarClass=type,colour=colour,mu=mu,radius=radius,semiMajor=binary?separation*(k==0?massB:massA)/total:0,meanMotion=n,phase=phase+k*Math.PI});sources.Add(index);
+                    nodes.Add(new CelestialBody{id=index,parent=bary,system=s,name=(s==0?"Home":("S"+s))+" "+(k==0?"A":"B"),kind=CelestialKind.Star,stellarClass=type,colour=colour,mu=mu,radius=radius*local.RuntimeSizeMultiplier,semiMajor=binary?separation*(k==0?massB:massA)/total:0,meanMotion=n,phase=phase+k*Math.PI});sources.Add(index);
                 }
                 double first=Math.Max(settings.systemOrbitRadius,separation*12);
                 for(int p=0;p<perSystem;p++){
                     int pi=defs.Count,index=nodes.Count;var d=s==0&&p==0?home:UnityEngine.Object.Instantiate(home);
-                    if(pi!=0){d.bodyId=home.bodyId+pi;d.terrainSeed=(int)(Next()&0x7fffffff);d.radius=Mathf.Lerp(Mathf.Max(20000,local.radiusRange.x),Mathf.Max(20000,local.radiusRange.y),(float)Value());d.terrainHeight=d.radius*.015f;d.oceanHeight=Mathf.Lerp(-200,120,(float)Value());d.gravitationalParameter=9.81*d.radius*d.radius;d.atmosphereHeight=d.radius/12;}
+                    if(pi!=0){d.bodyId=home.bodyId+pi;d.terrainSeed=(int)(Next()&0x7fffffff);d.radius=Mathf.Lerp(Mathf.Max(20000,local.radiusRange.x),Mathf.Max(20000,local.radiusRange.y),(float)Value());d.terrainHeight=d.radius/local.RuntimeSizeMultiplier*.015f;d.oceanHeight=Mathf.Lerp(-200,120,(float)Value());d.gravitationalParameter=9.81*d.radius*d.radius;d.atmosphereHeight=d.radius/local.RuntimeSizeMultiplier/12;}
                     if(pi!=0)PlanetWeather.Generate(d);
                     d.displayName=pi==0&&homeName!=null?homeName:PlanetNames.Unique(nameSeed,pi,usedNames);d.name=d.displayName;
                     double a=first*Math.Pow(1.7,p),e=p==0?0:Value()*.12;

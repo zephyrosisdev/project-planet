@@ -9,7 +9,7 @@ namespace MassiveArmy.EditorTools
 {
     public static class PlanetStreamingValidation
     {
-        [Serializable]sealed class Report { public string status="PASS",error="";public List<string> checks=new List<string>();public long bufferBytes;public int maximumResident,maximumLevel; }
+        [Serializable]sealed class Report { public string status="PASS",error="";public List<string> checks=new List<string>();public long bufferBytes;public double generationMedianMs,generationP95Ms;public int maximumResident,maximumLevel; }
         [MenuItem("Massive Army/Planetary/Validate Streamed Terrain")]
         public static void Run()
         {
@@ -30,7 +30,7 @@ namespace MassiveArmy.EditorTools
                         }
                         Check(true,"Bounded visible patches and complete sparse coverage at poles, antipodes and cube corners; radius "+radius);
                     }
-                    Check(terrain.BufferBytes==report.bufferBytes&&terrain.BufferBytes<24576,"GPU patch storage stays below 24 KiB as radius grows 240 times");
+                    Check(terrain.BufferBytes==report.bufferBytes&&terrain.BufferBytes<40960,"GPU patch storage plus split history stays below 40 KiB as radius grows 240 times");
                     int revision=terrain.Revision;terrain.UpdateReferenceForValidation(camera,Vector3.zero);Check(terrain.Revision==revision,"Stationary observer reuses descriptors without rebuilding or uploading terrain");
                     int resident=terrain.ResidentPatches,level=terrain.DeepestLevel;var offset=new Vector3(1024,-512,256);camera.transform.position+=offset;terrain.UpdateReferenceForValidation(camera,offset,force:true);
                     Check(terrain.ResidentPatches==resident&&terrain.DeepestLevel==level,"Floating-origin translation preserves visible residency and detail");
@@ -43,6 +43,9 @@ namespace MassiveArmy.EditorTools
                     tiny.UpdateReferenceForValidation(camera,Vector3.zero,force:true);Check(tiny.BudgetLimited&&tiny.LeafCount==6,"Exhausted budget is reported without dropping coarse coverage or allocating more storage");
                 }
                 var shader=Resources.Load<Shader>("MassiveArmy/PlanetTerrain");Check(shader!=null&&shader.isSupported,"Shared terrain shader supports streamed patches and existing surface layers");
+                definition.radius=120000;definition.terrainHeight=1800;camera.transform.position=new PlanetSurface(definition).GetSurfacePosition(Vector3.forward,1.8f);camera.transform.rotation=Quaternion.LookRotation(Vector3.right,Vector3.forward);
+                using(var timed=new PlanetStreamedTerrain(definition)){var samples=new List<double>();var timer=new System.Diagnostics.Stopwatch();for(int i=0;i<50;i++){timer.Restart();timed.Update(camera,Vector3.zero,force:true);timed.ReadPatchesForValidation();timer.Stop();if(i>=15)samples.Add(timer.Elapsed.TotalMilliseconds);}samples.Sort();report.generationMedianMs=samples[samples.Count/2];report.generationP95Ms=samples[(int)((samples.Count-1)*.95)];}
+                ValidateNearGround(Check);
                 ValidateInterest();Check(true,"GPU interest follows offscreen troops across cube seams and corners at 2 km and 120 km radii; distant slots sleep and camera visits wake them");
                 using(var gpu=new PlanetStreamedTerrain(definition)){
                     foreach(float radius in new[]{2000f,PlanetDefinition.TargetRadius})foreach(var direction in new[]{Vector3.up,Vector3.forward,new Vector3(1,1,1).normalized}){
@@ -57,6 +60,23 @@ namespace MassiveArmy.EditorTools
             finally{camera.targetTexture=null;UnityEngine.Object.DestroyImmediate(target);UnityEngine.Object.DestroyImmediate(root);UnityEngine.Object.DestroyImmediate(definition);}
             Directory.CreateDirectory("TestResults/Planetary/Streaming");File.WriteAllText("TestResults/Planetary/Streaming/validation.json",JsonUtility.ToJson(report,true));
             if(report.status!="PASS")throw new InvalidOperationException(report.error);Debug.Log("Planet streaming validation PASS");
+        }
+        static void ValidateNearGround(Action<bool,string> check){
+            var d=ScriptableObject.CreateInstance<PlanetDefinition>();d.radius=120000;d.terrainHeight=1800;d.oceanHeight=-35;
+            var host=new GameObject("First person terrain LOD regression");var camera=host.AddComponent<Camera>();var target=new RenderTexture(2560,1440,24);camera.targetTexture=target;camera.fieldOfView=60;camera.nearClipPlane=.1f;camera.farClipPlane=1000000;
+            try{var surface=new PlanetSurface(d);using(var terrain=new PlanetStreamedTerrain(d)){
+                foreach(var direction in new[]{Vector3.forward,Vector3.up,new Vector3(1,1,1).normalized,new Vector3(-1,.3f,.7f).normalized}){
+                    CubeSphere.Project(direction,out var face,out var uv);var tangent=Vector3.Cross(direction,Mathf.Abs(direction.y)>.9f?Vector3.right:Vector3.up).normalized;float previous=0;
+                    foreach(float height in new[]{1000f,100,30,10,3,1.8f})foreach(float pitch in new[]{0f,-45f,10f}){
+                        camera.transform.position=surface.GetSurfacePosition(direction,height);camera.transform.rotation=Quaternion.LookRotation(tangent*Mathf.Cos(pitch*Mathf.Deg2Rad)+direction*Mathf.Sin(pitch*Mathf.Deg2Rad),direction);terrain.Update(camera,Vector3.zero,force:true);var patches=terrain.ReadPatchesForValidation();float span=2;
+                        foreach(var patch in patches)if((int)patch.w==(int)face&&uv.x>=patch.x-1e-6f&&uv.x<=patch.x+patch.z+1e-6f&&uv.y>=patch.y-1e-6f&&uv.y<=patch.y+patch.z+1e-6f)span=Mathf.Min(span,patch.z);
+                        float edge=d.radius*span/PlanetStreamedTerrain.Grid;
+                        check(height>3||edge<=4,"Ground mesh edge "+edge.ToString("F3")+" m at eye height "+height+" m, pitch "+pitch+", direction "+direction);
+                        if(pitch==0){check(previous==0||edge<=previous*2,"Descending does not lose more than one detail level at "+height+" m");previous=edge;}
+                        check(patches.Length<=terrain.PatchBudget&&terrain.BufferBytes<40960,"Near-ground detail retains the existing fixed residency/memory budget");
+                    }
+                }
+            }}finally{camera.targetTexture=null;UnityEngine.Object.DestroyImmediate(target);UnityEngine.Object.DestroyImmediate(host);UnityEngine.Object.DestroyImmediate(d);}
         }
         static void ValidateCoverage(PlanetStreamedTerrain terrain)
         {

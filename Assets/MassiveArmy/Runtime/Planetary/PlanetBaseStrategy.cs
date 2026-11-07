@@ -12,11 +12,11 @@ namespace MassiveArmy.Planetary
         public readonly string[] AIActivity=Enumerable.Repeat("Starting",PlanetCountries.Maximum).ToArray();
         readonly float[] nextThink=new float[PlanetCountries.Maximum];float strategyTime;
         bool playerAutoPilot;
-        public bool AutoPilotEnabled=>Civilisation?.State.Faction(0)?.autonomous??playerAutoPilot;
-        internal bool BaseAIEnabled(int team)=>Civilisation?.State.Faction(team)?.autonomous??(team==0?playerAutoPilot||fixture.sessionMode==PlanetGameMode.AiTest:fixture.sessionMode!=PlanetGameMode.Swarm);
+        public bool AutoPilotEnabled=>Civilisation?.Autonomous(this,0)??playerAutoPilot;
+        internal bool BaseAIEnabled(int team)=>Civilisation?.Autonomous(this,team)??(team==0?playerAutoPilot||fixture.sessionMode==PlanetGameMode.AiTest:fixture.sessionMode!=PlanetGameMode.Swarm);
         public void SetAutoPilot(bool enabled){
             if(fixture.sessionMode==PlanetGameMode.AiTest||!fixture.StrategyEnabled||!Buildings.Any(b=>b.team==0&&!b.removed&&b.Complete&&b.definition.id=="command"))return;
-            playerAutoPilot=enabled;if(Civilisation!=null)Civilisation.State.Faction(0).autonomous=enabled;
+            playerAutoPilot=enabled;if(Civilisation!=null){var colony=Settlements?[0];if(colony!=null){colony.autoBuild=enabled;colony.autoBuildOverride=true;}if(Civilisation.IsHome(fixture.definition.bodyId))Civilisation.State.Faction(0).autonomous=enabled;}
             nextThink[0]=strategyTime;AIActivity[0]=enabled?"Developing economy and production":"Manual control";
             Notice=enabled?"Auto Pilot enabled: AI manages construction, research and production":"Auto Pilot disabled: manual base control";NotifyChanged();
         }
@@ -41,10 +41,20 @@ namespace MassiveArmy.Planetary
             }
         }
         internal bool HasProductiveBuilding(string id,int team){foreach(var b in Buildings)if(b.team==team&&!b.removed&&!b.roadSuspended&&b.definition.id==id&&(b.node<0||Nodes[b.node].remaining>0))return true;return false;}
-        internal bool ConstructForTeam(string id,int team,Vector3 direction){var d=Catalog.Buildings[id];return ConstructOriented(d,team,direction,Civilisation==null?0:EntranceRotation(d,direction,team));}
+        internal bool ConstructForTeam(string id,int team,Vector3 direction){var d=Catalog.Buildings[id];return InPlanningRange(direction)&&ConstructOriented(d,team,direction,Civilisation==null?0:EntranceRotation(d,direction,team));}
         readonly Dictionary<(int,string,int),double> resourceSiteRetries=new Dictionary<(int,string,int),double>();
         internal bool ResourceSiteCooling(string id,int team,int node)=>Civilisation!=null&&resourceSiteRetries.TryGetValue((team,id,node),out double until)&&Civilisation.SimulationTime<until;
         bool BuildAI(string id,int team,int cycle){var d=Catalog.Buildings[id];var f=Factions[team];if(f.tier<d.tier||!f.HasTech(d.requiredTech))return false;
+            if(Civilisation!=null&&d.terrain==TerrainRule.Node){
+                if(Nodes.Count==0)return false;long cursor=(long)PlanningCursor(d,team)*8;
+                for(int i=0;i<Math.Min(8,Nodes.Count);i++){var node=Nodes[(int)(((long)cursor+i)%Nodes.Count)];
+                    if(node.claimedBy>=0||node.remaining<=0||Array.IndexOf(d.nodes,node.kind)<0||!string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)||ResourceSiteCooling(id,team,node.id))continue;
+                    var point=CubeSphere.Decode(node.position);if(!OwnDeposit(team,point)||!InPlanningRange(point))continue;
+                    if(ConstructForTeam(id,team,point))return true;
+                    resourceSiteRetries[(team,id,node.id)]=Civilisation.SimulationTime+60;
+                    return false; // one final clearance per resource decision
+                }return false;
+            }
             if(d.terrain==TerrainRule.Node){foreach(var node in Nodes.Where(n=>n.claimedBy<0&&n.remaining>0&&Array.IndexOf(d.nodes,n.kind)>=0&&string.Equals(n.elementId??"",d.extractedResource??"",StringComparison.Ordinal)).OrderBy(n=>Distance(Homes[team],CubeSphere.Decode(n.position))))if((Civilisation==null||OwnDeposit(team,CubeSphere.Decode(node.position)))&&!ResourceSiteCooling(id,team,node.id)){
                 if(ConstructForTeam(id,team,CubeSphere.Decode(node.position)))return true;
                 if(Civilisation!=null&&f.wallet.CanAfford(d.cost))resourceSiteRetries[(team,id,node.id)]=Civilisation.SimulationTime+60;
@@ -55,8 +65,33 @@ namespace MassiveArmy.Planetary
         }
         static readonly string[] orbitalResearchPath={"civil_industry","civil_rocketry","civil_tracking","civil_refining","civil_satellites","civil_astronomy","civil_spectroscopy","civil_communications","civil_probes","civil_navigation","civil_mining","civil_colonisation","civil_logistics","civil_orbital_construction"};
         int ResearchPriority(string id){int rank=Array.IndexOf(orbitalResearchPath,id);return rank<0?orbitalResearchPath.Length:rank;}
+        readonly int[] simpleAiCursors=new int[PlanetCountries.Maximum];
+        void ThinkSimpleSettlementAI(int team,int cycle){using var timing=SettlementPerformance.Sample("SimpleSettlementAI");
+            var f=Factions[team];var colony=Settlements?[team];if(colony==null||Buildings.Count==0)return;
+            if(Civilisation.Settings.regionalSettlements&&!Civilisation.RegionalPlanner.StartupReady(this,team)){AIActivity[team]="Establishing starter supply before research and military spending";return;}
+            bool ready=(Civilisation.Settings.regionalSettlements||DevelopmentWorkforceReady(colony))&&f.wallet.Stock.materials>=Civilisation.Settings.aiConstructionReserve*2;
+            // Research, repairs and military production continue, with eight sites visited
+            // per thought instead of allocating and repeatedly analysing the whole city.
+            for(int i=0;i<Math.Min(8,Buildings.Count);i++){
+                int index=simpleAiCursors[team];if(index>=Buildings.Count)index=0;simpleAiCursors[team]=index+1;
+                var b=Buildings[index];if(b.team!=team||b.removed||!b.Complete)continue;
+                if(b.health<b.MaxHealth*.9f)b.repairing=AiCanSpend(team,new ResourceCost{materials=1});
+                if(!b.powered||b.paused)continue;
+                if(b.queue.Count==0&&b.definition.category==BuildingCategory.Research){
+                    var tech=Catalog.technologies.OrderBy(t=>ResearchPriority(t.id)).ThenBy(t=>t.tier).FirstOrDefault(t=>t.requiredBuilding==b.definition.id&&t.requiredBuildingLevel<=b.level&&!f.HasTech(t.id)&&!f.researching.Contains(t.id)&&t.prerequisites.All(f.HasTech)&&AiCanSpend(team,t.cost));
+                    if(tech!=null){if(Research(b,tech.id))AIActivity[team]="Researching "+tech.name;}
+                    else if(ready&&b.level<Math.Min(3,f.tier)&&!b.Upgrading&&AiCanSpend(team,b.definition.cost*(.65f*b.level)))Upgrade(b);
+                }
+                if(!ready)continue;
+                if(b.definition.id=="command"&&!b.Upgrading&&b.level<5&&AiCanSpend(team,b.definition.cost*(.65f*b.level)))Upgrade(b);
+                if(b.queue.Count<2&&b.definition.production.Length>0&&(!Civilisation.Settings.regionalSettlements||Civilisation.RegionalPlanner.MilitaryAllowed(this,b,false))){
+                    string id=b.definition.production[(cycle+i)%b.definition.production.Length];var unit=Catalog.Units[id];
+                    if((!Civilisation.Settings.regionalSettlements||!SettlementProfiles.IsNuclear(b.definition.id)&&unit.requiredTech!="nuclear"||Civilisation.RegionalPlanner.MilitaryAllowed(this,b,true))&&f.HasTech(unit.requiredTech)&&unit.producerLevel<=b.level&&AiCanSpend(team,unit.cost))QueueUnit(b,id);
+                }
+            }
+        }
         void ThinkPlanetAI(float dt){if(!fixture.StrategyEnabled)return;strategyTime+=dt;
-            for(int team=0;team<Factions.Length;team++){if(!BaseAIEnabled(team)||strategyTime<nextThink[team])continue;nextThink[team]=strategyTime+4;int cycle=++AIDecisions[team];var f=Factions[team];var owned=Buildings.Where(b=>b.team==team&&!b.removed).ToArray();var command=owned.FirstOrDefault(b=>b.definition.id=="command");if(command==null){AIActivity[team]="Command lost";continue;}bool Has(string id)=>HasProductiveBuilding(id,team);
+            for(int team=0;team<Factions.Length;team++){if(!BaseAIEnabled(team)||strategyTime<nextThink[team])continue;nextThink[team]=strategyTime+4;int cycle=++AIDecisions[team];if(Civilisation!=null){ThinkSimpleSettlementAI(team,cycle);continue;}var f=Factions[team];var owned=Buildings.Where(b=>b.team==team&&!b.removed).ToArray();var command=owned.FirstOrDefault(b=>b.definition.id=="command");if(command==null){AIActivity[team]="Command lost";continue;}bool Has(string id)=>HasProductiveBuilding(id,team);
                 foreach(var b in owned)if(b.Complete&&b.health<b.MaxHealth*.9f)b.repairing=AiCanSpend(team,new ResourceCost{materials=1});
                 bool built=false;AIActivity[team]="Developing economy and production";
                 if(Civilisation==null&&!Has("mine"))built=BuildAI("mine",team,cycle);
@@ -65,8 +100,8 @@ namespace MassiveArmy.Planetary
                 if(!built&&Civilisation==null&&f.generation+owned.Where(b=>!b.Complete).Sum(b=>b.definition.generation)<f.demand+35)built=BuildAI("wind",team,cycle);
                 if(!built&&economyReady)foreach(string id in new[]{"lab","autocannon","oil","rare","factory","at_turret","aa_turret","advanced_lab","strategic_lab"})if(!Has(id)&&AiCanSpend(team,Catalog.Buildings[id].cost)&&BuildAI(id,team,cycle)){built=true;AIActivity[team]="Constructing "+Catalog.Buildings[id].name;break;}
                 if(!built&&economyReady&&cycle%3==0)built=BuildLocalDefences(team,cycle);
-                if(scienceReady)foreach(var lab in owned.Where(b=>b.Complete&&b.powered&&b.queue.Count==0&&b.definition.category==BuildingCategory.Research)){
-                    var tech=Catalog.technologies.OrderBy(t=>Civilisation==null?0:ResearchPriority(t.id)).ThenBy(t=>t.tier).FirstOrDefault(t=>t.requiredBuilding==lab.definition.id&&t.requiredBuildingLevel<=lab.level&&!f.HasTech(t.id)&&!f.researching.Contains(t.id)&&t.prerequisites.All(f.HasTech)&&AiCanSpend(team,t.cost));if(tech!=null)Research(lab,tech.id);
+                if(scienceReady||Civilisation!=null)foreach(var lab in owned.Where(b=>b.Complete&&b.powered&&!b.paused&&b.queue.Count==0&&b.definition.category==BuildingCategory.Research)){
+                    var tech=Catalog.technologies.OrderBy(t=>Civilisation==null?0:ResearchPriority(t.id)).ThenBy(t=>t.tier).FirstOrDefault(t=>t.requiredBuilding==lab.definition.id&&t.requiredBuildingLevel<=lab.level&&!f.HasTech(t.id)&&!f.researching.Contains(t.id)&&t.prerequisites.All(f.HasTech)&&AiCanSpend(team,t.cost));if(tech!=null){if(Research(lab,tech.id))AIActivity[team]="Researching "+tech.name;}
                     else if(lab.level<Math.Min(3,f.tier)&&!lab.Upgrading&&AiCanSpend(team,lab.definition.cost*(.65f*lab.level)))Upgrade(lab);
                 }
                 if(economyReady&&AiCanSpend(team,command.definition.cost*(.65f*command.level))&&!command.Upgrading&&command.level<5&&f.wallet.Stock.materials>command.definition.cost.materials*.65f*command.level+450)Upgrade(command);

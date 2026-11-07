@@ -41,7 +41,7 @@ Shader "MassiveArmy/Scaled celestial body"
  #include "PlanetSurface.hlsl"
  float4x4 _PlanetVP;float3 _ScaledCentre,_CameraPosition;float _ScaledRadius,_ScaledFactor;
  float4 _ForegroundSphere,_PhysicalBody;
- float _BodyRadius,_BodyOcean,_BodySeed;uint _BodyGrid;int _BodyDebug;
+ float3 _BodyObserver;float _BodyRadius,_BodyOcean,_BodySeed;uint _BodyGrid;int _BodyDebug;
  Texture2DArray<float4> _BodySurface;SamplerState sampler_BodySurface;
  StructuredBuffer<float4> _BiomeColours;
  float4 BodySurface(float3 d){float2 p=PlanetEncode(d);uint f=(uint)floor(p.x);float2 uv=float2(p.x-f,p.y);return _BodySurface.SampleLevel(sampler_BodySurface,float3((uv*128+1)/130,f),0);}
@@ -78,10 +78,14 @@ Shader "MassiveArmy/Scaled celestial body"
     if(t>=0&&t<bodyHit)discard;
    }
   }
-  float3 d=normalize(i.direction);float4 surface=BodySurface(d);float3 normal=normalize(surface.xyz),albedo;float roughness;
+  float3 d=normalize(i.direction);float4 surface=BodySurface(d);
+  // A failed/incomplete preview bake can contain zero normals. Normalizing
+  // those poisons HDRP lighting and bloom when that planet enters the view.
+  float3 bakedNormal=dot(surface.xyz,surface.xyz)>1e-8&&all(isfinite(surface.xyz))?normalize(surface.xyz):d;
+  float3 normal=bakedNormal,albedo;float roughness=1;
   if(surface.w<_BodyOcean){normal=d;albedo=_BiomeColours[0].rgb;}
-  else albedo=EvaluatePlanetTerrain(d,surface.w,normal,normal,roughness);
-  float3 geometric=normalize(surface.xyz);if(surface.w<_BodyOcean)geometric=d;
+  else albedo=EvaluatePlanetTerrain(d,surface.w,normal,d*(_BodyRadius+surface.w)-_BodyObserver,normal,roughness);
+  float3 geometric=bakedNormal;if(surface.w<_BodyOcean)geometric=d;
   float3 rws=GetCameraRelativePositionWS(i.ray+_CameraPosition),V=GetWorldSpaceNormalizeViewDir(rws);
   PositionInputs position=GetPositionInput(i.position.xy,_ScreenSize.zw,i.position.z,i.position.w,rws,uint2(i.position.xy)/GetTileSize());
   SurfaceData lit;ZERO_INITIALIZE(SurfaceData,lit);lit.materialFeatures=MATERIALFEATUREFLAGS_LIT_STANDARD;lit.baseColor=albedo;lit.normalWS=normal;lit.geomNormalWS=geometric;

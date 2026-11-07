@@ -24,9 +24,9 @@ namespace MassiveArmy.Planetary {
             var walkers=new Walker[local.Citizens.Count];local.Citizens.WalkerStatesForValidation.GetData(walkers);
             Check(walkers[0].node==local.Roads.Node(local.Roads.Port(target)),"GPU pedestrian reaches a destination above building index 128");
             Check(local.Citizens.FlowStorageBytes<=Mathf.NextPowerOfTwo(local.Roads.Tiles.Count)*128L*8,"Pedestrian route storage remains bounded to 128 local destinations");
-            foreach(var node in local.Nodes)if(node.kind==NodeKind.Metal&&string.IsNullOrEmpty(node.elementId))node.remaining=0;
+            foreach(var node in local.Nodes)if(node.kind==NodeKind.Metal&&string.IsNullOrEmpty(node.elementId)){node.inexhaustible=false;node.remaining=0;}
             bool discovered=false;for(int attempt=0;attempt<8&&!discovered;attempt++)discovered=local.SurveyFrontierDeposit("mine",0);
-            Check(discovered,"Exhausted starter materials trigger a finite deterministic frontier survey");var planet=simulation.Planet(world.definition.bodyId);var deposit=planet.frontierDeposits[planet.frontierDeposits.Count-1];float reserve=deposit.remaining;deposit.remaining-=1;
+            Check(discovered,"Exhausted starter materials trigger a finite deterministic frontier survey");var planet=simulation.Planet(world.definition.bodyId);var deposit=planet.frontierDeposits[planet.frontierDeposits.Count-1];deposit.inexhaustible=false;float reserve=deposit.remaining;deposit.remaining-=1;
             var restored=CivilisationRuntime.Deserialize(simulation.Serialize(),simulation.State.galaxySeed,simulation.Catalogue);var saved=restored.Planet(planet.body).frontierDeposits;
             Check(saved.Count==planet.frontierDeposits.Count&&saved[saved.Count-1].remaining==reserve-1,"Strategic save preserves discovered deposits and their finite remaining reserves");
             Check(!local.SurveyFrontierDeposit("mine",0)&&deposit.remaining==reserve-1,"A usable prospect is reused without refilling its resource reserve");

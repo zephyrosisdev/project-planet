@@ -67,6 +67,12 @@ namespace MassiveArmy.EditorTools
         static readonly Dictionary<SceneView,bool> sceneLightingStates=new Dictionary<SceneView,bool>();
         public static bool PreviewEnabled=>material!=null;
 
+        const string DistanceScalingMenu="Massive Army/Art/Distance-based Terrain Texture Scaling";
+        [MenuItem(DistanceScalingMenu)]
+        static void ToggleDistanceScaling(){var settings=Resources.Load<TerrainSurfaceLibrary>("MassiveArmy/TerrainArt/SurfaceLibrary");if(settings==null)return;Undo.RecordObject(settings,"Toggle terrain texture scaling");settings.distanceTextureBlending=!settings.distanceTextureBlending;settings.NotifySettingsChanged();EditorUtility.SetDirty(settings);TerrainSurfaceLibrary.RefreshLiveMaterials();SceneView.RepaintAll();}
+        [MenuItem(DistanceScalingMenu,true)]
+        static bool ValidateDistanceScaling(){var settings=Resources.Load<TerrainSurfaceLibrary>("MassiveArmy/TerrainArt/SurfaceLibrary");Menu.SetChecked(DistanceScalingMenu,settings!=null&&settings.distanceTextureBlending);return settings!=null;}
+
         [MenuItem("Massive Army/Art/Terrain Look Dev")]
         public static void Open()=>GetWindow<TerrainLookDev>("Terrain Look Dev");
         public static void EnableConfiguredPreview()

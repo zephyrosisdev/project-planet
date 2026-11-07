@@ -28,9 +28,16 @@ MonoBehaviour:
   heightBlendStrength: 0.564
   normalStrength: 1
   macroVariation: 0.218
+  distanceTextureBlending: 0
+  textureScale: 0.1
+  textureBandScale: 5
+  textureBandStartDistance: 48
+  biomeAltitudeCooling: 1
+  cliffStartDegrees: 11
+  cliffFullDegrees: 47
   biomeBlendWidth: 123.7
   boundaryWarp: 58.7
-  boundaryNoiseScale: 50
+  boundaryNoiseScale: 192
   patchStrength: 1
   patchScale: 11.6
   roadEdgeNoise: 0.198

@@ -29,7 +29,7 @@ namespace MassiveArmy.Planetary {
                 }
             }return false;
         }
-        public bool OrderFreight(PlanetRtsBase local,int team,bool sea,bool rail=false){
+        public bool OrderFreight(PlanetRtsBase local,int team,bool sea,bool rail=false){if(civilisation.Settings.ambientSettlementLife)return false;
             var colony=local.Settlements?[team];if(colony==null||colony.cargoVehicles.Count+colony.cargoOrders.Count>=civilisation.Settings.maximumCargoVehicles)return false;
             foreach(var producer in local.Buildings)if(Terminal(producer,sea,rail)&&producer.team==team&&Connected(local,producer)){
                 double cost=rail?civilisation.Settings.trainCargoCost:sea?civilisation.Settings.shipCargoCost:civilisation.Settings.freightAircraftCost;
@@ -45,7 +45,7 @@ namespace MassiveArmy.Planetary {
         internal static SurfaceInstallation RegionalWarehouse(PlanetRtsBase local,ColonyState colony,RtsBuilding producer){SurfaceInstallation best=null;float distance=float.MaxValue;
             foreach(var item in colony.installations)if(Storage(item)){var building=Building(local,item.id);if(building==null||!building.Complete||!local.Roads.Connected(producer,building))continue;float value=CubeSphere.ArcDistance(CubeSphere.Decode(building.position),CubeSphere.Decode(producer.position),local.World.definition.radius);if(value<distance){distance=value;best=item;}}return best;
         }
-        public bool OrderRegionalCart(PlanetRtsBase local,int team,long warehouseId){var colony=local.Settlements?[team];var warehouse=colony==null?null:Find(colony,warehouseId);var producer=warehouse==null?null:Building(local,warehouseId);if(producer==null||!producer.Complete||colony.cargoVehicles.Count+colony.cargoOrders.Count>=civilisation.Settings.maximumCargoVehicles||!warehouse.inventory.Spend("construction_materials",civilisation.Settings.cargoVehicleMaterialCost))return false;
+        public bool OrderRegionalCart(PlanetRtsBase local,int team,long warehouseId){if(civilisation.Settings.ambientSettlementLife)return false;var colony=local.Settlements?[team];var warehouse=colony==null?null:Find(colony,warehouseId);var producer=warehouse==null?null:Building(local,warehouseId);if(producer==null||!producer.Complete||colony.cargoVehicles.Count+colony.cargoOrders.Count>=civilisation.Settings.maximumCargoVehicles||!warehouse.inventory.Spend("construction_materials",civilisation.Settings.cargoVehicleMaterialCost))return false;
             colony.cargoOrders.Add(new CargoVehicleOrder{producer=warehouseId,warehouse=warehouseId});return true;
         }
         internal bool IsLongHaul(CargoVehicleState vehicle)=>vehicle.freight&&vehicle.leg==1;
@@ -82,6 +82,10 @@ namespace MassiveArmy.Planetary {
                     if(vehicle.buffered>1e-6){vehicle.shuttleReturning=true;ResetFreightLeg(local,vehicle,departure);if(!civilisation.ReplayingEconomy)return false;continue;}
                     if(vehicle.leg==0){vehicle.loaded=vehicle.transferred;vehicle.transferred=0;}
                 }
+                if(vehicle.leg==1&&vehicle.seaborne&&vehicle.phase==CargoVehiclePhase.Delivering&&(vehicle.resource=="crude_oil"||vehicle.resource=="methane")){
+                    var dock=Building(local,vehicle.stops[2]);var receiving=dock==null?null:Find(local.Settlements[dock.team],dock.persistentId);
+                    if(receiving!=null){double accepted=receiving.inventory.Deposit(vehicle.resource,vehicle.loaded);vehicle.loaded-=accepted;vehicle.delivered+=accepted;}
+                }
                 if(vehicle.leg>=2){vehicle.arrival=vehicle.legArrival;return true;}
                 vehicle.leg++;if(vehicle.leg==2)StageRoadLoad(vehicle);ResetFreightLeg(local,vehicle,departure);if(!civilisation.ReplayingEconomy)return false;
             }return false;
@@ -92,7 +96,7 @@ namespace MassiveArmy.Planetary {
         internal bool BuildTerminalNear(RtsBuilding anchorBuilding,bool sea,bool rail=false){
             var id=rail?"civil_freight_station":sea?"civil_port":"civil_airport";var d=Catalog.Buildings[id];if(!AiCanSpend(anchorBuilding.team,d.cost))return false;
             var centre=CubeSphere.Decode(anchorBuilding.position);var east=Vector3.Cross(Mathf.Abs(centre.y)>.95f?Vector3.right:Vector3.up,centre).normalized;var north=Vector3.Cross(centre,east);var key=(anchorBuilding.team,anchorBuilding.index,sea);terminalSearch.TryGetValue(key,out int cursor);
-            for(int work=0;work<8;work++){int index=cursor++;float range=sea?64+(index/16%12)*64:48+(index/16%4)*24,angle=index*2.3999632f;var point=(centre+(east*Mathf.Cos(angle)+north*Mathf.Sin(angle))*range/fixture.definition.radius).normalized;
+            for(int work=0;work<8;work++){int index=cursor++;float range=sea?64+(index/16%192)*64:48+(index/16%4)*24,angle=index*2.3999632f;var point=(centre+(east*Mathf.Cos(angle)+north*Mathf.Sin(angle))*range/fixture.definition.radius).normalized;
                 if(ConstructForTeam(id,anchorBuilding.team,point)){terminalSearch[key]=cursor;return true;}}
             terminalSearch[key]=cursor;return false;
         }

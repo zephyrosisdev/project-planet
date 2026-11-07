@@ -11,6 +11,7 @@ namespace MassiveArmy.Planetary
         const int Size=1024,Grid=32,Block=Size/Grid,CellResolution=128;
         readonly Material material;readonly ComputeShader shader;readonly RenderTexture colour,relief;
         readonly GraphicsBuffer cells;readonly uint[] painted=new uint[6*CellResolution*CellResolution];
+        readonly Vector4[] detailStamps=new Vector4[32];int detailCount;
         static readonly Vector3[] centres=TileCentres();
         public int Count {get;private set;}
         public const long AtlasBytes=6L*Size*Size*4*2;
@@ -19,6 +20,7 @@ namespace MassiveArmy.Planetary
             this.material=material;shader=UnityEngine.Object.Instantiate(Resources.Load<ComputeShader>("MassiveArmy/PlanetNuclearScorch"));
             colour=Atlas("Persistent nuclear colour");relief=Atlas("Persistent nuclear normals");
             cells=new GraphicsBuffer(GraphicsBuffer.Target.Structured,painted.Length,4);cells.SetData(painted);
+            material.SetInt("_PlanetScorchDetailCount",0);material.SetVectorArray("_PlanetScorchDetails",detailStamps);
             foreach(string name in new[]{"Clear","Paint"}){int k=shader.FindKernel(name);shader.SetTexture(k,"_ScorchColour",colour);shader.SetTexture(k,"_ScorchRelief",relief);}
             int paint=shader.FindKernel("Paint");shader.SetTexture(paint,"_NukeColours",colours);shader.SetTexture(paint,"_NukeNormals",normals);shader.SetVector("_NukeNeutral",neutral);shader.SetInt("_ScorchSize",Size);shader.SetInt("_SourceSize",colours.width);
             shader.Dispatch(shader.FindKernel("Clear"),Size/8,Size/8,6);
@@ -29,6 +31,10 @@ namespace MassiveArmy.Planetary
         public void Paint(Vector3 direction,float radius,float planetRadius)
         {
             direction.Normalize();radius=Mathf.Max(1,radius);var right=Vector3.Cross(Mathf.Abs(direction.y)>.95f?Vector3.right:Vector3.up,direction).normalized;
+            // A planet-wide atlas cannot resolve metre-scale craters on Earth-size worlds.
+            // Keep a fixed recent detail cache; the atlas still preserves older overlapping paint.
+            detailStamps[Count%detailStamps.Length]=new Vector4(direction.x,direction.y,direction.z,radius);detailCount=Math.Min(detailStamps.Length,detailCount+1);
+            material.SetVectorArray("_PlanetScorchDetails",detailStamps);material.SetInt("_PlanetScorchDetailCount",detailCount);
             shader.SetVector("_Impact",new Vector4(direction.x,direction.y,direction.z,radius));shader.SetVector("_ImpactRight",right);shader.SetFloat("_ScorchRadius",planetRadius);
             // The normalized cube map is Lipschitz with constant one on each face.
             // 4/Grid safely encloses a tile, plus the farthest corner of the stamp.

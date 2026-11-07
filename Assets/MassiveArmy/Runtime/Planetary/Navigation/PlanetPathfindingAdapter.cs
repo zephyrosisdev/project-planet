@@ -21,6 +21,12 @@ namespace MassiveArmy.Planetary
         bool readbackPending,disposed;double nextReadback;
         internal Vector2 GoalForValidation(int group)=>orders[group].destination;
         public bool HasGoal(int group)=>orders[group].sequence!=0;
+        public void SetFormation(int group,Vector3 right,float spacing,float width,int count){
+            float length=right.magnitude;if(count>0&&length>1e-10f)right/=length;else count=0;
+            var order=orders[group];order.order=count>0?1u:0u;order.right=count>0?CubeSphere.Encode(right):Vector2.zero;
+            order.spacing=spacing;order.width=width;order.count=(uint)Mathf.Max(0,count);order.columns=(uint)Mathf.Max(1,Mathf.Min(Mathf.Max(1,count),Mathf.FloorToInt(width/Mathf.Max(1,spacing))+1));
+            orders[group]=order;Groups.SetData(orders,group,group,1);
+        }
         bool terrainRefreshReading;int terrainEpoch;readonly HashSet<int> terrainRefresh=new HashSet<int>();
         internal bool TerrainRefreshPendingForValidation=>terrainRefreshReading||terrainRefresh.Count>0;
         internal uint GoalSequenceForValidation(int group)=>orders[group].sequence;
@@ -71,7 +77,7 @@ namespace MassiveArmy.Planetary
             var coarseDirection=direction;
             if(choice!=uint.MaxValue&&choice!=(uint)CubeSphere.Cell(0,direction,Resolution).Index(Resolution)){int cell=(int)choice;coarseDirection=CubeSphere.Direction(new PlanetNavCoordinate(0,(CubeFace)(cell/(Resolution*Resolution)),cell%Resolution,cell/Resolution%Resolution),Resolution);}
             if(Regional==null)direction=coarseDirection;
-            var p=CubeSphere.Encode(direction);if(!force&&HasGoal(group)&&orders[group].movement==(uint)movement&&(orders[group].destination-p).sqrMagnitude<1e-10f)return;orders[group]=new GroupOrder{destination=p,localOrigin=CubeSphere.Encode(coarseDirection),sequence=orders[group].sequence+1,movement=(uint)movement,count=1,columns=1};pending[group]=true;Groups.SetData(orders,group,group,1);
+            var p=CubeSphere.Encode(direction);if(!force&&HasGoal(group)&&orders[group].movement==(uint)movement&&(orders[group].destination-p).sqrMagnitude<1e-10f)return;var previous=orders[group];orders[group]=new GroupOrder{destination=p,localOrigin=CubeSphere.Encode(coarseDirection),sequence=previous.sequence+1,movement=(uint)movement,order=force?previous.order:0,right=force?previous.right:Vector2.zero,spacing=force?previous.spacing:0,width=force?previous.width:0,count=force?previous.count:1,columns=force?previous.columns:1};pending[group]=true;Groups.SetData(orders,group,group,1);
             if(queuedResolve){picked[0]=picked[1]=uint.MaxValue;goalPick.SetData(picked);goalShader.SetInt("_Res",Resolution);goalShader.SetInt("_Movement",(int)movement);goalShader.SetVector("_Direction",direction);
                 foreach(string name in new[]{"Closest","Resolve"}){int k=goalShader.FindKernel(name);goalShader.SetBuffer(k,"_Costs",Costs);goalShader.SetBuffer(k,"_Pick",goalPick);goalShader.Dispatch(k,(CellCount+127)/128,1,1);}
                 int apply=goalShader.FindKernel("ApplyGoal");goalShader.SetInt("_ResolvedGroup",group);goalShader.SetBuffer(apply,"_Pick",goalPick);goalShader.SetBuffer(apply,"_ResolvedOrders",Groups);goalShader.Dispatch(apply,1,1,1);

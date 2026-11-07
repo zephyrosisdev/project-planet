@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources></PropertyGroup><ItemGroup><Compile Include="../../Assets/MassiveArmy/Runtime/Industrial/Industrial*.cs" Exclude="../../Assets/MassiveArmy/Runtime/Industrial/IndustrialGpuProbe.cs"/><Compile Include="Program.cs"/><Compile Include="MiningWorkflowChecks.cs"/><Compile Include="RespawnChecks.cs"/><Compile Include="InventorySlotChecks.cs"/></ItemGroup></Project>
+
+

@@ -8,7 +8,7 @@ namespace MassiveArmy.Planetary {
     public enum SocialTieKind {Friend,Rival,Gang}
     [Serializable] public sealed class SocialTie {public long resident;public SocialTieKind kind;public float strength;}
     [Serializable] public sealed class ResidentCrime {
-        public CrimeActivity activity;public CustodyStage custody;public double alcoholAddiction,drugAddiction,hardship,unemployedDays,rehabilitation;
+        public bool knownToPolice;public CrimeActivity activity;public CustodyStage custody;public double alcoholAddiction,drugAddiction,hardship,unemployedDays,rehabilitation;
         public long gang,exploiter,facility;public int weapons,convictions,ammoPurchased;public double contraband,wanted,courtDue,releaseAt,fleeUntil;public string reason="";
         public List<SocialTie> ties=new List<SocialTie>();
     }
@@ -112,7 +112,7 @@ namespace MassiveArmy.Planetary {
             return best?.persistentId??0;
         }
         internal CrimeCase ReportCrime(ColonyState c,ResidentState suspect,ResidentState victim,ResidentState officer,Offence offence,Vector2 place,double time,bool reported=true){
-            var record=new CrimeCase{id=State.AllocateId(),suspect=suspect?.id??0,victim=victim?.id??0,officer=officer?.id??0,offence=offence,place=place,time=time,evidence=officer!=null?.95:.65,reported=reported};c.crime.cases.Add(record);if(reported){c.crime.reportedCrimes++;if(suspect!=null)suspect.crime.wanted+=1;}c.societyRevision++;return record;
+            var record=new CrimeCase{id=State.AllocateId(),suspect=suspect?.id??0,victim=victim?.id??0,officer=officer?.id??0,offence=offence,place=place,time=time,evidence=officer!=null?.95:.65,reported=reported};c.crime.cases.Add(record);if(reported){c.crime.reportedCrimes++;if(suspect!=null){suspect.crime.knownToPolice=true;suspect.crime.wanted+=1;}}c.societyRevision++;return record;
         }
         internal bool Arrest(PlanetRtsBase local,ColonyState c,ResidentState suspect,ResidentState officer,Vector2 place,double time){
             if(suspect==null||!suspect.alive||suspect.age<18||Confined(suspect))return false;RtsBuilding jail=null;foreach(var b in local.Buildings)if(b.team==c.faction&&(b.definition.id==CountyJail||b.definition.id==PoliceHeadquarters)&&CivicServiceReady(b)){int held=0;foreach(var p in c.residents)if(p.alive&&Confined(p)&&p.crime.facility==b.persistentId)held++;if(held<(b.definition.id==CountyJail?24:8)*b.level){jail=b;break;}}
@@ -123,7 +123,7 @@ namespace MassiveArmy.Planetary {
             return true;
         }
         internal bool HoldCrimeBody(ColonyState c,ResidentState p){var d=c.deaths.Find(x=>x.resident==p.id);return d!=null&&(d.cause==DeathCause.Murder||d.cause==DeathCause.Robbery||d.cause==DeathCause.PoliceViolence)&&!d.collected;}
-        internal void DiscoverBody(ColonyState c,long resident,long witness,double time){var d=c.deaths.Find(x=>x.resident==resident);if(d==null||d.discovered)return;d.discovered=true;d.discoveredAt=time;d.discoveredBy=witness;c.crime.discoveries++;foreach(var q in c.crime.cases)if(q.victim==resident&&!q.reported){q.reported=true;c.crime.reportedCrimes++;var criminal=Person(c,q.suspect);if(criminal!=null)criminal.crime.wanted+=2;}c.security.requestedPatrols=Math.Min(32,c.security.requestedPatrols+2);c.societyRevision++;}
+        internal void DiscoverBody(ColonyState c,long resident,long witness,double time){var d=c.deaths.Find(x=>x.resident==resident);if(d==null||d.discovered)return;d.discovered=true;d.discoveredAt=time;d.discoveredBy=witness;c.crime.discoveries++;foreach(var q in c.crime.cases)if(q.victim==resident&&!q.reported){q.reported=true;c.crime.reportedCrimes++;var criminal=Person(c,q.suspect);if(criminal!=null){criminal.crime.knownToPolice=true;criminal.crime.wanted+=2;}}c.security.requestedPatrols=Math.Min(32,c.security.requestedPatrols+2);c.societyRevision++;}
         void TickJustice(PlanetRtsBase local,ColonyState c){
             var court=local.Buildings.Find(b=>b.team==c.faction&&b.definition.id==Court&&CivicServiceReady(b));
             foreach(var p in c.residents){if(!p.alive||!Confined(p))continue;var x=p.crime;var facility=SocietyBuilding(local,x.facility);if(facility==null){x.custody=CustodyStage.Free;x.facility=0;x.wanted+=1;x.reason="Escaped a destroyed detention facility";continue;}

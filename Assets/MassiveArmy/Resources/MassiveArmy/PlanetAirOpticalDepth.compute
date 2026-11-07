@@ -1,0 +1,22 @@
+#pragma kernel Build
+// Dimensionless Rayleigh/Mie density columns, independent of sun, pressure and colour.
+// Height and sun-angle coordinates concentrate precision near the ground and horizon.
+RWTexture2DArray<float2> _AirColumnsWrite;
+float _AirHeight;int _AirSlice;
+[numthreads(8,8,1)]void Build(uint3 id:SV_DispatchThreadID){
+ if(id.x>=128||id.y>=64)return;
+ float h=_AirHeight*pow(id.y/63.0,2),r=1+h;
+ float horizon=-sqrt(h*(2+h))/(1+h),u=id.x/127.0;
+ float mu=horizon+(1-horizon)*u*u;
+ float c=(h-_AirHeight)*(2+h+_AirHeight),b=r*mu;
+ float distance=max(0,-b+sqrt(max(0,b*b-c)));
+ float2 scale=max(float2(1e-8,1e-8),_AirHeight*float2(.125,.01875));
+ float2 sum=0;float step=distance/64;
+ [loop]for(int i=0;i<64;i++){
+  float t=(i+.5)*step;
+  // Rationalized height avoids subtracting two nearly equal radii.
+  float delta=t*(2*r*mu+t);float altitude=max(0,h+delta/(sqrt(max(1e-12,r*r+delta))+r));
+  sum+=exp(-altitude/scale)*step/scale;
+ }
+ _AirColumnsWrite[uint3(id.xy,_AirSlice)]=sum;
+}

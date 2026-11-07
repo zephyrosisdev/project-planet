@@ -9,14 +9,17 @@ namespace MassiveArmy.Planetary
         public string SpeedReadout=>FormatFlightSpeed(pose.linearVelocity.Magnitude);
         internal static string FormatFlightSpeed(double metresPerSecond)=>Math.Abs(metresPerSecond)>=1000?$"{metresPerSecond/1000:#,##0.##} km/s":$"{metresPerSecond:0.0} m/s";
         public bool CruiseActive {get;private set;}
-        Double3 cruiseReturnVelocity;
+        Double3 cruiseReturnVelocity;bool cruiseInhibited;
+        internal bool CruiseInhibited=>cruiseInhibited;
+        internal void MatchWarpArrivalFrame(Double3 velocity){EndCruise();pose.linearVelocity+=velocity;shipFrame.Pose=pose;cruiseInhibited=true;}
         internal Double3 NormalFlightVelocity=>CruiseActive?cruiseReturnVelocity:pose.linearVelocity;
         static double CruiseDot(Double3 a,Double3 b)=>a.x*b.x+a.y*b.y+a.z*b.z;
+        internal static bool CruiseSphereEntry(Double3 from,Double3 direction,double length,double radius,out double entry){double along=-CruiseDot(from,direction);var side=from+direction*along;double disc=radius*radius-CruiseDot(side,side);entry=disc>=0?along-Math.Sqrt(disc):double.PositiveInfinity;return entry>=0&&entry<=length;}
         double CruiseBoundary=>world.definition.radius+Math.Max(world.definition.ReliefBound+6000,world.definition.hasAtmosphere?world.definition.atmosphereHeight:0);
-        internal bool CruiseAvailable=>!Landed&&!Docked&&!Docking&&!AutoFlightActive&&pose.position.Magnitude>CruiseBoundary+2;
+        internal bool CruiseAvailable=>!cruiseInhibited&&!Landed&&!Docked&&!Docking&&!AutoFlightActive&&pose.position.Magnitude>CruiseBoundary+2;
         // Warp is swept analytically, so its travel time need not use the normal
         // physics step cap. At 10 FPS a 50 ms cap would halve actual travel speed.
-        internal float FlightStepDuration(float elapsed,bool cruise,bool brake)=>cruise&&!brake&&CruiseAvailable?elapsed:Mathf.Min(elapsed,.05f);
+        internal float FlightStepDuration(float elapsed,bool cruise,bool brake)=>cruise&&!brake&&CruiseAvailable?elapsed:VehicleMotor.LocalStepDuration(elapsed);
         void EndCruise(){if(!CruiseActive)return;pose.linearVelocity=cruiseReturnVelocity;CruiseActive=false;shipFrame.Pose=pose;nextOrbitRefresh=0;nextArcRefresh=0;}
         bool IntegrateCruise(float dt,Vector3 turn){
             // Transit is a held speed override, not permanent orbital acceleration.
@@ -32,12 +35,19 @@ namespace MassiveArmy.Planetary
             var side=from+direction*along;double disc=boundary*boundary-CruiseDot(side,side);
             bool stopped=false;var next=from+delta;
             if(disc>=0){double entry=along-Math.Sqrt(disc);if(entry>=0&&entry<=length){next=from+direction*Math.Max(0,entry-1);stopped=true;}}
+            // Sweep all destination atmospheres, including worlds not loaded yet.
+            // Point-distance activation alone can miss an entire planet at warp speed.
+            int destination=-1;bool startedInside=false;double nearest=(next-from).Magnitude;var runtime=world.SystemRuntime;
+            if(runtime!=null)for(int i=0;i<runtime.Bodies.Length;i++){var body=runtime.Bodies[i];if(body==world.definition)continue;var relative=world.definition.position.Add(from).RelativeTo(body.position);double shell=body.radius+Math.Max(body.ReliefBound+6000,body.hasAtmosphere?body.atmosphereHeight:0);
+                if(relative.Magnitude<=shell+2){nearest=0;destination=i;startedInside=true;break;}
+                if(CruiseSphereEntry(relative,direction,nearest,shell,out double entry)){nearest=Math.Max(0,entry-1);destination=i;}}
+            if(destination>=0){next=from+direction*nearest;stopped=true;}
             var intended=next;StationCollision(from,ref next,ref velocity);
             if((next-intended).Magnitude>.001){CruiseActive=false;}
             pose.position=next;pose.linearVelocity=velocity;
             if(RotationLocked)pose.rotation=LockedAttitude(next);
             pose.angularVelocity=RotationLocked?Double3.Cross(next,velocity).Float/(float)(next.Magnitude*next.Magnitude):pose.rotation*(angularVelocity*Mathf.Deg2Rad);shipFrame.Pose=pose;
-            if(stopped)EndCruise();return true;
+            if(stopped){EndCruise();cruiseInhibited=true;}if(destination>=0)runtime.InterceptArrival(destination,world.definition.position.Add(next),!startedInside);return true;
         }
     }
 }

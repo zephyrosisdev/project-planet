@@ -12,7 +12,7 @@ namespace MassiveArmy.Planetary
 {
     public sealed class PlanetWeatherValidation:MonoBehaviour
     {
-        [Serializable]sealed class Report{public string status="PASS",error="",gpu,measurement="2560x1440; paired HDRP render requests with explicit pixel readback fence. Weather delta includes CPU submission and GPU work; not a GPU timestamp.";public int runtimeErrors,orbitPixels,insidePixels;public long weatherTextureBytes;public double nearWeatherMedianMs,nearWeatherP95Ms,weatherGpuMs;public List<string> checks=new List<string>();}
+        [Serializable]sealed class Report{public string status="PASS",error="",gpu,measurement="2560x1440; paired HDRP render requests with explicit pixel readback fence. Weather delta includes CPU submission and GPU work; not a GPU timestamp.";public int runtimeErrors,orbitPixels,insidePixels;public long weatherTextureBytes,bodyOrbitBufferBytes;public double bodyOrbitMedianMs,bodyOrbitP95Ms;public double nearWeatherMedianMs,nearWeatherP95Ms,weatherGpuMs;public List<string> checks=new List<string>();}
         readonly Report report=new Report();PlanetDevelopment world;RenderTexture target,small;string output;bool logging;readonly Stopwatch timer=new Stopwatch();
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]static void Install(){if(!Application.isEditor&&Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-weather-validation")>=0)new GameObject("Planet weather validation").AddComponent<PlanetWeatherValidation>();}
         void Awake(){var args=Environment.GetCommandLineArgs();output=args[Array.IndexOf(args,"-planet-output")+1];Directory.CreateDirectory(output);world=FindAnyObjectByType<PlanetDevelopment>();world.currentRtsContent=true;world.configuredRadius=120000;world.requestedCapacity=8192;world.ambientZombies=0;world.sessionMode=PlanetGameMode.AiTest;Application.targetFrameRate=-1;QualitySettings.vSyncCount=0;report.gpu=SystemInfo.graphicsDeviceName;Application.logMessageReceived+=Log;logging=true;}
@@ -61,8 +61,8 @@ namespace MassiveArmy.Planetary
         }
         Color32[] ReadColour(){var read=AsyncGPUReadback.Request(target,0,TextureFormat.RGBA32);read.WaitForCompletion();if(read.hasError)throw new InvalidOperationException("First-person colour readback failed");return read.GetData<Color32>().ToArray();}
         IEnumerator CloudLighting(PlanetWeatherRenderer renderer){
-            var weather=world.definition.weather;float haze=weather.haze,coverage=weather.coverage,pitch=world.Rig.Pitch,distance=world.Rig.Distance;var rotation=world.LightingForValidation.Sun.transform.rotation;
-            weather.haze=0;weather.coverage=1;world.Rig.Pitch=90;world.Rig.Distance=1500;world.Rig.RefreshPose();yield return null;
+            var weather=world.definition.weather;float molecular=weather.rayleighStrength,haze=weather.haze,coverage=weather.coverage,pitch=world.Rig.Pitch,distance=world.Rig.Distance;var rotation=world.LightingForValidation.Sun.transform.rotation;
+            weather.rayleighStrength=0;weather.haze=0;weather.coverage=1;world.Rig.Pitch=90;world.Rig.Distance=1500;world.Rig.RefreshPose();yield return null;
             var sun=world.LightingForValidation.Sun;var up=world.Rig.FocusDirection;sun.transform.rotation=Quaternion.LookRotation(-up,Mathf.Abs(up.y)<.95f?Vector3.up:Vector3.right);
             renderer.ShadowsEnabled=false;var control=Capture("terrain-shadow-control");renderer.ShadowsEnabled=true;var shadow=Capture("terrain-cloud-shadow");
             int darker=0;for(int i=0;i<control.Length;i++)if(control[i].r+control[i].g+control[i].b-shadow[i].r-shadow[i].g-shadow[i].b>2)darker++;
@@ -72,7 +72,7 @@ namespace MassiveArmy.Planetary
             Check(varied>1000,"Sunlight optical depth varies through the cloud interior and decreases toward its lit top");
             sun.transform.rotation=Quaternion.LookRotation(up,Mathf.Abs(up.y)<.95f?Vector3.up:Vector3.right);
             renderer.ShadowsEnabled=false;var nightControl=Capture("night-shadow-control");renderer.ShadowsEnabled=true;var night=Capture("night-no-cloud-shadow");Check(Difference(nightControl,night)==0,"Cloud shadows do not darken the planet's unlit side");
-            sun.transform.rotation=rotation;weather.coverage=coverage;weather.haze=haze;world.Rig.Pitch=pitch;world.Rig.Distance=distance;world.Rig.RefreshPose();yield return null;
+            sun.transform.rotation=rotation;weather.coverage=coverage;weather.haze=haze;weather.rayleighStrength=molecular;world.Rig.Pitch=pitch;world.Rig.Distance=distance;world.Rig.RefreshPose();yield return null;
             renderer.ShadowsEnabled=false;renderer.ScatteringEnabled=false;var simple=Capture("cloud-lighting-control");renderer.ScatteringEnabled=true;var scattered=Capture("cloud-internal-scattering");
             Check(Difference(simple,scattered)>1000,"Internal attenuation and scattering change the visible cloud lighting");renderer.ShadowsEnabled=true;
         }
@@ -94,7 +94,7 @@ namespace MassiveArmy.Planetary
             Check(samples>1000,name+" renders nearby opaque surfaces");Check(changed==0,name+" keeps weather behind solid surfaces (changed "+changed+" / "+samples+")");
         }
         IEnumerator CharacterOcclusion(PlanetWeatherRenderer renderer){
-            var player=world.PlayerForValidation;var ship=world.ShipForValidation;float haze=world.definition.weather.haze;world.definition.weather.haze=0;world.AutomaticPlayerStep=false;player.CaptureCursor=false;
+            var player=world.PlayerForValidation;var ship=world.ShipForValidation;float molecular=world.definition.weather.rayleighStrength,haze=world.definition.weather.haze;world.definition.weather.rayleighStrength=0;world.definition.weather.haze=0;world.AutomaticPlayerStep=false;player.CaptureCursor=false;
             world.SetFirstPerson(true);var building=world.Base.Buildings[0];var up=CubeSphere.Decode(building.position);var side=Vector3.Cross(up,Vector3.up).normalized;if(side.sqrMagnitude<.1f)side=Vector3.Cross(up,Vector3.right).normalized;
             player.Enter((up+side*(60/world.definition.radius)).normalized,-side);Check(player.PreciseBodyPosition.Magnitude+.02>=world.Base.PlayerEntryRadius(player.Direction),"Entering first person places the player above a raised building plot");world.Base.Rebase();yield return null;
             var targetBuilding=building.visual.GetComponentInChildren<Renderer>().bounds.center;world.View.transform.rotation=Quaternion.LookRotation(targetBuilding-world.View.transform.position,up);yield return null;
@@ -104,7 +104,7 @@ namespace MassiveArmy.Planetary
             world.definition.weather.Layer(world.definition,out float bottom,out float thickness);var pose=ship.Pose;pose.position=new Double3(pose.position.Float.normalized)*(world.definition.radius+bottom+thickness*.5f);ship.ResetForSystemValidation(pose);player.Resume();ship.Rebase();for(int i=0;i<4;i++)yield return null;CheckNearSolids("ship-wall-inside-cloud",renderer,20);
             world.SetShipControl(true);for(int i=0;i<4;i++)yield return null;CheckNearSolids("pilot-inside-cloud",renderer,20);
             renderer.Enabled=false;var windowControl=Capture("cloud-window-control");renderer.Enabled=true;var windowWeather=Capture("cloud-window-weather");Check(Difference(windowControl,windowWeather)>1000,"Clouds remain visible outside the cockpit windshield while the cabin stays clear");
-            world.SetFirstPerson(false);world.AutomaticPlayerStep=true;world.definition.weather.haze=haze;world.Rig.RefreshPose();yield return null;
+            world.SetFirstPerson(false);world.AutomaticPlayerStep=true;world.definition.weather.haze=haze;world.definition.weather.rayleighStrength=molecular;world.Rig.RefreshPose();yield return null;
         }
         IEnumerator ForegroundOcclusion(PlanetWeatherRenderer renderer){
             // Exercise the opaque mesh path used by RTS buildings, ahead of weather.
@@ -112,14 +112,14 @@ namespace MassiveArmy.Planetary
             var cube=GameObject.CreatePrimitive(PrimitiveType.Cube);cube.name="Weather foreground occlusion fixture";
             var material=new Material(Resources.Load<Shader>("MassiveArmy/Structure"));material.SetColor("_Tint",new Color(.8f,.05f,.03f));cube.GetComponent<Renderer>().sharedMaterial=material;
             cube.transform.SetPositionAndRotation(world.View.transform.position+world.View.transform.forward*50,world.View.transform.rotation);cube.transform.localScale=new Vector3(20,20,2);
-            float haze=world.definition.weather.haze;world.definition.weather.haze=0;
+            float molecular=world.definition.weather.rayleighStrength,haze=world.definition.weather.haze;world.definition.weather.rayleighStrength=0;world.definition.weather.haze=0;
             bool shadows=renderer.ShadowsEnabled;renderer.ShadowsEnabled=false;
             renderer.Enabled=false;var control=Capture("foreground-control");renderer.Enabled=true;var weather=Capture("foreground-weather");renderer.ShadowsEnabled=shadows;int changed=0;
             var depth=AsyncGPUReadback.Request(renderer.DepthForValidation,0);depth.WaitForCompletion();bool depthReadSucceeded=!depth.hasError;var values=depth.GetData<float>();var projection=GL.GetGPUProjectionMatrix(world.View.projectionMatrix,true);
             float raw=values[720*2560+1280],metres=Mathf.Abs(projection.m23/(raw+projection.m22));
             File.WriteAllText(Path.Combine(output,"foreground-depth.txt"),"Source dimension: "+renderer.DepthDimensionForValidation+"\nForeground depth: "+metres+" metres\nRaw depth: "+raw);
             for(int y=65;y<115;y++)for(int x=135;x<185;x++){int i=y*320+x;if(Math.Abs(control[i].r-weather[i].r)+Math.Abs(control[i].g-weather[i].g)+Math.Abs(control[i].b-weather[i].b)>6)changed++;}
-            cube.SetActive(false);Destroy(cube);Destroy(material);world.definition.weather.haze=haze;
+            cube.SetActive(false);Destroy(cube);Destroy(material);world.definition.weather.haze=haze;world.definition.weather.rayleighStrength=molecular;
             world.Rig.Pitch=pitch;world.Rig.Distance=distance;world.Rig.RefreshPose();yield return null;
             Check(depthReadSucceeded&&Mathf.Abs(metres-49)<1,"Weather snapshot contains the foreground object's depth rather than an empty texture");
             Check(changed==0,"Clouds behind a foreground opaque object do not tint or cover its interior (changed pixels: "+changed+")");
@@ -151,14 +151,33 @@ namespace MassiveArmy.Planetary
             var travel=TravelClouds();while(travel.MoveNext())yield return travel.Current;
             Check(report.runtimeErrors==0,"Weather rendering produces no runtime or shader errors");
         }
-        IEnumerator TravelClouds(){var runtime=world.SystemRuntime;if(runtime.Bodies.Length<2)yield break;const int destination=1;runtime.PreparePlanet(destination);double deadline=Time.realtimeSinceStartupAsDouble+120;while(!runtime.IsPreparedForValidation(destination)&&Time.realtimeSinceStartupAsDouble<deadline)yield return null;Check(runtime.IsPreparedForValidation(destination),"Second planet prepares for travelled-world weather regression");
-            var body=runtime.Bodies[destination];world.SetShipControl(true);var pose=world.ShipForValidation.Pose;pose.position=body.position.Add(new Double3(0,0,-body.radius*3)).RelativeTo(world.definition.position);pose.linearVelocity=body.velocity-world.definition.velocity+new Double3(Math.Sqrt(body.gravitationalParameter/(body.radius*3)),0,0);pose.rotation=Quaternion.identity;world.ShipForValidation.ResetForSystemValidation(pose);runtime.EnterPlanet(destination);world=runtime.ActiveWorld;world.Paused=true;Check(world.definition==body,"Cloud regression enters a different planet through the real ship handoff");
+        IEnumerator TravelClouds(){var runtime=world.SystemRuntime;if(runtime.Bodies.Length<2)yield break;const int destination=1;
+            // Exercise the real warp sweep before destination terrain exists.
+            var body=runtime.Bodies[destination];world.SetShipControl(true);var departing=world.ShipForValidation;departing.SetFlightAssistance(true);var pose=departing.Pose;
+            double shell=body.radius+Math.Max(body.ReliefBound+6000,body.hasAtmosphere?body.atmosphereHeight:0);
+            pose.position=body.position.Add(new Double3(0,0,-shell-100000)).RelativeTo(world.definition.position);pose.linearVelocity=new Double3();pose.rotation=Quaternion.identity;departing.ResetForSystemValidation(pose);departing.SetFlightAssistance(true);
+            departing.Integrate(.05f,Vector3.zero,Vector3.zero,false,false,true);
+            Check(!departing.CruiseActive&&runtime.ArrivalPreparing,"Warp intercepts an unprepared destination rather than skipping through it");
+            Check(Math.Abs(departing.Position.RelativeTo(body.position).Magnitude-shell-1)<2,"Destination warp sweep stops just outside the atmosphere/terrain boundary");
+            double deadline=Time.realtimeSinceStartupAsDouble+120;while(!runtime.IsPreparedForValidation(destination)&&Time.realtimeSinceStartupAsDouble<deadline)yield return null;Check(runtime.IsPreparedForValidation(destination),"Second planet prepares for travelled-world weather regression");
+            world.Paused=false;deadline=Time.realtimeSinceStartupAsDouble+10;while(runtime.ActiveWorld==world&&Time.realtimeSinceStartupAsDouble<deadline)yield return null;
+            Check(runtime.ActiveWorld!=world,"Prepared destination activates automatically through the real arrival handoff");world=runtime.ActiveWorld;world.Paused=true;body=world.definition;
+            Check(world.ShipForValidation.Pose.linearVelocity.Magnitude<10,"Assisted arrival matches the destination frame instead of inheriting departure orbital speed");
+            Check(world.ShipForValidation.VisualForValidation.GetComponentInChildren<UnityEngine.Rendering.Volume>(true)==null,"Ship interior has no exposure override volume");
+            pose=world.ShipForValidation.Pose;pose.position=new Double3(0,0,-body.radius*3);pose.linearVelocity=new Double3(Math.Sqrt(body.gravitationalParameter/(body.radius*3)),0,0);pose.rotation=Quaternion.identity;world.ShipForValidation.ResetForSystemValidation(pose);
+
             for(int i=0;i<5;i++)yield return null;Check(world.ShipForValidation.PilotRootForValidation.Q("pilot-altimeter")!=null&&world.ShipForValidation.PilotRootForValidation.Q("pilot-bank")!=null&&world.ShipForValidation.PilotRootForValidation.Q("pilot-velocity")!=null,"Travelled-world cockpit builds altitude, roll and velocity instruments");
-            world.ShipForValidation.SetFlightAssistance(true);body.hasAtmosphere=true;body.surfacePressure=1;body.weather=new PlanetWeather{clouds=PlanetCloudSystem.Overcast,coverage=1,haze=0};world.View.enabled=false;world.View.targetTexture=target;
+            world.ShipForValidation.SetFlightAssistance(true);body.hasAtmosphere=true;body.surfacePressure=1;body.weather=new PlanetWeather{clouds=PlanetCloudSystem.Overcast,coverage=1,haze=0,rayleighStrength=0};world.View.enabled=false;world.View.targetTexture=target;
             double forecastDeadline=Time.realtimeSinceStartupAsDouble+15;while(world.ShipForValidation.TrajectoryPointsForValidation<3&&Time.realtimeSinceStartupAsDouble<forecastDeadline)yield return null;Render();
             Check(world.ShipForValidation.FlightAssistEnabled&&world.ShipForValidation.TrajectoryPointsForValidation>2,"Coast trajectory remains available with flight assist enabled near a travelled planet (samples "+world.ShipForValidation.TrajectoryPointsForValidation+", forecast "+world.ShipForValidation.PredictionForValidation?.Count+", status "+world.ShipForValidation.PredictionForValidation?.Status+")");
             Check(world.ShipForValidation.LocalOrbitPointsForValidation>2,"Nearby travelled planet has a local osculating orbit reference curve");
             var weather=world.WeatherForValidation;var ship=world.ShipForValidation;var savedPose=ship.Pose;
+            for(int i=0;i<16;i++){Render();yield return null;}
+            Check(ship.CelestialGuideCountForValidation>0,"Planet and stellar parent-orbit guides are present after travel");
+            Check(ship.ApproachTargetForValidation>=0&&ship.PilotRootForValidation.Q<Label>("pilot-body-navigation")?.text.Contains("CLOSING")==true,"Approach target exposes body motion and relative closing speed");
+            Check(ship.BodyDirectionVisibleForValidation,"Selected planet has an on-screen direction arrow even when a minute of travel leaves the viewport");
+            Check(ship.PilotRootForValidation.Q<Label>("pilot-body-future-0")?.text.Contains("+1 min")==true&&ship.PilotRootForValidation.Q<Label>("pilot-body-future-2")?.text.Contains("+15 min")==true,"Timed planet forecasts retain labelled off-screen indicators");
+            var guideDeltas=new List<double>();for(int sample=0;sample<50;sample++){ship.ShowCelestialOrbits=false;timer.Restart();Render();double off=timer.Elapsed.TotalMilliseconds;ship.ShowCelestialOrbits=true;timer.Restart();Render();double on=timer.Elapsed.TotalMilliseconds;if(sample>=15)guideDeltas.Add(Math.Max(0,on-off));yield return null;}guideDeltas.Sort();report.bodyOrbitMedianMs=guideDeltas[guideDeltas.Count/2];report.bodyOrbitP95Ms=guideDeltas[(int)((guideDeltas.Count-1)*.95)];report.bodyOrbitBufferBytes=ship.CelestialGuideBytesForValidation;Check(report.bodyOrbitBufferBytes>0&&report.bodyOrbitBufferBytes<=12*193*16,"Celestial orbit guides retain at most twelve bounded GPU path buffers");
             var hud=new RenderTexture(2560,1440,0,RenderTextureFormat.ARGB32);hud.Create();ship.SetPilotRenderTarget(hud);for(int i=0;i<8;i++)yield return null;var previous=RenderTexture.active;RenderTexture.active=hud;var hudImage=new Texture2D(2560,1440,TextureFormat.RGBA32,false);hudImage.ReadPixels(new Rect(0,0,2560,1440),0,0);hudImage.Apply();File.WriteAllBytes(Path.Combine(output,"travel-flight-instruments.png"),hudImage.EncodeToPNG());Destroy(hudImage);RenderTexture.active=previous;ship.SetPilotRenderTarget(null);hud.Release();Destroy(hud);
             foreach(float angle in new[]{-25f,-12f,0f,12f,25f}){var angled=savedPose;angled.rotation=savedPose.rotation*Quaternion.Euler(0,angle,0);ship.ResetForSystemValidation(angled);ship.SetFlightAssistance(true);yield return null;weather.Enabled=false;var control=Capture("travel-cloud-control-"+angle);weather.Enabled=true;var clouds=Capture("travel-cloud-weather-"+angle);Check(Difference(control,clouds)>100,"Clouds remain visible after planetary travel with camera yaw "+angle);}
             ship.ResetForSystemValidation(savedPose);
@@ -166,3 +185,4 @@ namespace MassiveArmy.Planetary
         void OnDestroy(){if(logging)Application.logMessageReceived-=Log;if(target!=null){target.Release();Destroy(target);}if(small!=null){small.Release();Destroy(small);}}
     }
 }
+

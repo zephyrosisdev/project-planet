@@ -15,7 +15,7 @@ namespace MassiveArmy.Planetary
         }
         static Texture2DArray Load(string suffix,bool linear){string[] names={"NukeCrater","ZombieSplatter","HumanRemains","TankWreck","VehicleWreck","BuildingRubble"};var first=Resources.Load<Texture2D>("MassiveArmy/CombatArt/"+names[0]+suffix);var result=new Texture2DArray(first.width,first.height,names.Length,first.format,true,linear){name="Planet combat "+suffix,wrapMode=TextureWrapMode.Clamp,filterMode=FilterMode.Trilinear,anisoLevel=2};result.Apply(false,true);for(int i=0;i<names.Length;i++){var source=Resources.Load<Texture2D>("MassiveArmy/CombatArt/"+names[i]+suffix);if(source==null||source.format!=first.format)throw new InvalidOperationException("Combat decal import mismatch: "+names[i]);for(int mip=0;mip<source.mipmapCount;mip++)Graphics.CopyTexture(source,0,mip,result,i,mip);}return result;}
         internal PlanetNuclearScorch ScorchForValidation=>scorch;
-        public void StampNuke(Vector3 direction,float radius,float planetRadius)=>scorch.Paint(direction,radius,planetRadius);
+        public void StampNuke(Vector3 direction,float radius,float planetRadius)=>scorch.Paint(direction,radius*1.44f,planetRadius);
         internal uint CountForValidation(){var value=new uint[1];counter.GetData(value);return value[0]+(uint)scorch.Count;}
         public void Dispose(){material.DisableKeyword("PLANET_COMBAT_DECALS");scorch.Dispose();stamps.Dispose();indices.Dispose();counter.Dispose();ArmyLifetime.Destroy(colours);ArmyLifetime.Destroy(normals);}
     }

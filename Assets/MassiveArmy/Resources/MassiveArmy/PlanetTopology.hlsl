@@ -9,6 +9,21 @@ static const uint PlanetReverse[24]={0,0,1,0,0,0,0,1,1,0,0,1,0,1,1,0,0,0,0,0,0,0
 float3 PlanetDirection(uint face,float2 uv){return normalize(PlanetN[face]+PlanetU[face]*uv.x+PlanetV[face]*uv.y);}
 float2 PlanetEncode(float3 d){float3 a=abs(d);uint f=a.x>=a.y&&a.x>=a.z?(d.x>=0?0:1):a.y>=a.z?(d.y>=0?2:3):(d.z>=0?4:5);float2 uv=float2(dot(d,PlanetU[f]),dot(d,PlanetV[f]))/dot(d,PlanetN[f]);return float2(f+clamp((uv.x+1)*.5,0,1-1e-6),saturate((uv.y+1)*.5));}
 float3 PlanetDecode(float2 p){uint f=min((uint)max(0,floor(p.x)),5u);return PlanetDirection(f,float2((p.x-f)*2-1,p.y*2-1));}
+// Planet rendering never interpolates UnitState.previous. On extended bodies it
+// holds the low encoded-coordinate residual instead, without expanding army state.
+float2 PlanetPositionLow(float2 previous,uint flags){return (flags&268435456u)!=0?previous:0;}
+void PlanetAdvancePosition(inout float2 encoded,inout float2 previous,inout uint flags,float3 d,float3 tangent,float angle){
+ angle=angle<.001?angle:tan(angle);
+ uint face=min((uint)floor(encoded.x),5u);float2 low=PlanetPositionLow(previous,flags);
+ float2 uv=float2((encoded.x-face)*2-1,encoded.y*2-1);
+ float normal=dot(d,PlanetN[face]),normalStep=dot(tangent,PlanetN[face])*angle;
+ // Rationalized projective difference: never add a sub-metre step to a
+ // planet-sized direction before finding the coordinate increment.
+ float2 delta=(float2(dot(tangent,PlanetU[face]),dot(tangent,PlanetV[face]))*angle-uv*normalStep)/(2*(normal+normalStep));
+ float2 increment=low+delta;precise float2 next=encoded+increment;
+ precise float2 remainder=(encoded-next)+increment;previous=remainder;encoded=next;flags|=268435456u;
+ if(encoded.x<face||encoded.x>=face+1||encoded.y<0||encoded.y>1){encoded=PlanetEncode(PlanetDirection(face,float2((encoded.x-face)*2-1,encoded.y*2-1)));previous=0;}
+}
 uint PlanetIndex(int2 c,uint n){return (c.x/n)*n*n+c.y*n+c.x%n;}
 int2 PlanetCell(uint index,uint n){uint f=index/(n*n),i=index%(n*n);return int2(f*n+i%n,i/n);}
 int2 PlanetPositionCell(float2 p,uint n){uint f=min((uint)max(0,floor(p.x)),5u);int2 xy=clamp((int2)(float2(p.x-f,p.y)*n),0,(int)n-1);return int2(f*n+xy.x,xy.y);}

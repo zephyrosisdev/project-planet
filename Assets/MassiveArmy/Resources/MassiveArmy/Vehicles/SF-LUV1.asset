@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27719f69f40c43d42a2417bfd009d538, type: 3}
+  m_Name: SF-LUV1
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.Planetary.VehicleDefinition
+  id: SF-LUV1
+  displayName: SF-LUV1 Utility
+  cameraSettings: {fileID: 11400000, guid: af3db7530f204810b2fcdaeac086e9c9, type: 2}
+  locomotion: 1
+  prefab: {fileID: 5377553348947682537, guid: 8b11d3f72030f254e9c87ddbcb947fdd, type: 3}
+  size: {x: 2.35, y: 2.55, z: 4.8}
+  chassisCentre: {x: 0, y: 1.25, z: 0}
+  chassisSize: {x: 1.692, y: 0.6375, z: 3.6000001}
+  centreOfMass: {x: 0, y: 1.25, z: 0}
+  mass: 4200
+  maximumSpeed: 24
+  reverseSpeed: 9.6
+  acceleration: 4
+  braking: 7
+  turnSpeed: 50
+  turnAcceleration: 90
+  suspensionSpring: 45
+  suspensionDamping: 12
+  grip: 6
+  torsoYaw: 100
+  torsoPitch: 35
+  traversal:
+    maximumSlope: 38
+    maximumStep: 0.7
+    maximumDrop: 1.5
+    clearance: 0.25
+  seats:
+  - name: Driver 1
+    role: 0
+    permissions: 1
+    position: {x: -0.45, y: 1.15, z: 0.4}
+    eye: {x: -0.45, y: 1.8, z: 0.70000005}
+    entry: {x: -1.775, y: 0, z: 0.2}
+    exit: {x: -2.175, y: 0, z: 0.2}
+    aiByDefault: 0
+  - name: Passenger 2
+    role: 3
+    permissions: 0
+    position: {x: 0.45, y: 1.15, z: 0.4}
+    eye: {x: 0.45, y: 1.8, z: 0.70000005}
+    entry: {x: 1.775, y: 0, z: 0.2}
+    exit: {x: 2.175, y: 0, z: 0.2}
+    aiByDefault: 0
+  - name: Passenger 3
+    role: 3
+    permissions: 0
+    position: {x: -0.45, y: 1.15, z: -0.7}
+    eye: {x: -0.45, y: 1.8, z: -0.39999998}
+    entry: {x: -1.775, y: 0, z: 0.2}
+    exit: {x: -2.175, y: 0, z: 0.2}
+    aiByDefault: 0
+  - name: Passenger 4
+    role: 3
+    permissions: 0
+    position: {x: 0.45, y: 1.15, z: -0.7}
+    eye: {x: 0.45, y: 1.8, z: -0.39999998}
+    entry: {x: 1.775, y: 0, z: 0.2}
+    exit: {x: 2.175, y: 0, z: 0.2}
+    aiByDefault: 0
+  legs: []
+  gaits: []
+  wheels:
+  - name: Front left
+    position: {x: -1.02, y: 0.48, z: 1.43}
+    radius: 0.48
+    width: 0.27
+    suspension: 0.3
+    steering: 1
+    driven: 1
+    brake: 1
+  - name: Front right
+    position: {x: 1.02, y: 0.48, z: 1.43}
+    radius: 0.48
+    width: 0.27
+    suspension: 0.3
+    steering: 1
+    driven: 1
+    brake: 1
+  - name: Rear left
+    position: {x: -1.02, y: 0.48, z: -1.45}
+    radius: 0.48
+    width: 0.27
+    suspension: 0.3
+    steering: 0
+    driven: 1
+    brake: 1
+  - name: Rear right
+    position: {x: 1.02, y: 0.48, z: -1.45}
+    radius: 0.48
+    width: 0.27
+    suspension: 0.3
+    steering: 0
+    driven: 1
+    brake: 1
+  detailDistances: {x: 90, y: 250, z: 650}
+  debugDraw: 0

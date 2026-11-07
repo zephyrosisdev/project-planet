@@ -18,7 +18,17 @@ namespace MassiveArmy.Planetary
             public bool Overlaps(Footprint other)=>face==other.face&&x<other.x+other.width&&x+width>other.x&&y<other.y+other.depth&&y+depth>other.y;
         }
         public PlanetNavCoordinate Cell(Vector3 direction)=>CubeSphere.Cell(Planet,direction,Resolution);
+        public Vector3 NeighbourTangent(PlanetNavCoordinate cell,int edge){
+            var a=DirectionPrecise(cell);var b=DirectionPrecise(Neighbour(cell,edge));
+            // Normalize a metre-scale difference, not two rounded unit directions.
+            var tangent=Vector3.ProjectOnPlane(((b-a)*Radius).Float,a.Float);
+            return tangent.sqrMagnitude>1e-10f?tangent.normalized:Vector3.zero;
+        }
         public Vector3 Direction(PlanetNavCoordinate cell)=>CubeSphere.Direction(cell,Resolution);
+        public Double3 PointPrecise(CubeFace face,double x,double y){var p=new Double3(CubeSphere.Normal[(int)face])+new Double3(CubeSphere.Right[(int)face])*(2*x/Resolution-1)+new Double3(CubeSphere.Up[(int)face])*(2*y/Resolution-1);return p*(1/p.Magnitude);}
+        public Double3 PointPrecise(Footprint area,double u,double v)=>PointPrecise(area.face,area.x+u*area.width,area.y+v*area.depth);
+        public Double3 CentrePrecise(Footprint area)=>PointPrecise(area,.5,.5);
+        public Double3 DirectionPrecise(PlanetNavCoordinate cell)=>PointPrecise(cell.face,cell.x+.5,cell.y+.5);
         public Vector3 Point(CubeFace face,double x,double y)=>CubeSphere.Direction(face,new Vector2((float)(2*x/Resolution-1),(float)(2*y/Resolution-1)));
         public Footprint Area(BuildingDefinition definition,Vector3 direction,int rotation){
             CubeSphere.Project(direction,out var face,out var uv);bool odd=(rotation&1)!=0;int width=odd?definition.footprintDepth:definition.footprintWidth,depth=odd?definition.footprintWidth:definition.footprintDepth;

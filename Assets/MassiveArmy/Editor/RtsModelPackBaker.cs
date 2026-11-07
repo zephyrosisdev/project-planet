@@ -83,7 +83,7 @@ namespace MassiveArmy.EditorTools
                 for(int sub=0;sub<mesh.subMeshCount;sub++){
                     var surface=old?defaultSurface:new Surface{material=source.material??material,albedo=source.albedo,tint=source.tint};
                     int at=shape.surfaces.FindIndex(s=>ReferenceEquals(s,surface)||!old&&!s.original&&s.material==surface.material&&s.albedo==surface.albedo&&s.tint==surface.tint);if(at<0){at=shape.surfaces.Count;shape.surfaces.Add(surface);}
-                    parts.Add(new Part{mesh=mesh,matrix=Matrix4x4.Rotate(Quaternion.Euler(source.rotation))*matrix,submesh=sub,surface=at,original=old});
+                    parts.Add(new Part{mesh=mesh,matrix=Matrix4x4.Rotate(Quaternion.Euler(source.rotation))*matrix,submesh=sub,surface=at,original=old||source.preserveArticulation});
                 }
             }
             if(source.kind==ModelSourceKind.Original){if(original==null)throw new InvalidOperationException("No original mesh for LOD "+lod);Add(original,Matrix4x4.identity,defaultSurface.material,true);return;}
@@ -132,8 +132,8 @@ namespace MassiveArmy.EditorTools
             try{if(result.GetPixelData<byte>(0,0).Length==0)throw new InvalidOperationException("Original texture array has no editable pixel payload.");return result;}catch{Object.DestroyImmediate(result);throw;}
         }
         static void SetSlice(Texture2DArray array,int slice,Texture2D texture){Compress(texture);var data=texture.GetRawTextureData<byte>();int offset=0;for(int mip=0;mip<texture.mipmapCount;mip++){array.SetPixelData(data,mip,slice,offset);int w=Mathf.Max(1,texture.width>>mip),h=Mathf.Max(1,texture.height>>mip);offset+=Mathf.Max(1,(w+3)/4)*Mathf.Max(1,(h+3)/4)*16;}}
-        public static Result Compile(RtsModelPack pack){
-            if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play mode before baking model packs.");var original=Original;var c=Catalogue();var result=new Result();result.catalogue=result.Own(Object.Instantiate(original));result.catalogue.name=pack.name+" catalogue";
+        public static Result Compile(RtsModelPack pack,RtsModelArt basis=null){
+            if(EditorApplication.isPlaying)throw new InvalidOperationException("Stop Play mode before baking model packs.");var original=basis??Original;var c=Catalogue();var result=new Result();result.catalogue=result.Own(Object.Instantiate(original));result.catalogue.name=pack.name+" catalogue";
             try{
                 var entries=original.buildings.ToDictionary(x=>x.id,x=>new RtsModelArt.Building{id=x.id,near=x.near,far=x.far,distant=x.distant,customLods=x.customLods,modular=x.modular,material=x.material,walls=x.walls,gateLeaf=x.gateLeaf});
                 var ids=new HashSet<string>();foreach(var b in pack.buildings.Where(x=>x.enabled)){

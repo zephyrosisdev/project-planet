@@ -1,5 +1,7 @@
 # Planet atmospheres and clouds
 
+The atmospheric-lighting path now supports [Rayleigh and aerosol scattering](ATMOSPHERIC_SCATTERING.md), including wavelength-dependent sunlight attenuation, RGB view transmission and the bounded density-column cache. The original haze and memory figures below describe the earlier renderer; see the new guide for additional targets, settings and validation scope.
+
 Planets have independent atmosphere and cloud settings. Generated worlds can be airless, clear, scattered, broken or overcast. Their pressure and breathable-air flags agree with the civilisation environment. Home-planet weather can be edited on its `PlanetDefinition` asset under `weather`: coverage, cloud altitude, thickness, density, wind, haze and colours.
 
 Nearby clouds are actual raymarched three-dimensional density layers: a spacecraft can pass below, through and above them. Volumetric detail fades between 1.5 and 3 atmosphere heights above the surface. More distant planets use the same seeded, wind-driven coverage field on a cheap cloud layer, with progressively filtered noise for small screen sizes. Atmospheric haze and the sunlit planetary limb are rendered separately from cloud coverage, so a clear atmosphere needs no cloud volume.

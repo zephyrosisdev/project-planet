@@ -7,12 +7,12 @@ namespace MassiveArmy.Planetary
     /// <summary>Cheap visual spheres. Physics and navigation never receive these compressed poses.</summary>
     public sealed class ScaledSpaceRenderer : IDisposable
     {
-        readonly Material material;PlanetDistantTerrain ownPreviews;
+        readonly TerrainSurfaceLibrary surfaceLibrary;readonly Vector4[] phases=new Vector4[81],noiseHigh=new Vector4[3],noiseLow=new Vector4[3],noisePhase=new Vector4[3];readonly Material material;PlanetDistantTerrain ownPreviews;
         internal int VisibleCount {get;private set;}
         internal PlanetDefinition VisibleBody(int index)=>nearest[index];
         readonly List<MaterialPropertyBlock> blocks=new List<MaterialPropertyBlock>();readonly List<int> counts=new List<int>();
         readonly PlanetDefinition[] nearest=new PlanetDefinition[16];readonly double[] distances=new double[16];
-        public ScaledSpaceRenderer(GraphicsBuffer colours){material=new Material(Resources.Load<Shader>("MassiveArmy/PlanetScaledBody"));material.SetBuffer("_BiomeColours",colours);material.SetInteger("_BodyDebug",Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-preview-debug")>=0?1:0);Resources.Load<TerrainSurfaceLibrary>("MassiveArmy/TerrainArt/SurfaceLibrary").Bind(material);}
+        public ScaledSpaceRenderer(GraphicsBuffer colours){material=new Material(Resources.Load<Shader>("MassiveArmy/PlanetScaledBody"));material.SetBuffer("_BiomeColours",colours);material.SetInteger("_BodyDebug",Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-preview-debug")>=0?1:0);surfaceLibrary=Resources.Load<TerrainSurfaceLibrary>("MassiveArmy/TerrainArt/SurfaceLibrary");surfaceLibrary.Bind(material);}
         public void Render(Camera camera,FloatingOrigin origin,IReadOnlyList<PlanetDefinition> bodies,PlanetDefinition foreground=null,PlanetDistantTerrain previews=null)
         {
             if(foreground!=null)foreground.Edits.Bind(material);
@@ -31,6 +31,8 @@ namespace MassiveArmy.Planetary
                 var preview=previews.Get(body);var visual=ScaledSpace.Project(body.position,observer,body.radius);
                 while(blocks.Count<=counts.Count)blocks.Add(new MaterialPropertyBlock());var properties=blocks[counts.Count];
                 var centre=camera.transform.position+visual.position;properties.Clear();properties.SetMatrix("_PlanetVP",vp);properties.SetVector("_ScaledCentre",centre);properties.SetFloat("_ScaledRadius",visual.radius);properties.SetVector("_CameraPosition",camera.transform.position);
+                var eye=observer.RelativeTo(body.position);properties.SetVector("_BodyObserver",eye.Float);for(int band=0;band<9;band++)for(int layer=0;layer<9;layer++){double span=Math.Max(.1,surfaceLibrary.layerParameters[layer].x)*Math.Max(.01,surfaceLibrary.textureScale)*Math.Pow(Math.Max(1.5,surfaceLibrary.textureBandScale),band);float Phase(double value)=>(float)(value/span-Math.Floor(value/span));phases[band*9+layer]=new Vector4(Phase(eye.x),Phase(eye.y),Phase(eye.z),0);}properties.SetVectorArray("_TerrainTexturePhases",phases);
+                PlanetTerrainNoiseAnchor.Fill(eye,(body.terrainSeed%1009)*.017f,surfaceLibrary.boundaryNoiseScale,surfaceLibrary.patchScale,noiseHigh,noiseLow,noisePhase);properties.SetVectorArray("_TerrainNoiseHigh",noiseHigh);properties.SetVectorArray("_TerrainNoiseLow",noiseLow);properties.SetVectorArray("_TerrainNoisePhase",noisePhase);properties.SetFloat("_TerrainNoiseAnchored",1);
                 var physical=body.position.RelativeTo(observer).Float;properties.SetVector("_PhysicalBody",new Vector4(physical.x,physical.y,physical.z,body.radius));
                 var occluder=foreground!=null?foreground.position.RelativeTo(observer).Float:Vector3.zero;
                 properties.SetVector("_ForegroundSphere",new Vector4(occluder.x,occluder.y,occluder.z,foreground!=null?foreground.radius:0));properties.SetFloat("_PlanetRadius",foreground!=null?foreground.radius:1);properties.SetFloat("_PlanetHeight",foreground!=null?foreground.terrainHeight:0);properties.SetFloat("_PlanetOcean",foreground!=null?foreground.oceanHeight:0);properties.SetFloat("_PlanetSeed",foreground!=null?(foreground.terrainSeed%1009)*.017f:0);

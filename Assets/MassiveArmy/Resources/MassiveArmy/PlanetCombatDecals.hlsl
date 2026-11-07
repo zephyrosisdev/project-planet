@@ -1,16 +1,17 @@
 struct PlanetRemains {float4 centre,tangent,metadata;};
 StructuredBuffer<PlanetRemains> _PlanetRemains;StructuredBuffer<uint> _PlanetRemainsIndex;uint _PlanetRemainsResolution;
 UNITY_DECLARE_TEX2DARRAY(_PlanetRemainsColours);UNITY_DECLARE_TEX2DARRAY(_PlanetRemainsNormals);float4 _PlanetRemainsNeutral[6];
-float4 PlanetRemainsDecal(float3 d,float height,inout float3 normal){
- float3 p=d*(_PlanetRadius+height),dx=ddx(p),dy=ddy(p);int2 cell=PlanetPositionCell(PlanetEncode(d),_PlanetRemainsResolution);uint serial=_PlanetRemainsIndex[PlanetIndex(cell,_PlanetRemainsResolution)];if(serial==0)return 0;PlanetRemains stamp=_PlanetRemains[(serial-1)%512];if((uint)stamp.metadata.w!=serial)return 0;
- float3 right=stamp.tangent.xyz,forward=cross(stamp.centre.xyz,right),delta=p-PlanetPosition(stamp.centre.xyz);float scale=stamp.centre.w;float2 uv=float2(dot(delta,right),dot(delta,forward))/scale+.5;if(any(uv<0)||any(uv>1))return 0;
+float4 PlanetRemainsDecal(float3 d,float height,float3 p,inout float3 normal){
+ float3 dx=ddx(p),dy=ddy(p);int2 cell=PlanetPositionCell(PlanetEncode(d),_PlanetRemainsResolution);uint serial=_PlanetRemainsIndex[PlanetIndex(cell,_PlanetRemainsResolution)];if(serial==0)return 0;PlanetRemains stamp=_PlanetRemains[(serial-1)%512];if((uint)stamp.metadata.w!=serial)return 0;
+ float3 right=stamp.tangent.xyz,forward=cross(stamp.centre.xyz,right),delta=p-PlanetRelativePoint(stamp.centre.xyz,PlanetHeight(stamp.centre.xyz));float scale=stamp.centre.w;float2 uv=float2(dot(delta,right),dot(delta,forward))/scale+.5;if(any(uv<0)||any(uv>1))return 0;
  float2 gx=float2(dot(dx,right),dot(dx,forward))/scale,gy=float2(dot(dy,right),dot(dy,forward))/scale;uint kind=(uint)stamp.metadata.x;float4 colour=_PlanetRemainsColours.SampleGrad(sampler_PlanetRemainsColours,float3(uv,kind),gx,gy);float3 bump=_PlanetRemainsNormals.SampleGrad(sampler_PlanetRemainsNormals,float3(uv,kind),gx,gy).xyz;float2 relief=(bump.xy-_PlanetRemainsNeutral[kind].xy)*2/max(.25,bump.z*2-1);float3 perturb=right*relief.x+forward*relief.y;normal=normalize(normal+(perturb-normal*dot(perturb,normal))*colour.a);return colour;
 }
 
 Texture2DArray<float4> _PlanetScorchColour,_PlanetScorchRelief;
 SamplerState sampler_PlanetScorchColour;
 StructuredBuffer<uint> _PlanetScorchCells;uint _PlanetScorchActive;
-float3 PlanetNuclearScorch(float3 d,inout float3 normal){
+float4 _PlanetScorchDetails[32];uint _PlanetScorchDetailCount;
+float3 PlanetNuclearScorch(float3 d,float3 p,inout float3 normal){
  if(_PlanetScorchActive==0)return 1;
  float2 encoded=PlanetEncode(d);int2 cell=PlanetPositionCell(encoded,128);
  if(_PlanetScorchCells[PlanetIndex(cell,128)]==0)return 1;
@@ -23,5 +24,11 @@ float3 PlanetNuclearScorch(float3 d,inout float3 normal){
  // RGBA8 stores exact neutral as 128, avoiding a whole-surface normal bias.
  relief=(_PlanetScorchRelief.SampleGrad(sampler_PlanetScorchColour,float3(uv,face),gx,gy).xyz-128.0/255)*4;
  normal=normalize(normal+relief-normal*dot(relief,normal));
- return _PlanetScorchColour.SampleGrad(sampler_PlanetScorchColour,float3(uv,face),gx,gy).rgb;
+ float3 colour=_PlanetScorchColour.SampleGrad(sampler_PlanetScorchColour,float3(uv,face),gx,gy).rgb;
+ [loop]for(uint i=0;i<_PlanetScorchDetailCount;i++){float4 stamp=_PlanetScorchDetails[i];float3 delta=p-PlanetRelativePoint(stamp.xyz,0);
+  float3 right=normalize(cross(abs(stamp.y)>.95?float3(1,0,0):float3(0,1,0),stamp.xyz)),forward=cross(stamp.xyz,right);float2 local=float2(dot(delta,right),dot(delta,forward))/(stamp.w*2)+.5;
+  if(any(local<0)||any(local>1))continue;float2 sx=float2(dot(ddx(p),right),dot(ddx(p),forward))/(stamp.w*2),sy=float2(dot(ddy(p),right),dot(ddy(p),forward))/(stamp.w*2);
+  float4 paint=_PlanetRemainsColours.SampleGrad(sampler_PlanetRemainsColours,float3(local,0),sx,sy);colour=min(colour,lerp(1,paint.rgb,paint.a));
+ }
+ return colour;
 }

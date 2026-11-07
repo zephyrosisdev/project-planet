@@ -82,15 +82,17 @@ namespace MassiveArmy
         void MakeMenu()
         {
             menuUi.Clear();L(menuUi,"SYNTHETIC FRONT","heading");var layout=Box(menuUi,"menu-layout");var main=Box(layout,"menu-main");
-            L(main,"SYNTHETIC\nFRONT","title");L(main,"Massive armies. One continuous battlefield.","heading");
-            L(main,"Base building RTS · GPU combined arms · CYAN vs RED","body");L(main,"BATTLE CAPACITY","subheading");
+            L(main,"SYNTHETIC\nFRONT","title");L(main,"Explore. Survive. Build your future among the stars.","heading");
+            L(main,"First person space survival · offline prototype","body");
+            var start=Box(main,"row");B(start,"START SURVIVAL",StartSurvivalGame,"confirm","primary grow");
+            B(start,"SETTINGS",()=>SetSettingsOpen(true),"settings");
+            L(main,"WASD walk · mouse look · Space jump · F interact\nI inventory · number keys equip · hold LMB to use · H pilot ship","muted");
+            L(main,"Multiplayer planned: Unity Lobby + Relay. Online play is not connected yet.","muted");
+            L(main,"DEVELOPMENT BENCHMARK","subheading");
             var scales=Box(main,"row");for(int i=0;i<Scales.Length;i++){int index=i;var b=B(scales,new[]{"10K","50K","100K","250K","500K","1M"}[i],()=>{chosenScale=index;foreach(var child in scales.Children())child.EnableInClassList("active",scales.IndexOf(child)==index);},null,"scale-choice");b.EnableInClassList("active",i==chosenScale);}
-            L(main,"","muted","menu-world");var start=Box(main,"row");B(start,"BASE BUILDING RTS",()=>StartBaseBattle(Scales[chosenScale]),"construct","primary grow");B(start,"SWARM SURVIVAL",()=>StartSwarmBattle(Scales[chosenScale]),"defence","grow");B(start,"AI TEST / SPECTATE",()=>StartTestBattle(Scales[chosenScale]),"research","grow");
-            var more=Box(main,"row");B(more,"DEPLOY STRESS ARMIES",()=>{settings.capacity=Scales[chosenScale];StartBattle(Scales[chosenScale]);},"units","grow");B(more,"WORLD SETUP",()=>worldSetupOpen=true,"map","grow");B(more,"SETTINGS",()=>SetSettingsOpen(true),"settings");
-            L(main,"Select: click / drag · Shift adds · Ctrl removes\nOrder: right-click / right-drag formation\nCamera: WASD / arrows · middle drag · wheel · Q / E","muted");
-            var aiProfiles=Box(main,"row");foreach(int team in new[]{0,1}){int t=team;var choice=new DropdownField(t==0?"Test Cyan AI":"Test Red AI",Enum.GetNames(typeof(StrategicProfile)).ToList(),t==0?settings.aiCyanProfile:settings.aiRedProfile);choice.RegisterValueChangedCallback(e=>{if(t==0)settings.aiCyanProfile=choice.index;else settings.aiRedProfile=choice.index;});aiProfiles.Add(choice);}
-            L(main,"Swarm: 10 minutes to prepare · 30-second warning · doubling waves","muted");L(main,"","danger-text body","menu-error");
-            var art=Box(layout,"menu-art");Portrait(art,"building-command","hero");L(art,"COMMAND THE FRONT","heading");L(art,"","muted","menu-memory");
+            B(main,"DEPLOY STRESS ARMIES",()=>{settings.capacity=Scales[chosenScale];StartBattle(Scales[chosenScale]);},"units");
+            L(main,"","danger-text body","menu-error");
+            var art=Box(layout,"menu-art");Portrait(art,"building-command","hero");L(art,"EXPLORE THE FRONTIER","heading");L(art,"","muted","menu-memory");
         }
         void MakeLoading()
         {
@@ -134,7 +136,7 @@ namespace MassiveArmy
             string screen=State=="menu"?(worldSetupOpen?"setup":"menu"):State;
             if(screen!=uiScreen){ReleaseQueueRows();uiScreen=screen;contextKey=buildKey=setupKey="";}
             Visible(menuUi,screen=="menu");Visible(loadingUi,screen=="loading");Visible(setupUi,screen=="setup");Visible(hudUi,screen=="battle");
-            Value("menu-world",$"WRAPPING WORLD {settings.world.size:N0} × {settings.world.size:N0} m · capacity {Scales[chosenScale]:N0}");Value("menu-memory",MemoryBudget.Report(settings));Value("menu-error",error);
+            Value("menu-world",$"WRAPPING WORLD {settings.world.size:N0} × {settings.world.size:N0} m · capacity {Scales[chosenScale]:N0}");Value("menu-memory","Procedural planets / first person survival");Value("menu-error",error);
             Value("load-phase",Loading);Value("load-info",$"{settings.activeUnits:N0} units · seed {settings.world.seed}");
             if(screen=="setup")RefreshSetup();
             if(State=="battle"&&Battle!=null)RefreshHud();else Visible(tooltipUi,false);

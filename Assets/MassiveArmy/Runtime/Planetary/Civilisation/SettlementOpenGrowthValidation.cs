@@ -55,11 +55,13 @@ namespace MassiveArmy.Planetary {
             // Exercise an actual GPU storage clear beyond the old one-dimensional dispatch limit.
             var shader=UnityEngine.Object.Instantiate(Resources.Load<ComputeShader>("MassiveArmy/SettlementRoad"));
             const int stride=65536,slots=128,count=stride*slots;
-            using(var seen=new GraphicsBuffer(GraphicsBuffer.Target.Structured,count,4))
-            using(var work=new GraphicsBuffer(GraphicsBuffer.Target.Structured,slots,48)){
-                int kernel=shader.FindKernel("ClearSearch");shader.SetInt("_RoadStride",stride);shader.SetInt("_SearchSlots",slots);shader.SetBuffer(kernel,"_RoadSeen",seen);shader.SetBuffer(kernel,"_RoadWork",work);
-                seen.SetData(new uint[]{17},0,count-1,1);SettlementCargoNavigation.DispatchStorage(shader,kernel,count);var tail=new uint[1];seen.GetData(tail,0,count-1,1);
-                Check(tail[0]==0,"GPU road storage clears the final element beyond 65,535 dispatch groups");
+            using(var seen=new GraphicsBuffer(GraphicsBuffer.Target.Structured,count,16))
+            using(var work=new GraphicsBuffer(GraphicsBuffer.Target.Structured,slots,64))
+            using(var owners=new GraphicsBuffer(GraphicsBuffer.Target.Structured,slots,4))
+            using(var epochs=new GraphicsBuffer(GraphicsBuffer.Target.Structured,slots,4)){
+                int kernel=shader.FindKernel("ClearSearch");shader.SetInt("_RoadStride",stride);shader.SetInt("_SearchSlots",slots);shader.SetInt("_CargoCount",slots);shader.SetBuffer(kernel,"_RoadSearch",seen);shader.SetBuffer(kernel,"_RoadWork",work);shader.SetBuffer(kernel,"_SearchOwners",owners);shader.SetBuffer(kernel,"_SearchEpochs",epochs);
+                seen.SetData(new Vector4[]{new Vector4(17,0,0,0)},0,count-1,1);SettlementCargoNavigation.DispatchStorage(shader,kernel,count);var tail=new Vector4[1];seen.GetData(tail,0,count-1,1);
+                Check(tail[0].x==0,"GPU road storage clears the final element beyond 65,535 dispatch groups");
             }UnityEngine.Object.Destroy(shader);
         }
     }

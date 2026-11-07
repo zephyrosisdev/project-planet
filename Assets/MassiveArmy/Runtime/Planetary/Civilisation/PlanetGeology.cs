@@ -3,6 +3,12 @@ using UnityEngine;
 namespace MassiveArmy.Planetary
 {
     public sealed partial class PlanetRtsBase {
+        int infiniteNodeCount;
+        internal void EnsureInfiniteDeposits(){
+            // Only newly materialized deposits are visited; no planet-wide generation or per-frame sweep.
+            for(int i=infiniteNodeCount;i<Nodes.Count;i++)Nodes[i].MakeInexhaustible();
+            infiniteNodeCount=Nodes.Count;
+        }
         void InitializeGeology(){
             var civilisation=Civilisation;if(civilisation==null)return;var profile=civilisation.Planet(fixture.definition.bodyId).composition;
             // Preserve the original starter sites and their bootstrap guarantee; abundance changes their efficiency.
@@ -10,6 +16,9 @@ namespace MassiveArmy.Planetary
             var elements=System.Array.FindAll(civilisation.Catalogue.resources,element=>element.element&&profile.Get(element.id)>0);
             if(elements.Length==0)return;
             for(int team=0;team<Factions.Length;team++){
+                // Unsettled countries on visited worlds have no local home yet.
+                // Global procedural deposits remain available without inventing a settlement.
+                if(Homes[team].sqrMagnitude<.5f)continue;
                 if(team==1&&fixture.sessionMode==PlanetGameMode.Swarm)continue;
                 for(int at=0;at<civilisation.Settings.geologicalDepositsPerFaction;at++){
                     var element=elements[at%elements.Length];int reserve=at/elements.Length;
@@ -35,15 +44,17 @@ namespace MassiveArmy.Planetary
         internal bool SurveyFrontierDeposit(string id,int team){
             var d=Catalog.Buildings[id];if(d.terrain!=TerrainRule.Node||d.nodes.Length==0)return false;
             // A usable, unclaimed local prospect must be developed before surveying another.
-            foreach(var node in Nodes)if(node.claimedBy<0&&node.remaining>0&&Array.IndexOf(d.nodes,node.kind)>=0&&string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)){
+            if(PlanningSettlement==null)foreach(var node in Nodes)if(node.claimedBy<0&&node.remaining>0&&Array.IndexOf(d.nodes,node.kind)>=0&&string.Equals(node.elementId??"",d.extractedResource??"",StringComparison.Ordinal)){
                 var direction=CubeSphere.Decode(node.position);if(OwnDeposit(team,direction)&&!ResourceSiteCooling(id,team,node.id)&&Validate(d,direction,0,false,team).valid)return false;
             }
-            var planet=Civilisation.Planet(fixture.definition.bodyId);var survey=planet.frontierSurveys.Find(s=>s.team==team&&s.resource==id);
-            if(survey==null){survey=new FrontierSurvey{team=team,resource=id};planet.frontierSurveys.Add(survey);}
+            var planet=Civilisation.Planet(fixture.definition.bodyId);var survey=planet.frontierSurveys.Find(s=>s.team==team&&s.resource==id&&s.settlement==(PlanningSettlement?.id??0));
+            if(survey==null){survey=new FrontierSurvey{team=team,resource=id,settlement=PlanningSettlement?.id??0};planet.frontierSurveys.Add(survey);}
             return Natural.Survey(d,team,survey);
         }
 
         public bool TryConstructInfrastructure(string id,int team){
+            if(Civilisation?.Settings.ambientSettlementLife==true&&id.StartsWith("civil_farm_"))return LandUse.Plan(team,id.Substring(11));
+            if(Civilisation?.Settings.ambientSettlementLife==true&&id=="civil_park")return LandUse.Plan(team,"",true);
             if(!Catalog.Buildings.ContainsKey(id)||team<0||team>=Factions.Length)return false;return BuildAI(id,team,AIDecisions[team]);
         }
     }

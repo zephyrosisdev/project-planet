@@ -1,0 +1,7 @@
+using UnityEngine.UIElements;
+namespace MassiveArmy.Planetary {
+    public sealed partial class PlanetRtsHud {
+        void RenderRegionalTowns(CivilisationRuntime simulation,ColonyState colony){if(colony.towns==null)return;foreach(var town in colony.towns){Label(civilisationContent,town.name+" / "+SettlementProfiles.Get(town.kind).label,"subheading");Label(civilisationContent,$"{town.buildingCount} buildings · {town.housing} housing · {town.jobs} jobs · {town.status}","muted");if(fixture.sessionMode!=PlanetGameMode.AiTest&&colony.faction==0){var selected=town;Button(civilisationContent,"CHANGE SPECIALIZATION",()=>ChooseRegionalRole(selected));}}}
+        void ChooseRegionalRole(RegionalSettlement town){civilisationOpen=false;civilisationContent=null;var modal=front.Q("modal");modal.Clear();modal.style.display=DisplayStyle.Flex;var panel=new VisualElement();panel.AddToClassList("panel");panel.style.width=880;modal.Add(panel);Label(panel,"SPECIALIZATION / "+town.name,"heading");Label(panel,"Existing buildings remain. Future growth follows the selected role and retains common civic services.","body");var list=new ScrollView();list.style.height=480;panel.Add(list);foreach(var profile in SettlementProfiles.All){var choice=profile;Button(list,choice.label,()=>{town.kind=choice.kind;town.focusCursor=0;town.nextGrowth=0;town.status="Specialization changed";ToggleCivilisation();});Label(list,string.Join(", ",choice.buildings),"muted");}Button(panel,"CANCEL",ToggleCivilisation);}
+    }
+}

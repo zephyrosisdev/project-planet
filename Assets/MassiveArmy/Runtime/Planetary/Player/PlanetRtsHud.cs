@@ -48,7 +48,7 @@ namespace MassiveArmy.Planetary
 
             this.fixture=fixture;this.world=world;art=Resources.Load<RtsUiArt>("MassiveArmy/UI/FrontArt");cardTemplate=Resources.Load<VisualTreeAsset>("MassiveArmy/UI/CatalogRow");resourceTemplate=Resources.Load<VisualTreeAsset>("MassiveArmy/UI/ResourceCell");
 
-            ui=new RtsUiController(fixture.transform,Build,Refresh,()=>!fixture.IsFirstPerson&&!fixture.IsPiloting);ui.Attach();
+            ui=new RtsUiController(fixture.transform,Build,Refresh,()=>!fixture.IsFirstPerson&&!fixture.IsPiloting&&!fixture.IsDriving);ui.Attach();
 
         }
 
@@ -91,7 +91,7 @@ namespace MassiveArmy.Planetary
             constructionTab.AddToClassList("construction-tab");ui.Block(constructionTab);
             drawerLeft=buildOpen?40:-400;UpdateConstructionDrawer(true);SetConstructionOpen(buildOpen);
             MakeMap();BuildResourceHover();context=front.Q("context");Refresh();
-            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.AddToClassList("settlement-toolbar");front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"ORBITALS",OpenOrbitals,"orbitals-open");Button(toolbar,"RESIDENTS",OpenResidents,"residents-open");Button(toolbar,"CRIME",OpenCrime,"crime-open");Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",()=>{crimeView=orbitalsView=residentsView=resourcesView=false;ToggleCivilisation();},"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"RESEARCH",()=>Dispatch("tech"),"tech");Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
+            if(world.Civilisation!=null){var toolbar=new VisualElement{name="settlement-toolbar"};toolbar.AddToClassList("settlement-toolbar");front.Q("hud").Add(toolbar);ui.Block(toolbar);Button(toolbar,"ORBITALS",OpenOrbitals,"orbitals-open");Button(toolbar,"RESIDENTS",OpenResidents,"residents-open");Button(toolbar,"CRIME",OpenCrime,"crime-open");Button(toolbar,"RESOURCES",OpenResources,"resources-open");Button(toolbar,"SETTLEMENTS",()=>{crimeView=orbitalsView=residentsView=resourcesView=false;ToggleCivilisation();},"civilisation-open");BuildDistrictToggle(toolbar);Button(toolbar,"RESEARCH",()=>Dispatch("tech"),"tech");Button(toolbar,"PARK",()=>world.BeginLandPlacement(SettlementLandKind.Park),"park-paint").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);Button(toolbar,"FIELD",()=>world.BeginLandPlacement(SettlementLandKind.Farm),"farm-paint").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);Button(toolbar,"ROADS",()=>world.BeginRoadPlacement(),"civilisation-roads").SetEnabled(fixture.sessionMode!=PlanetGameMode.AiTest);}
 
         }
 
@@ -132,19 +132,7 @@ namespace MassiveArmy.Planetary
 
             var modal=front.Q("modal");modal.Clear();technologyCards.Clear();modal.style.display=technologyOpen?DisplayStyle.Flex:DisplayStyle.None;if(!technologyOpen)return;
 
-            var panel=new VisualElement();panel.AddToClassList("panel");panel.style.width=1100;modal.Add(panel);Label(panel,"TECHNOLOGY DEPENDENCY GRAPH","heading");Button(panel,"CLOSE",()=>{technologyOpen=false;ShowTechnology();});
-            if(Observer){var factions=new VisualElement();factions.AddToClassList("row");panel.Add(factions);for(int i=0;i<world.Factions.Length;i++){int team=i;Button(factions,team==0?"CYAN":"RED",()=>{inspectedFaction=team;ShowTechnology();},"technology-faction-"+team);}Label(panel,"SPECTATOR · VIEW ONLY · "+(inspectedFaction==0?"CYAN":"RED"),"muted").name="technology-observer";}
-            var faction=world.Factions[Observer?inspectedFaction:0];
-
-            var scroll=new ScrollView(ScrollViewMode.VerticalAndHorizontal);scroll.style.height=530;panel.Add(scroll);var canvas=new VisualElement();canvas.AddToClassList("tech-canvas");scroll.Add(canvas);var drawing=new RtsUiDrawing();drawing.StretchToParentSize();canvas.Add(drawing);
-
-            var positions=new Dictionary<string,Rect>();int column=0,maxRows=0;foreach(int tier in world.Catalog.technologies.Select(t=>t.tier).Distinct().OrderBy(t=>t)){int row=0;foreach(var tech in world.Catalog.technologies.Where(t=>t.tier==tier))positions[tech.id]=new Rect(10+column*260,44+row++*102,230,78);column++;maxRows=Math.Max(maxRows,row);}canvas.style.width=Math.Max(1040,column*260);canvas.style.height=Math.Max(850,44+maxRows*102);
-
-            foreach(var tech in world.Catalog.technologies){var t=tech;var card=Button(canvas,"",()=>{if(Observer)return;var lab=world.Buildings.FirstOrDefault(b=>b.team==0&&b.Complete&&b.definition.id==t.requiredBuilding&&b.level>=t.requiredBuildingLevel);if(lab==null)world.Notice="Requires "+t.requiredBuilding+" MK "+t.requiredBuildingLevel;else if(!world.Research(lab,t.id))world.Notice="Research requirements are not met";else ShowTechnology();},"tech-"+t.id);card.AddToClassList("tech-node");var rect=positions[t.id];card.style.left=rect.x;card.style.top=rect.y;
-
-                technologyCards.Add(t.id,card);foreach(string dep in t.prerequisites){var a=positions[dep];var from=new Vector2(a.xMax,a.center.y);var to=new Vector2(rect.xMin,rect.center.y);drawing.Lines.Add((from,to,faction.HasTech(dep)?Color.cyan:Color.gray));}}
-            RefreshTechnology();
-
+            BuildTechnologyPanel(modal);
         }
         void RefreshTechnology(){
             if(!technologyOpen)return;var faction=world.Factions[Observer?inspectedFaction:0];
@@ -189,6 +177,7 @@ namespace MassiveArmy.Planetary
             void Mark(Vector2 p,Color color,float r){mapDrawing.Lines.Add((p+Vector2.left*r,p+Vector2.right*r,color));mapDrawing.Lines.Add((p+Vector2.up*r,p+Vector2.down*r,color));}
 
             foreach(var building in world.Buildings)Mark(Point(CubeSphere.Decode(building.position)),Color.cyan,2);
+            if(crimeMap&&world.Civilisation!=null){var frontier=world.Civilisation.Planet(fixture.definition.bodyId);foreach(var camp in frontier.raiders)if(camp.health>0)Mark(Point(CubeSphere.Decode(camp.position)),new Color(1,.25f,.03f),5);foreach(var incident in frontier.frontierIncidents)Mark(Point(CubeSphere.Decode(incident.position)),new Color(1,.65f,.1f),3);}
             if(crimeMap&&world.Settlements!=null){int marked=0;var colony=world.Settlements[Observer?inspectedFaction:0];if(colony?.crime!=null)for(int i=colony.crime.cases.Count-1;i>=Math.Max(0,colony.crime.cases.Count-256)&&marked<32;i--){var incident=colony.crime.cases[i];if(!SettlementCrimeView.Visible(incident,Observer)||incident.closed)continue;Mark(Point(CubeSphere.Decode(incident.place)),new Color(1,.4f,.05f),4);marked++;}}
             var rig=fixture.Rig;var focus=rig.FocusDirection.normalized;var centre=Point(focus);Mark(centre,Color.yellow,4);
             // A fixed-size heading arrow stays legible when a street-level view is smaller than one atlas pixel.
@@ -226,14 +215,25 @@ namespace MassiveArmy.Planetary
 
         }
 
+        float nextLandTileRefresh;
+        void LandTileContext(VisualElement parent,SettlementLandTile tile){
+            Label(parent,tile.kind==SettlementLandKind.Park?"PARK":"FARM FIELD","heading");Label(parent,"Settlement faction "+(tile.faction+1)+" � Tile #"+tile.id,"body");
+            if(tile.kind==SettlementLandKind.Park){Label(parent,"Public green space � residents visit, wander and rest here.","body");return;}
+            Label(parent,"Crop: "+tile.crop+"\nGrowth: "+(tile.field.growth*100).ToString("0")+"%\n"+(tile.harvestAt>=0?"Tractor harvesting":tile.field.growth>=1?"Ripe � awaiting harvest":tile.field.planted?"Growing":"Awaiting planting"),"body");
+        }
         void Context()
 
         {
 
-            context.Clear();queueStatus=null;var building=world.Selected;context.style.display=building==null&&world.SelectedHearse==null?DisplayStyle.None:DisplayStyle.Flex;layout.Actions["context-reopen"].SetEnabled(building!=null||world.SelectedHearse!=null);if(building==null){if(world.SelectedHearse!=null)HearseContext(context,world.SelectedHearse);return;}
+            context.Clear();queueStatus=null;var building=world.Selected;context.style.display=building==null&&world.SelectedHearse==null&&world.SelectedCitizen==null&&world.SelectedLandTile==null?DisplayStyle.None:DisplayStyle.Flex;layout.Actions["context-reopen"].SetEnabled(building!=null||world.SelectedHearse!=null||world.SelectedCitizen!=null||world.SelectedLandTile!=null);if(building==null){if(world.SelectedLandTile!=null)LandTileContext(context,world.SelectedLandTile);if(world.SelectedHearse!=null)HearseContext(context,world.SelectedHearse);if(world.SelectedCitizen!=null)CitizenContext(context,world.SelectedCitizenColony,world.SelectedCitizen);return;}
 
-            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(world.Civilisation!=null){Label(context,"DISTRICT · "+building.definition.district,"muted");HouseholdContext(context,building);CivicSecurityContext(context,building);if(building.roadSuspended)Label(context,"Road access blocked · suspended while another route is planned","muted");}
+            Label(context,building.definition.name.ToUpperInvariant(),"heading").name="planet-building-name";Label(context,building.definition.description,"body");if(building.definition.id=="command")Label(context,world.AllianceDescription,"muted");if(world.Civilisation!=null){Label(context,"DISTRICT · "+building.definition.district,"muted");HouseholdContext(context,building);CivicSecurityContext(context,building);if(building.roadSuspended)Label(context,"Road access blocked · suspended while another route is planned","muted");}
 
+            if(world.Civilisation!=null&&CivilisationRuntime.DepotResource(building.definition.id)!=null){
+                string resource=CivilisationRuntime.DepotResource(building.definition.id);
+                Button(context,"CONNECT "+(resource=="methane"?"GAS":"OIL")+" PIPELINE",()=>{RtsBuilding nearest=null;float best=float.MaxValue;foreach(var target in world.Buildings)if(target!=building&&world.Allied(building.team,target.team)&&CivilisationRuntime.PipeEndpoint(target,resource)){if(world.Civilisation.Planet(fixture.definition.bodyId).pipelines.Exists(x=>x.resource==resource&&(x.source==target.persistentId&&x.destination==building.persistentId||x.source==building.persistentId&&x.destination==target.persistentId)))continue;float distance=CubeSphere.ArcDistance(CubeSphere.Decode(building.position),CubeSphere.Decode(target.position),fixture.definition.radius);if(distance<best){best=distance;nearest=target;}}world.Civilisation.ConnectPipeline(world,nearest,building,resource,out string reason);world.Notice=reason;world.NotifyChanged();},"planet-connect-pipeline");
+                var item=world.Civilisation.Installation(world,building.persistentId);if(item!=null)Label(context,resource+": "+item.inventory.Get(resource).ToString("0.0"),"muted");
+            }
             var portrait=new Image{image=art?.Find("building",building.definition.id)?.portrait,scaleMode=ScaleMode.ScaleToFit};portrait.AddToClassList("portrait-large");context.Add(portrait);
 
             queueStatus=Label(context,"","muted");queueStatus.name="planet-building-status";if(building.awaitingProjectMaterials)queueStatus.text="REBUILD PROJECT: waiting for delivered construction supplies";
@@ -252,18 +252,20 @@ namespace MassiveArmy.Planetary
 
             LaunchControls(context,building);
             if(building.definition.id=="gate")Button(context,building.gateOpen?"CLOSE GATE":"OPEN GATE",()=>world.SetGate(building,!building.gateOpen),"gate-toggle");
-            if(building.definition.id=="silo")Button(context,"LAUNCH NUKE · 100F / 25I",()=>{fixture.NuclearTargetArmed=true;world.Notice="Click a target within silo range · right-click cancels";},"planet-launch-nuke");
+            if(building.definition.id=="silo"&&world.Factions[building.team].HasTech("civil_infection_weapon"))Button(context,"INFECTION BOMB · 100F / 50R",()=>{fixture.NuclearTargetArmed=false;fixture.BiologicalTargetArmed=true;world.Notice="Click an infection target · right-click cancels";},"planet-launch-biological");
+            if(building.definition.id=="silo")Button(context,"LAUNCH NUKE · 100F / 25I",()=>{fixture.BiologicalTargetArmed=false;fixture.NuclearTargetArmed=true;world.Notice="Click a target within silo range · right-click cancels";},"planet-launch-nuke");
 
             var scroll=new ScrollView();scroll.style.flexGrow=1;context.Add(scroll);
             if(world.Civilisation!=null){
                 Button(scroll,"CONNECT TO WAREHOUSE",()=>world.ConnectSelectedToWarehouse(),"civilisation-connect");
                 foreach(var recipe in world.Civilisation.Catalogue.recipes)if(recipe.building==building.definition.id){var selectedRecipe=recipe;Button(scroll,"PRODUCE "+recipe.name,()=>{world.Civilisation.SetRecipe(fixture.definition.bodyId,building,selectedRecipe.id,0);world.Notice="Recipe selected: "+selectedRecipe.name;},"recipe-"+recipe.id);}
-                if(building.definition.id=="light_depot"||building.definition.id=="helipad")Button(scroll,building.definition.id=="helipad"?"MANUFACTURE AIR CARGO":"MANUFACTURE CARGO TRUCK",()=>{bool ok=world.Civilisation.Logistics.Order(world,building.team,building.definition.id=="helipad");world.Notice=ok?"Cargo vehicle ordered":"Requires connected production and construction materials";},"civilisation-hauler");
+                if(!world.Civilisation.Settings.ambientSettlementLife&&(building.definition.id=="light_depot"||building.definition.id=="helipad"))Button(scroll,building.definition.id=="helipad"?"MANUFACTURE AIR CARGO":"MANUFACTURE CARGO TRUCK",()=>{bool ok=world.Civilisation.Logistics.Order(world,building.team,building.definition.id=="helipad");world.Notice=ok?"Cargo vehicle ordered":"Requires connected production and construction materials";},"civilisation-hauler");
             }
 
+            bool exitWaiting=PlanetRtsBase.ExitAwaitingRelease(building);if(exitWaiting)Label(scroll,"Finished unit awaiting a clear exit or army capacity. Further production orders are paused.","muted");
             foreach(string id in building.definition.production){var d=world.Catalog.Units[id];var button=Card(scroll,"unit",id,d.name,d.cost+" • "+d.time+"s",()=>{if(!world.QueueUnit(building,d.id))world.Notice="Training unavailable: check construction, technology, level or resources";},"train-"+id);
 
-                button.SetEnabled(building.Complete&&world.Faction.HasTech(d.requiredTech)&&building.level>=d.producerLevel);if(!world.Faction.HasTech(d.requiredTech))button.tooltip="Requires "+d.requiredTech;}
+                button.SetEnabled(!exitWaiting&&building.Complete&&world.Faction.HasTech(d.requiredTech)&&building.level>=d.producerLevel);if(!world.Faction.HasTech(d.requiredTech))button.tooltip="Requires "+d.requiredTech;}
 
             foreach(var technology in world.Catalog.technologies.Where(t=>t.requiredBuilding==building.definition.id)){var d=technology;var button=Card(scroll,"technology",d.id,d.name,d.cost+" • "+d.time+"s",()=>{if(!world.Research(building,d.id))world.Notice="Research requirements are not met";},"research-"+d.id);
 
@@ -277,7 +279,7 @@ namespace MassiveArmy.Planetary
 
         {
 
-            if(front==null)return;front.Q("hud").style.display=fixture.IsFirstPerson||fixture.IsPiloting?DisplayStyle.None:DisplayStyle.Flex;
+            if(front==null)return;front.Q("hud").style.display=fixture.IsFirstPerson||fixture.IsPiloting||fixture.IsDriving?DisplayStyle.None:DisplayStyle.Flex;
             RefreshCivilisation();
 
             if(Time.realtimeSinceStartupAsDouble<nextRefresh&&revision==world.Revision)return;nextRefresh=Time.realtimeSinceStartupAsDouble+.1;
@@ -285,11 +287,11 @@ namespace MassiveArmy.Planetary
 
             for(int i=0;i<resources.Count;i++)resources[i].text=$"{world.Faction.wallet.Stock[i]:0} / {world.Faction.wallet.Capacity[i]:0}";
 
-            layout.Value("fps",$"{1/Mathf.Max(Time.smoothDeltaTime,.0001f):0} FPS · TICK {fixture.SimulationTicks} · {fixture.SimulationSpeedLabel}"+(fixture.Paused?" · PAUSED":""));layout.Value("faction","PLANET COMMAND");layout.Value("outcome",world.Outcome);
+            layout.Value("fps",$"{1/Mathf.Max(Time.smoothDeltaTime,.0001f):0} FPS · TICK {fixture.SimulationTicks} · {fixture.SimulationSpeedLabel}"+(fixture.Paused?" · PAUSED":""));layout.Value("faction",fixture.definition.displayName+(fixture.RemoteView?" · REMOTE RTS":" · LOCAL"));layout.Value("outcome",world.Outcome);
 
             selection.text=$"{fixture.Commands.SelectedCount} SELECTED • {fixture.unitCount} ACTIVE\n"+fixture.Commands.Status;notice.text=world.Notice;notice.tooltip=world.Notice;power.text=$"POWER {world.Faction.generation:0} / {world.Faction.demand:0} • EFFICIENCY {world.Faction.efficiency:P0}";
 
-            if(revision!=world.Revision){revision=world.Revision;Context();sharedConstruction?.Refresh(world.Catalog,world.Faction,buildCategory);}
+            if(revision!=world.Revision){revision=world.Revision;Context();sharedConstruction?.Refresh(world.Catalog,world.Faction,buildCategory);}else if(world.SelectedLandTile!=null&&Time.unscaledTime>=nextLandTileRefresh){nextLandTileRefresh=Time.unscaledTime+1;Context();}
 
             foreach(string id in new[]{"notice","placement","outcome"})layout.Labels[id].style.display=string.IsNullOrEmpty(layout.Labels[id].text)?DisplayStyle.None:DisplayStyle.Flex;
 
@@ -311,7 +313,7 @@ namespace MassiveArmy.Planetary
         }
         public void ShowBuildingCategory(BuildingCategory category){SetConstructionOpen(true);buildCategory=(int)category;sharedConstruction?.Refresh(world.Catalog,world.Faction,buildCategory);}
 
-        public void Tick(){ui.Tick();UpdateConstructionDrawer();var k=UnityEngine.InputSystem.Keyboard.current;if(k==null||TextFocused||fixture.IsFirstPerson||fixture.IsPiloting)return;if(k.escapeKey.wasPressedThisFrame){if(technologyOpen){technologyOpen=false;ShowTechnology();}else if(civilisationOpen)ToggleCivilisation();else if(buildOpen)Dispatch("construct");return;}if(k.bKey.wasPressedThisFrame)Dispatch("construct");if(k.tKey.wasPressedThisFrame)Dispatch("tech");if(k.spaceKey.wasPressedThisFrame)Dispatch("pause-game");if(k.mKey.wasPressedThisFrame)Dispatch("map");}
+        public void Tick(){ui.Tick();UpdateConstructionDrawer();var k=UnityEngine.InputSystem.Keyboard.current;if(k==null||TextFocused||fixture.IsFirstPerson||fixture.IsPiloting||fixture.IsDriving)return;if(k.escapeKey.wasPressedThisFrame){if(technologyOpen){technologyOpen=false;ShowTechnology();}else if(civilisationOpen)ToggleCivilisation();else if(buildOpen)Dispatch("construct");return;}if(k.bKey.wasPressedThisFrame)Dispatch("construct");if(k.tKey.wasPressedThisFrame)Dispatch("tech");if(k.spaceKey.wasPressedThisFrame)Dispatch("pause-game");if(k.mKey.wasPressedThisFrame)Dispatch("map");}
 
         public void Dispose(){ui.Dispose();ArmyLifetime.Destroy(map);}
 

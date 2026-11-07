@@ -3,19 +3,34 @@ using UnityEngine;
 namespace MassiveArmy.Planetary
 {
     /// <summary>One viewed planet. Unvisited bodies are definitions; visited worlds retain GPU state while frozen.</summary>
-    [DefaultExecutionOrder(-100)] public sealed class PlanetSystemRuntime:MonoBehaviour
+    [DefaultExecutionOrder(-100)] public sealed partial class PlanetSystemRuntime:MonoBehaviour
     {
         public PlanetSystemDefinition Settings {get;private set;}
         public PlanetDefinition[] Bodies {get;private set;}
         public GalaxyModel Galaxy {get;private set;}
         public CivilisationRuntime Civilisation {get;private set;}
-        GalaxySkyRenderer sky;
+        internal MassiveArmy.Industrial.IndustrialAuthority Industry;
+        GalaxySkyRenderer sky;bool ownsScaledSettings;
         internal GalaxySkyRenderer SkyForValidation=>sky;
         internal bool IsPreparedForValidation(int index)=>worlds[index]!=null&&worlds[index].Ready;
+        internal PlanetDevelopment WorldForColonyValidation(int index)=>worlds[index];
         public PlanetDevelopment ActiveWorld {get;private set;}
         public Quaternion SunRotation {get;private set;}
         public double WeatherTime {get;private set;}
         PlanetDevelopment[] worlds;bool[] failed;PlanetDevelopment root;
+        int arrivalTarget=-1;Double3 arrivalOffset;bool arrivalHolding;
+        internal bool ArrivalPreparing=>arrivalTarget>=0;
+        internal void InterceptArrival(int index,UniversePosition position,bool matchVelocity=true){
+            var ship=ActiveWorld.ShipForValidation;if(matchVelocity)ship.MatchWarpArrivalFrame(Bodies[index].velocity-ActiveWorld.definition.velocity);
+            arrivalTarget=index;arrivalOffset=position.RelativeTo(Bodies[index].position);arrivalHolding=ship.FlightAssistEnabled;PreparePlanet(index);
+        }
+        internal bool HoldArrival(PlanetSpacecraft ship){
+            if(arrivalTarget<0||ship!=ActiveWorld.ShipForValidation)return false;
+            if(failed[arrivalTarget]){arrivalTarget=-1;return false;}
+            if(!ship.FlightAssistEnabled){arrivalHolding=false;return false;}
+            if(!arrivalHolding){arrivalOffset=ship.Position.RelativeTo(Bodies[arrivalTarget].position);arrivalHolding=true;}
+            ship.HoldForArrival(Bodies[arrivalTarget].position.Add(arrivalOffset).RelativeTo(ActiveWorld.definition.position),Bodies[arrivalTarget].velocity-ActiveWorld.definition.velocity);return true;
+        }
         public string PreparationError {get;private set;}="";
         public readonly PlanetDistantTerrain DistantTerrain=new PlanetDistantTerrain();
         public int ResidentWorldCount {get;private set;}
@@ -26,7 +41,7 @@ namespace MassiveArmy.Planetary
             var host=new GameObject(Bodies[index].displayName+" local simulation");host.transform.SetParent(root.transform,false);
             var next=host.AddComponent<PlanetDevelopment>();next.DeferredInitialization=true;next.ResidentActive=false;next.SystemRuntime=this;next.systemDefinition=Settings;
             next.ConfigureDefinition(Bodies[index]);next.configuredRadius=Bodies[index].radius;next.terrainSeed=Bodies[index].terrainSeed;
-            next.currentRtsContent=root.currentRtsContent;next.requestedCapacity=root.requestedCapacity;
+            next.countryCount=root.countryCount;next.currentRtsContent=root.currentRtsContent;next.requestedCapacity=root.requestedCapacity;
             next.ambientZombies=root.ambientZombies;next.sessionMode=root.sessionMode;next.restoredCrowd=root.restoredCrowd;
             next.deformTerrainOnNuke=root.deformTerrainOnNuke;next.returnToMenu=root.ReturnToMenu;
             worlds[index]=next;ResidentWorldCount++;return next;
@@ -41,20 +56,23 @@ namespace MassiveArmy.Planetary
             ArmyLifetime.Destroy(Bodies[index]);Bodies[index]=next.definition;RefreshDistantBodies();
         }
         public void Initialize(PlanetDevelopment home,PlanetSystemDefinition settings){
+            if(home.systemSizeMultiplier!=1){settings=settings.CreateScaledCopy(home.systemSizeMultiplier);ownsScaledSettings=true;}
             root=ActiveWorld=home;SunRotation=home.LightingForValidation.Sun.transform.rotation;Settings=settings;
             if(settings.galaxy!=null&&settings.galaxy.enabledInGame&&Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-legacy-system")<0){Galaxy=new GalaxyModel(settings.galaxy,settings,home.definition,out var planets,-home.LightingForValidation.Sun.transform.forward);Bodies=planets;sky=new GalaxySkyRenderer(Galaxy);DistantTerrain.MaximumCount=settings.galaxy.terrainPreviewBudget;}
             else Bodies=settings.Generate(home.definition);
-            if(Galaxy!=null){var config=Resources.Load<CivilisationSettings>("MassiveArmy/Civilisation/DefaultCivilisation");if(config!=null&&config.enabledInGame)Civilisation=new CivilisationRuntime(this,config);}
+            if(Galaxy!=null&&!home.IsSurvival){var config=Resources.Load<CivilisationSettings>("MassiveArmy/Civilisation/DefaultCivilisation");if(config!=null&&config.enabledInGame)Civilisation=new CivilisationRuntime(this,config);}
             worlds=new PlanetDevelopment[Bodies.Length];failed=new bool[Bodies.Length];worlds[0]=home;ResidentWorldCount=1;RefreshDistantBodies();
         }
         void RefreshDistantBodies(){for(int i=0;i<worlds.Length;i++)if(worlds[i]!=null){var far=new PlanetDefinition[Bodies.Length-1];int k=0;for(int j=0;j<Bodies.Length;j++)if(j!=i)far[k++]=Bodies[j];worlds[i].distantBodies=far;}}
         void Update(){
+            UpdateRemoteView();
             if(ActiveWorld!=null&&ActiveWorld.Ready&&!ActiveWorld.Paused)WeatherTime+=Math.Min(Time.deltaTime,.05)*ActiveWorld.SimulationSpeed;
             if(Galaxy==null||ActiveWorld==null||!ActiveWorld.Ready)return;
             var observer=ActiveWorld.ObserverPosition;var offset=observer.RelativeTo(ActiveWorld.definition.position);
             if(!ActiveWorld.Paused){double step=Math.Min(Time.deltaTime,.05)*ActiveWorld.SimulationSpeed;Galaxy.Publish(Galaxy.Time+step,Bodies);Civilisation?.Advance(step);}
             for(int i=0;i<worlds.Length;i++)if(worlds[i]!=null&&worlds[i].definition!=Bodies[i]){worlds[i].definition.position=Bodies[i].position;worlds[i].definition.velocity=Bodies[i].velocity;}
             ActiveWorld.FollowCelestialFrame(offset);
+            if(arrivalTarget>=0)HoldArrival(ActiveWorld.ShipForValidation);
             UpdateStarlight();
         }
         internal void UpdateSky(){if(Galaxy!=null&&ActiveWorld!=null)sky.Update(ActiveWorld.View,ActiveWorld.ObserverPosition,ActiveWorld.definition);}
@@ -67,16 +85,21 @@ namespace MassiveArmy.Planetary
             var direction=(observer-Galaxy.Current[closest].position).Float.normalized;
             // Keep sub-pixel stellar motion from dirtying native shadow/culling state every frame.
             if((sun.transform.forward-direction).sqrMagnitude>2.74156e-7f)sun.transform.rotation=Quaternion.LookRotation(direction,Vector3.up);
-            var colour=Color.Lerp(Color.white,Galaxy.Nodes[closest].colour,.25f);if(sun.color!=colour)sun.color=colour;
+            bool neutral=ActiveWorld.definition.weather?.neutralSunlight==true;sky?.SetSunAppearance(closest,neutral);if(neutral)sun.useColorTemperature=false;var colour=neutral?Color.white:Color.Lerp(Color.white,Galaxy.Nodes[closest].colour,.25f);if(sun.color!=colour)sun.color=colour;
             SunRotation=sun.transform.rotation;
             if(second>=0)ActiveWorld.LightingForValidation.SetCompanion((Galaxy.Current[second].position-observer).Float.normalized,Galaxy.Nodes[second].colour,Galaxy.Settings.secondaryStarlight?(float)(next/Math.Max(1e-30,best)):0);
         }
         void LateUpdate(){
+            if(IsRemoteView)return;
             if(ActiveWorld==null||!ActiveWorld.Ready||ActiveWorld.Paused||!ActiveWorld.IsPiloting)return;
-            var observer=ActiveWorld.ObserverPosition;double best=observer.RelativeTo(ActiveWorld.definition.position).Magnitude-ActiveWorld.definition.radius;int target=-1;
+            if(ActiveWorld.LocalPlayerDead)return;
+            if(arrivalTarget>=0){if(worlds[arrivalTarget]!=null&&worlds[arrivalTarget].Ready)EnterPlanet(arrivalTarget);return;}
+            var observer=ActiveWorld.ObserverPosition;double best=observer.RelativeTo(ActiveWorld.definition.position).Magnitude-ActiveWorld.definition.radius;int target=-1,prepare=-1;double preparationRange=double.PositiveInfinity;bool preparing=false;
             for(int i=0;i<Bodies.Length;i++)if(worlds[i]!=ActiveWorld){double altitude=observer.RelativeTo(Bodies[i].position).Magnitude-Bodies[i].radius;
-                if(worlds[i]==null&&altitude<Settings.activationAltitude+Settings.preparationDistance)PreparePlanet(i);
-                if(worlds[i]!=null&&worlds[i].Ready&&altitude<best-Settings.sleepHysteresis&&Settings.ShouldSimulate(Bodies[i],observer,false)){best=altitude;target=i;}}
+                if(worlds[i]!=null&&!worlds[i].Ready)preparing=true;
+                if(worlds[i]==null&&!failed[i]&&altitude<Settings.PreparationAltitude(Bodies[i])&&altitude<preparationRange){prepare=i;preparationRange=altitude;}
+                if(worlds[i]!=null&&worlds[i].Ready&&altitude<best-Settings.sleepHysteresis&&Settings.ShouldUseFullDetail(Bodies[i],observer)){best=altitude;target=i;}}
+            if(!preparing&&prepare>=0)PreparePlanet(prepare);
             if(target>=0)EnterPlanet(target);
         }
         // Only at a sphere-of-interest crossing, never per unit. Canonical sector/double poses survive handoff.
@@ -91,13 +114,15 @@ namespace MassiveArmy.Planetary
             previous.SetResidentActive(false);
             try{
                 next.SetResidentActive(true);
-                pose.position=position.RelativeTo(next.definition.position);pose.linearVelocity=velocity-next.definition.velocity;pose.frameId=0;
-                next.PlayerForValidation.CopySessionFrom(previous.PlayerForValidation);next.ShipForValidation.CopyDoorsFrom(ship);
-                next.SetShipControl(true);next.ShipForValidation.Arrive(pose,assist,gear);next.ShipForValidation.SetActive(true);next.Base?.Rebase();Physics.SyncTransforms();
+                pose.position=position.RelativeTo(next.definition.position);pose.linearVelocity=assist?new Double3():velocity-next.definition.velocity;pose.frameId=0;
+                next.PlayerForValidation.CopySessionFrom(previous.PlayerForValidation);next.ShipForValidation.CopyDoorsFrom(ship);next.ShipForValidation.CopyReentryStateFrom(ship);
+                respawnCarrierWorld=next;next.SetShipControl(true);next.ShipForValidation.Arrive(pose,assist,gear,ship.CruiseInhibited);next.ShipForValidation.SetActive(true);next.Base?.Rebase();Physics.SyncTransforms();
+                previous.TransferParkedVehiclesTo(next);
                 ActiveWorld=next;
+                arrivalTarget=-1;
                 Civilisation?.ObserveArrival(next.definition.bodyId,0);
             }catch{
-                next.SetResidentActive(false);ActiveWorld=previous;
+                next.SetResidentActive(false);ActiveWorld=previous;respawnCarrierWorld=previous;
                 previous.SetResidentActive(true);ship.SetActive(true);throw;
             }
         }
@@ -120,6 +145,9 @@ namespace MassiveArmy.Planetary
             if(PreparationError.Length>0)GUI.Label(new Rect(12,310,390,70),PreparationError);
             GUI.color=Color.white;
         }
-        void OnDestroy(){sky?.Dispose();DistantTerrain.Dispose();if(Bodies==null)return;for(int i=1;i<Bodies.Length;i++)if(worlds[i]==null||Bodies[i]!=worlds[i].definition)ArmyLifetime.Destroy(Bodies[i]);}
+        void OnDestroy(){Industry?.Save();Industry?.Dispose();if(ownsScaledSettings){ArmyLifetime.Destroy(Settings.galaxy);ArmyLifetime.Destroy(Settings);}sky?.Dispose();DistantTerrain.Dispose();if(Bodies==null)return;for(int i=1;i<Bodies.Length;i++)if(worlds[i]==null||Bodies[i]!=worlds[i].definition)ArmyLifetime.Destroy(Bodies[i]);}
     }
 }
+
+
+

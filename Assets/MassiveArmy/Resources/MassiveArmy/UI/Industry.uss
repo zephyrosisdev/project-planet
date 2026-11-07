@@ -1,0 +1,48 @@
+.industry-menu { position: absolute; left: 5%; top: 6%; width: 90%; height: 83%; background-color: rgba(26,29,31,0.98); border-top-width: 3px; border-top-color: rgb(237,125,47); padding: 16px; color: rgb(226,229,230); }
+.industry-heading, .industry-tabs, .industry-toolbar, .industry-body, .industry-row { flex-direction: row; }
+.industry-heading { justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.industry-title { font-size: 23px; -unity-font-style: bold; white-space: normal; margin-bottom: 8px; }
+.industry-tabs { margin-bottom: 12px; border-bottom-width: 1px; border-bottom-color: rgb(72,77,79); padding-bottom: 8px; }
+.industry-toolbar { align-items: center; margin-bottom: 10px; }
+.industry-toolbar TextField { margin-right: 16px; }
+.industry-body { flex-grow: 1; min-height: 0; }
+.industry-categories { width: 155px; flex-shrink: 0; padding-right: 10px; }
+.industry-button { background-color: rgb(55,61,63); color: rgb(225,229,230); border-top-width: 0; border-bottom-width: 0; border-left-width: 0; border-right-width: 0; border-top-left-radius: 0; border-top-right-radius: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; padding: 9px 12px; margin: 3px; white-space: normal; min-height: 34px; }
+.industry-button:hover { background-color: rgb(77,86,87); }
+.industry-button:disabled { opacity: 0.42; }
+.industry-primary { background-color: rgb(73,104,54); min-height: 45px; margin-top: 15px; -unity-font-style: bold; }
+.industry-primary:hover { background-color: rgb(92,132,68); }
+.industry-recipe-scroll { flex-grow: 1; flex-basis: 0; min-width: 160px; margin-right: 14px; }
+.industry-recipe-grid { flex-direction: row; flex-wrap: wrap; align-content: flex-start; }
+.industry-recipe-tile { width: 132px; height: 112px; justify-content: center; align-items: center; flex-shrink: 0; padding: 7px; background-color: rgb(48,54,56); }
+.industry-recipe-tile.station-recipe { background-color: rgb(41,46,48); }
+.industry-recipe-tile.selected { border-left-width: 3px; border-left-color: rgb(237,125,47); background-color: rgb(73,78,78); }
+.industry-item-mark { font-size: 26px; color: rgb(235,150,75); -unity-font-style: bold; }
+.industry-item-name { font-size: 13px; white-space: normal; -unity-text-align: middle-center; }
+.industry-item-requirement, .industry-muted { color: rgb(155,168,172); font-size: 11px; white-space: normal; margin-top: 4px; }
+.industry-details { width: 310px; flex-shrink: 0; padding: 14px; background-color: rgb(35,39,41); }
+.industry-text { white-space: normal; margin-top: 4px; margin-bottom: 5px; }
+.industry-ingredients { margin-top: 14px; margin-bottom: 14px; background-color: rgb(25,29,30); padding: 8px; }
+.missing { color: rgb(239,124,103); }
+.industry-section { font-size: 13px; -unity-font-style: bold; color: rgb(205,213,213); margin-top: 12px; margin-bottom: 7px; }
+.industry-queue { flex-shrink: 0; min-height: 100px; max-height: 155px; margin-top: 12px; padding: 7px; background-color: rgb(20,24,25); }
+.industry-queue .industry-row { flex-wrap: nowrap; }
+.industry-queue .industry-button { min-width: 135px; flex-shrink: 0; }
+.industry-context-inventory { flex-grow: 1; flex-basis: 0; margin-right: 20px; }
+.industry-context-actions { width: 43%; flex-shrink: 0; }
+.industry-overlay { position: absolute; left: 18px; top: 108px; max-width: 650px; background-color: rgba(12,18,23,0.84); color: rgb(220,229,232); padding: 8px; }
+.industry-prompt { position: absolute; left: 30%; bottom: 190px; width: 40%; -unity-text-align: middle-center; color: white; background-color: rgba(15,20,24,0.8); padding: 7px; white-space: normal; }
+.industry-placement { position: absolute; left: 28%; bottom: 120px; width: 44%; -unity-text-align: middle-center; color: rgb(219,241,225); background-color: rgba(15,20,24,0.9); padding: 10px; white-space: normal; }
+.industry-deposit { position: absolute; color: rgb(246,201,116); font-size: 12px; white-space: normal; background-color: rgba(10,15,20,0.7); padding: 4px; }
+
+.industry-personal-materials { color: rgb(226,229,230); margin-top: 15px; padding: 12px; background-color: rgb(32,39,43); }
+.industry-menu .unity-base-text-field__input { background-color: rgb(18,23,25); color: rgb(232,237,238); border-top-color: rgb(77,86,90); border-right-color: rgb(77,86,90); border-left-color: rgb(77,86,90); border-bottom-color: rgb(77,86,90); padding: 6px; }
+.industry-menu .unity-base-text-field__input .unity-text-element { color: rgb(232,237,238); }
+.industry-menu .unity-progress-bar__background { background-color: rgb(43,51,54); }
+.industry-menu .unity-progress-bar__progress { background-color: rgb(85,117,58); }
+.industry-menu .unity-progress-bar__title { color: rgb(235,241,235); font-size: 11px; -unity-font-style: bold; }
+.industry-menu .unity-base-slider__tracker { background-color: rgb(25,30,32); }
+.industry-menu .unity-base-slider__dragger { background-color: rgb(100,112,117); }
+.industry-menu .unity-scroller__low-button, .industry-menu .unity-scroller__high-button { background-color: rgb(47,56,59); -unity-background-image-tint-color: rgb(207,218,222); }
+.industry-menu .unity-toggle__input { background-color: rgb(26,33,36); }
+.industry-menu .unity-toggle__checkmark { -unity-background-image-tint-color: rgb(237,150,75); }

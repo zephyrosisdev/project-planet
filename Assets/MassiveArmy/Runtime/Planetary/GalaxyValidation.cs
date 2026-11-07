@@ -65,7 +65,7 @@ namespace MassiveArmy.Planetary
             Check(galaxy.Nodes[path.Primary].kind==CelestialKind.Star&&galaxy.Nodes[path.Secondary].kind==CelestialKind.Star,"Binary forecast identifies both stellar influences");
             Check(path.FrameNode==bary,"Binary trajectory uses the shared barycentre as its moving display frame");
             Check(!path.Status.StartsWith("PREDICTED BOUND"),"Comparable binary influences never receive a two-body stable-orbit claim");
-            Check(path.Horizon>0&&path.Horizon<=galaxy.Settings.predictionHorizon,"Forecast explicitly bounds its prediction window");
+            Check(path.Horizon>0&&path.Horizon<=path.HorizonLimit+1e-6,"Forecast explicitly bounds its prediction window");
             double arcDeadline=Time.realtimeSinceStartupAsDouble+5;while(ship.TrajectoryPointsForValidation<2&&Time.realtimeSinceStartupAsDouble<arcDeadline)yield return null;
             Check(ship.TrajectoryPointsForValidation>1,"The numerical prediction feeds the 3D HUD arc and route markers");
             var frame=ship.TrajectoryFrameForValidation;var oldCenter=galaxy.Current[frame].position;var oldAnchor=ship.TrajectoryAnchorForValidation;

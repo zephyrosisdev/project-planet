@@ -1,0 +1,43 @@
+#pragma kernel Control
+#pragma kernel Gather
+#define PLANET_VEHICLES 1
+#include "ArmyCommon.hlsl"
+#include "PlanetTopology.hlsl"
+RWStructuredBuffer<UnitState> _PlanetUnits;
+struct VehicleCommand {float4 position,velocity,heading;uint id,mode,weapons,padding;};
+StructuredBuffer<VehicleCommand> _VehicleCommands;
+RWStructuredBuffer<UnitState> _VehicleSnapshots;
+RWStructuredBuffer<float4> _VehicleTargets;
+uint _VehicleCount,_PlanetUnitCount;
+[numthreads(32,1,1)]void Control(uint3 thread:SV_DispatchThreadID){
+ if(thread.x>=_VehicleCount)return;VehicleCommand c=_VehicleCommands[thread.x];if(c.id>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[c.id];
+ if((u.flags&ALIVE)==0)return;
+ if(c.mode==4){u.flags=0;u.health=0;_PlanetUnits[c.id]=u;return;}
+ if(c.mode==5){u.flags|=VEHICLE_PROXY;u.packed=(u.packed&255u)|(c.weapons<<8);if(c.padding>0)u.health=c.padding;_PlanetUnits[c.id]=u;return;}
+ if((u.flags&VEHICLE_PROXY)==0)return;
+ bool wasDriven=(u.flags&VEHICLE_DRIVEN)!=0;
+ u.flags&=~(VEHICLE_DRIVEN|VEHICLE_EMBARKED|VEHICLE_WEAPON_DISABLED);
+ if(c.weapons==0)u.flags|=VEHICLE_WEAPON_DISABLED;
+ if(c.weapons==2){
+  // Player gunner fire is permitted only when the acquired enemy lies under the reticle.
+  float3 aim=normalize(float3(c.position.w,c.velocity.w,c.heading.w));bool aligned=false;
+  if(u.target<_PlanetUnitCount){float3 direction=PlanetDecode(_PlanetUnits[u.target].position)-PlanetDecode(u.position);aligned=dot(normalize(direction),aim)>.9986;}
+  if(!aligned)u.flags|=VEHICLE_WEAPON_DISABLED;
+ }
+ if(c.mode==1||c.mode==2){
+  // Stop the old route once when taking local authority. Preserve subsequent
+  // GPU RTS move/stop orders while airborne or locally controlled, so release
+  // cannot cancel a fresh order or resume a stale one.
+  if(!wasDriven)u.flags|=STOPPED;
+  u.flags|=VEHICLE_DRIVEN;if(c.mode==2)u.flags|=VEHICLE_EMBARKED;
+  float3 up=normalize(c.position.xyz);u.position=PlanetEncode(up);u.previous=u.position;u.flags&=~PLANET_POSITION_RESIDUAL;
+  uint face=min((uint)floor(u.position.x),5u);float3 right=normalize(PlanetU[face]-up*dot(PlanetU[face],up)),forward=cross(right,up);
+  u.velocity=float2(dot(c.velocity.xyz,right),dot(c.velocity.xyz,forward));u.facing=atan2(dot(c.heading.xyz,right),dot(c.heading.xyz,forward));
+ }
+ _PlanetUnits[c.id]=u;
+}
+[numthreads(32,1,1)]void Gather(uint3 thread:SV_DispatchThreadID){
+ if(thread.x>=_VehicleCount)return;uint id=_VehicleCommands[thread.x].id;
+ UnitState u=(UnitState)0;if(id<_PlanetUnitCount)u=_PlanetUnits[id];_VehicleSnapshots[thread.x]=u;
+ float4 target=0;if(u.target<_PlanetUnitCount){UnitState other=_PlanetUnits[u.target];if((other.flags&ALIVE)!=0)target=float4(PlanetDecode(other.position),1);}_VehicleTargets[thread.x]=target;
+}

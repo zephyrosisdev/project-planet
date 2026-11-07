@@ -32,8 +32,9 @@ namespace MassiveArmy.Planetary
             var node=ResourceAt(screen);if(node==null){resourceTooltip.style.display=DisplayStyle.None;return;}
             string name=node.kind==NodeKind.RareEarth?"Rare earth":node.kind==NodeKind.RichMetal?"Rich metal":node.kind.ToString();
             if(!string.IsNullOrEmpty(node.elementId)&&world.Civilisation!=null&&world.Civilisation.Catalogue.Resources.TryGetValue(node.elementId,out var element))name=element.name;
-            string claim=node.remaining<=0?"DEPLETED":node.claimedBy<0?"UNCLAIMED":"CLAIMED";
-            resourceTooltipText.text=$"{name.ToUpperInvariant()} DEPOSIT\nRemaining: {node.remaining:N0} / {node.capacity:N0}\nQuality: {node.quality:P0}  -  Yield: {node.rateMultiplier:0.00}x\n{claim}";
+            string claim=!node.inexhaustible&&node.remaining<=0?"DEPLETED":node.claimedBy<0?"UNCLAIMED":"CLAIMED";
+            string reserve=node.inexhaustible?"INFINITE":$"{node.remaining:N0} / {node.capacity:N0}";
+            resourceTooltipText.text=$"{name.ToUpperInvariant()} DEPOSIT\nRemaining: {reserve}\nQuality: {node.quality:P0}  -  Yield: {node.rateMultiplier:0.00}x\n{claim}";
             resourceTooltip.style.display=DisplayStyle.Flex;
             var point=RuntimePanelUtils.ScreenToPanel(front.panel,new Vector2(screen.x,Screen.height-screen.y));
             resourceTooltip.style.left=Mathf.Clamp(point.x+18,8,Mathf.Max(8,front.contentRect.width-336));resourceTooltip.style.top=Mathf.Clamp(point.y+20,8,Mathf.Max(8,front.contentRect.height-140));

@@ -7,6 +7,7 @@ namespace MassiveArmy.Planetary {
             double wood=Math.Min(region.timber,seconds*.5),scrap=Math.Min(region.scrap,seconds*.2);region.timber-=site.inventory.Deposit("timber",wood);region.scrap-=site.inventory.Deposit("scrap",scrap);
         }
         internal void SponsorProject(PlanetRtsBase local,RtsBuilding building){
+            if(local.FreePrebuild)return;
             var c=local.Settlements?[building.team];if(c==null)return;bool business=building.definition.district==SettlementDistrict.Agricultural||building.definition.district==SettlementDistrict.Industrial||building.definition.district==SettlementDistrict.Commercial;
             ResidentState sponsor=null,contractor=null;foreach(var p in c.residents)if(p.alive&&p.age>=18){if(sponsor==null||p.savings>sponsor.savings)sponsor=p;if(contractor==null||p.education>contractor.education)contractor=p;}
             if(contractor==null)return;double fee=5;

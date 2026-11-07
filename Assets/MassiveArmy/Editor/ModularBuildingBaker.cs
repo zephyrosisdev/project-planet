@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using MassiveArmy.Planetary;
 using Object=UnityEngine.Object;
 namespace MassiveArmy.EditorTools {
     public static class ModularBuildingBaker {
@@ -11,7 +12,7 @@ namespace MassiveArmy.EditorTools {
             public void Dispose(){foreach(var a in assets)if(a!=null&&!UnityEditor.AssetDatabase.Contains(a))Object.DestroyImmediate(a);}
         }
         public static Result Bake(ModularBuildingProfile p){
-            Validate(p);var result=new Result();var layout=result.Own(ScriptableObject.CreateInstance<ModularBuildingLayout>());result.layout=layout;layout.name=p.buildingId+" modular layout";layout.buildingId=p.buildingId;layout.detailDistance=p.detailDistance;layout.material=p.kit.material;layout.glassMaterial=p.kit.glassMaterial;
+            Validate(p);if(p.use==ModularUse.Pub)return ModularPubBaker.Bake(p);var result=new Result();var layout=result.Own(ScriptableObject.CreateInstance<ModularBuildingLayout>());result.layout=layout;layout.name=p.buildingId+" modular layout";layout.buildingId=p.buildingId;layout.detailDistance=p.detailDistance;layout.material=p.kit.material;layout.glassMaterial=p.kit.glassMaterial;
             try{
                 var shell=new ModularGeometry();var flat=new ModularGeometry();var physics=new ModularGeometry();var glass=new ModularGeometry();var rooms=new List<ModularBuildingLayout.Room>();var roomMeshes=new List<ModularGeometry>();var portals=new List<ModularBuildingLayout.Portal>();var doors=new List<ModularBuildingLayout.Door>();
                 float w=p.width,d=p.depth,h=p.floorHeight,t=p.wallThickness,hall=p.hallWidth,divide=-p.depth*.5f+p.depth*p.frontRoomFraction;var hole=new Rect(-hall*.5f, d*.5f-h*1.5f-1.8f,2.1f,h*1.5f+.2f);
@@ -69,6 +70,7 @@ namespace MassiveArmy.EditorTools {
                 Solid(shell,new Vector3(0,p.floors*h+.08f,0),new Vector3(w+.3f,.16f,d+.3f),p.roof);
                 if(p.pitchedRoof){float slope=18*Mathf.Deg2Rad,rise=w*.5f*Mathf.Tan(slope);for(int side=-1;side<=1;side+=2)Solid(shell,new Vector3(side*w*.25f,p.floors*h+rise*.5f+.14f,0),new Vector3(w*.5f/Mathf.Cos(slope)+.25f,.15f,d+.5f),p.roof,Quaternion.Euler(0,0,-side*18));
                     for(int side=-1;side<=1;side+=2){Vector3 a=new Vector3(-w*.5f,p.floors*h+.14f,side*d*.5f),b=new Vector3(w*.5f,p.floors*h+.14f,side*d*.5f),c=new Vector3(0,p.floors*h+rise+.14f,side*d*.5f);if(side>0){shell.Triangle(a,b,c,p.exterior);physics.Triangle(a,b,c,Color.white);}else{shell.Triangle(a,c,b,p.exterior);physics.Triangle(a,c,b,Color.white);}}}
+                if(p.buildingId==CivilisationRuntime.FuneralDirectors){for(int sign=-1;sign<=1;sign+=2)shell.Box(new Vector3(11+sign*1.6f,.025f,8),new Vector3(.12f,.04f,7),Color.white);shell.Box(new Vector3(11,.025f,4.5f),new Vector3(3.3f,.04f,.12f),Color.white);shell.Text("HEARSE",new Vector3(11,.05f,11.7f),.4f,Color.white,Quaternion.Euler(90,0,0));}
                 flat.Box(new Vector3(0,p.floors*h*.5f,0),new Vector3(w,p.floors*h,d),p.exterior);
                 if(p.windows)for(int floor=0;floor<p.floors;floor++)for(int side=0;side<4;side++){float yaw=side*90;var q=Quaternion.Euler(0,yaw,0);float length=side%2==0?w:d;float offset=side%2==0?d*.5f:w*.5f;for(int i=-1;i<=1;i++){var centre=q*new Vector3(i*length*.28f,0,offset+.01f)+Vector3.up*(floor*h+1.55f);flat.Quad(centre+q*new Vector3(-.7f,-.6f,0),centre+q*new Vector3(.7f,-.6f,0),centre+q*new Vector3(.7f,.6f,0),centre+q*new Vector3(-.7f,.6f,0),new Color(.18f,.3f,.35f));}}
                 if(p.gardenWalls){var size=p.gardenSize;float height=p.gardenHeight;

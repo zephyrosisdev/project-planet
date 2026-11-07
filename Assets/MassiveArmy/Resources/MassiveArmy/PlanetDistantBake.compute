@@ -9,5 +9,5 @@ uint _PreviewResolution;
  // One gutter texel samples the continuation of the sphere, avoiding cube-face filter cracks.
  float2 uv=((float2(id.xy)-.5)/_PreviewResolution)*2-1;
  float3 d=PlanetDirection(id.z,uv);float h=PlanetHeight(d);
- float3 normal=h<_PlanetOcean?d:PlanetSurfaceNormal(d);_PreviewSurface[id]=float4(normal,h);
+ float3 normal=h<_PlanetOcean?d:PlanetSurfaceNormal(d,h);_PreviewSurface[id]=float4(normal,h);
 }

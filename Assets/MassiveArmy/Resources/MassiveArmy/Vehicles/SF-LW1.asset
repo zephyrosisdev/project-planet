@@ -1,0 +1,106 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27719f69f40c43d42a2417bfd009d538, type: 3}
+  m_Name: SF-LW1
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.Planetary.VehicleDefinition
+  id: SF-LW1
+  displayName: SF-LW1 Scout
+  cameraSettings: {fileID: 11400000, guid: 770d8892e231453f8bd8d7199cc091d6, type: 2}
+  locomotion: 0
+  prefab: {fileID: 7514784892277092487, guid: 5f3cb0b350777ec469997be5e0a7f46d, type: 3}
+  size: {x: 2.25, y: 2.8, z: 2.5}
+  chassisCentre: {x: 0, y: 1.694, z: 0}
+  chassisSize: {x: 1.6200001, y: 0.7, z: 1.875}
+  centreOfMass: {x: 0, y: 1.694, z: 0}
+  mass: 2800
+  maximumSpeed: 13
+  reverseSpeed: 5.2000003
+  acceleration: 3.2
+  braking: 7
+  turnSpeed: 65
+  turnAcceleration: 117
+  suspensionSpring: 45
+  suspensionDamping: 12
+  grip: 6
+  torsoYaw: 100
+  torsoPitch: 35
+  traversal:
+    maximumSlope: 38
+    maximumStep: 0.7
+    maximumDrop: 1.5
+    clearance: 0.25
+  seats:
+  - name: Driver 1
+    role: 0
+    permissions: 7
+    position: {x: 0, y: 1.4779999, z: 0.2}
+    eye: {x: 0, y: 2.1279998, z: 0.5}
+    entry: {x: -1.725, y: 0, z: 0.2}
+    exit: {x: -2.125, y: 0, z: 0.2}
+    aiByDefault: 0
+  legs:
+  - name: Left
+    hip: {x: -0.5175, y: 1.344, z: 0}
+    stance: {x: -0.855, y: 0.08, z: 0}
+    pole: {x: -0.15, y: 0, z: 1}
+    upperLength: 0.77952
+    lowerLength: 0.77952
+    footWidth: 0.495
+    footLength: 0.75
+    stride: 0.924
+    stepHeight: 0.364
+    stepDuration: 0.3
+    maxReach: 1.520064
+    compression: 0.42000002
+    probeHeight: 1.12
+    probeDepth: 2.8
+    strength: 1
+    minimumKneeAngle: 8
+    maximumKneeAngle: 155
+    damage: 0
+  - name: Right
+    hip: {x: 0.5175, y: 1.344, z: 0}
+    stance: {x: 0.855, y: 0.08, z: 0}
+    pole: {x: 0.15, y: 0, z: 1}
+    upperLength: 0.77952
+    lowerLength: 0.77952
+    footWidth: 0.495
+    footLength: 0.75
+    stride: 0.924
+    stepHeight: 0.364
+    stepDuration: 0.3
+    maxReach: 1.520064
+    compression: 0.42000002
+    probeHeight: 1.12
+    probeDepth: 2.8
+    strength: 1
+    minimumKneeAngle: 8
+    maximumKneeAngle: 155
+    damage: 0
+  gaits:
+  - name: Walk
+    groups: 0000000001000000i
+    minimumGrounded: 1
+    cadence: 1.4
+    strideMultiplier: 1
+    maximumSpeed: 7.15
+    bodyBob: 0.04
+  - name: Travel
+    groups: 0000000001000000i
+    minimumGrounded: 1
+    cadence: 2.2
+    strideMultiplier: 1.15
+    maximumSpeed: 13
+    bodyBob: 0.04
+  wheels: []
+  detailDistances: {x: 90, y: 250, z: 650}
+  debugDraw: 0

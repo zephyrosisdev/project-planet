@@ -6,16 +6,17 @@ Shader "MassiveArmy/Generated galaxy sky" {SubShader {Tags {"RenderType"="Transp
  #pragma fragment Frag
  #include "UnityCG.cginc"
  struct Star {float4 position,colour,properties;};StructuredBuffer<Star> _GalaxyStars;
- float4x4 _GalaxyVP;float3 _GalaxyObserverDelta,_GalaxyCamera,_GalaxyRight,_GalaxyUp;float4 _GalaxyScreen,_GalaxyForeground;
+ float4x4 _GalaxyVP;float3 _GalaxyObserverDelta,_GalaxyCamera,_GalaxyRight,_GalaxyUp;float4 _GalaxyScreen,_GalaxyForeground,_GalaxySunOverride,_GalaxyPreviewSun;
  struct Varying {float4 position:SV_POSITION;float2 uv:TEXCOORD0;float4 colour:TEXCOORD1;float4 data:TEXCOORD2;float4 physical:TEXCOORD3;float3 ray:TEXCOORD4;};
  Varying Vert(uint vertex:SV_VertexID,uint instance:SV_InstanceID){
   Star star=_GalaxyStars[instance];float3 delta=star.position.xyz-(star.properties.w>.5?0:_GalaxyObserverDelta);
   float distance=max(1,length(delta)),physical=star.position.w/distance;
+  if(_GalaxyPreviewSun.w>.5&&abs((float)instance-_GalaxySunOverride.x)<.5)delta=normalize(_GalaxyPreviewSun.xyz)*distance;
   float pixel=2*_GalaxyScreen.z/max(1,_GalaxyScreen.y),disc=max(physical,pixel*.65),width=disc*4;
   const float2 corners[6]={float2(-1,-1),float2(-1,1),float2(1,1),float2(-1,-1),float2(1,1),float2(1,-1)};
   float2 uv=corners[vertex];float shell=10000*distance/(10000+distance);
   Varying o;float3 offset=normalize(delta)*shell+(_GalaxyRight*uv.x+_GalaxyUp*uv.y)*width*shell;o.position=mul(_GalaxyVP,float4(_GalaxyCamera+offset,1));o.ray=offset;o.physical=float4(delta,star.position.w);
-  o.uv=uv*4;o.colour=star.colour;o.data=float4(physical/disc,star.properties.x,star.properties.y,instance);return o;
+  o.uv=uv*4;o.colour=_GalaxySunOverride.y>.5&&abs((float)instance-_GalaxySunOverride.x)<.5?float4(1,1,1,1):star.colour;o.data=float4(physical/disc,star.properties.x,star.properties.y,instance);return o;
  }
  struct Output {float4 colour:SV_Target;float depth:SV_Depth;};
  Output Frag(Varying i){
@@ -41,3 +42,4 @@ Shader "MassiveArmy/Generated galaxy sky" {SubShader {Tags {"RenderType"="Transp
  }
  ENDHLSL
  }}}
+

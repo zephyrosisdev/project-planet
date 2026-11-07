@@ -7,12 +7,14 @@ Shader "MassiveArmy/Settlement land use" {SubShader {Tags {"RenderType"="Transpa
  #include "UnityCG.cginc"
  #include "ArtLighting.hlsl"
  UNITY_DECLARE_TEX2DARRAY(_SurfaceAlbedo);UNITY_DECLARE_TEX2DARRAY(_SurfaceData);
- float _DistrictOverlay,_RoadWidth;float4x4 _SettlementVP;float3 _SettlementCenter,_SettlementCamera;
- struct Input {float3 position:POSITION;float3 normal:NORMAL;float4 uv:TEXCOORD0;float4 colour:COLOR;float2 metres:TEXCOORD1;};
+ float _DistrictOverlay,_RoadWidth;float4x4 _SettlementVP;float3 _SettlementCenter,_SettlementCamera,_SettlementCenterHigh,_SettlementCenterLow;
+ struct Input {float3 position:POSITION;float3 normal:NORMAL;float4 uv:TEXCOORD0;float4 colour:COLOR;float2 metres:TEXCOORD1;float3 low:TEXCOORD2;};
  struct Varying {float4 position:SV_POSITION;float3 normal:TEXCOORD0;float4 uv:TEXCOORD1;float4 colour:TEXCOORD2;float3 world:TEXCOORD3;float2 metres:TEXCOORD4;};
- Varying Vert(Input i){Varying o;o.world=i.position+_SettlementCenter;o.position=mul(_SettlementVP,float4(o.world,1));o.normal=i.normal;o.uv=i.uv;o.colour=i.colour;o.metres=i.metres;return o;}
+ Varying Vert(Input i){Varying o;o.world=(i.position+_SettlementCenterHigh)+(i.low+_SettlementCenterLow);o.position=mul(_SettlementVP,float4(o.world,1));o.normal=i.normal;o.uv=i.uv;o.colour=i.colour;o.metres=i.metres;return o;}
  float4 Frag(Varying i):SV_Target{
   if(_DistrictOverlay>.5){float border=saturate(min(min(i.uv.x,1-i.uv.x),min(i.uv.y,1-i.uv.y))*30);return float4(i.colour.rgb,lerp(.65,i.colour.a,border));}
+  if(i.uv.z>10.5){float3 grass=UNITY_SAMPLE_TEX2DARRAY(_SurfaceAlbedo,float3(i.uv.xy*8,6)).rgb*i.colour.rgb*1.8;return float4(ShadeArmour(i.world,normalize(i.normal),grass,float4(0,.8,0,.03),float3(1,1,1),_SettlementCamera),1);}
+  if(i.uv.z>9.5)return float4(ShadeArmour(i.world,normalize(i.normal),i.colour.rgb,float4(0,.6,0,.05),float3(1,1,1),_SettlementCamera),1);
   bool rail=i.uv.z>8.5;float layer=rail?8:i.uv.z;float2 uv=i.uv.xy;float3 soil=UNITY_SAMPLE_TEX2DARRAY(_SurfaceAlbedo,float3(uv*3,layer)).rgb;
   float4 data=UNITY_SAMPLE_TEX2DARRAY(_SurfaceData,float3(uv*3,layer));float3 n=normalize(i.normal);float3 east=normalize(cross(abs(n.y)>.95?float3(1,0,0):float3(0,1,0),n)),north=cross(n,east);
   float glow=0;float edge=saturate(min(min(uv.x,1-uv.x),min(uv.y,1-uv.y))*40);

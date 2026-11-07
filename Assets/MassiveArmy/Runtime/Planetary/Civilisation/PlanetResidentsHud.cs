@@ -3,8 +3,24 @@ using UnityEngine;
 using UnityEngine.UIElements;
 namespace MassiveArmy.Planetary {
     public sealed partial class PlanetRtsHud {
-        bool residentsView;int residentPage;
+        bool residentsView;
         void OpenResidents(){crimeView=false;orbitalsView=false;residentsView=true;resourcesView=false;if(civilisationOpen)civilisationOpen=false;ToggleCivilisation();}
+        void ArchiveLookup(VisualElement parent,CivilisationRuntime simulation,ColonyState colony){
+            var row=new VisualElement();row.AddToClassList("row");parent.Add(row);
+            var id=new TextField("History ID");row.Add(id);var kind=new DropdownField(new System.Collections.Generic.List<string>{"Person","Death","Case"},0);row.Add(kind);
+            var result=Label(parent,"Look up older records by their permanent ID.","muted");
+            Button(row,"LOOK UP",async ()=>{
+                if(!long.TryParse(id.value,out long value)||value<=0){result.text="Enter a positive record ID";return;}
+                int type=kind.index;result.text="Loading history�";
+                try{
+                    string json=type==0?await simulation.ReadArchivedResident(colony.id,value):await simulation.ReadArchivedHistory(colony.id,value,type==1);
+                    if(json==null){result.text="No archived record with that ID";return;}
+                    if(type==0){var p=JsonUtility.FromJson<ResidentState>(json);result.text=p.name+" � deceased � household #"+p.household;}
+                    else if(type==1){var d=JsonUtility.FromJson<DeathRecord>(json);result.text=d.name+" � "+SettlementCrimeView.Cause(d.cause)+" � "+simulation.CivicDate(d.time);}
+                    else {var q=JsonUtility.FromJson<CrimeCase>(json);if(!SettlementCrimeView.Visible(q,Observer)){result.text="No public record with that ID";return;}result.text="#"+q.id+" � "+q.offence+" � "+simulation.CivicDate(q.time)+" � "+q.outcome;}
+                }catch(Exception){result.text="Unable to read this archived record.";}
+            });
+        }
         void HouseholdContext(VisualElement parent,RtsBuilding building){
             var colony=world.Settlements?[building.team];if(colony==null||building.definition.housingCapacity<=0)return;
             var h=colony.households.Find(x=>x.home==building.persistentId);if(h==null){Label(parent,"VACANT FAMILY HOME · up to six residents","body");return;}
@@ -19,16 +35,11 @@ namespace MassiveArmy.Planetary {
             Label(civilisationContent,$"Treasury {council.treasury:0.00} credits · wage tax {council.taxRate:P0} · taxes collected {council.taxesCollected:0.00}\nEducation {council.educationSpent:0.00} · welfare {council.welfareSpent:0.00} · projects {council.infrastructureSpent:0.00}\nPriority: {council.priority} · {council.decision}","body").name="council-summary";
             if(fixture.sessionMode!=PlanetGameMode.AiTest&&inspectedFaction==0){var row=new VisualElement();row.AddToClassList("row");civilisationContent.Add(row);foreach(CivicPriority choice in Enum.GetValues(typeof(CivicPriority))){var priority=choice;Button(row,"FUND "+choice.ToString().ToUpperInvariant(),()=>{council.priority=priority;council.decision="Resident mandate: "+priority;nextCivilisationRefresh=0;});}}
             Label(civilisationContent,"One household per home. School age 5–17; adults qualify through education and experience. Households select an adult shopper; any parent can take that role. Homes share residential streets with nearby shops. Shifts have staggered starts; errands follow work, school ends in the afternoon, and some residents visit the council before returning home.","muted");
-            var pages=new VisualElement();pages.AddToClassList("row");civilisationContent.Add(pages);Button(pages,"PREVIOUS",()=>{residentPage=Math.Max(0,residentPage-1);nextCivilisationRefresh=0;});Button(pages,"NEXT",()=>{residentPage=Math.Min(Math.Max(0,(colony.residents.Count-1)/20),residentPage+1);nextCivilisationRefresh=0;});
-            int start=Math.Min(residentPage*20,Math.Max(0,colony.residents.Count-1)),end=Math.Min(start+20,colony.residents.Count);
-            for(int i=start;i<end;i++){var p=colony.residents[i];if(!p.alive)continue;var h=CivilisationRuntime.Family(colony,p.household);var job=CivilisationRuntime.SocietyBuilding(world,p.workplace);
-                Label(civilisationContent,$"{p.name} · age {(int)p.age} · {(p.age<18?"Child":p.role.ToString())} · {simulation.Routine(colony,p,simulation.SimulationTime)}","subheading").name="resident-"+p.id;
-                Label(civilisationContent,$"{h?.surname} family · {h?.tenure} · {(h?.home>0?"Home #"+h.home:"Awaiting a home")}\n{p.relationship} · {p.background} · education {p.education:P0} · reputation {p.reputation:P0}\n{(p.age<18?"School / dependent":job?.definition.name??"Available for work")} · wage {p.wage:0.00}/day · last pay {p.lastPay:0.00} · savings {p.savings:0.00}","body");
-                SettlementCrimeView.Resident(civilisationContent,colony,p,Observer);
-                if(job!=null)Label(civilisationContent,$"Shift {simulation.WorkStart(p):00.0}–{simulation.WorkStart(p)+8:00.0}h · walks via connected roads","muted");
-            }
+            Label(civilisationContent,"Select a civilian in the world to inspect their identity and activity. The settlement-wide live resident directory is disabled.","muted");
+            Label(civilisationContent,$"Archived history: {colony.archivedResidents} biographies � {colony.archivedDeaths} burials � {colony.archivedCases} closed cases","muted");
+            ArchiveLookup(civilisationContent,simulation,colony);
             RecentDeaths(civilisationContent,colony,20);
-            Label(civilisationContent,"LOCAL BUSINESSES","subheading");foreach(var e in colony.enterprises)Label(civilisationContent,$"{e.name} · cash {e.balance:0.00} · payroll {e.wagesPaid:0.00} · sales {e.sales:0.00}","muted");
+            Label(civilisationContent,"LOCAL BUSINESSES","subheading");int shown=0;foreach(var e in colony.enterprises){if(shown++>=20)break;Label(civilisationContent,$"{e.name} · cash {e.balance:0.00} · payroll {e.wagesPaid:0.00} · sales {e.sales:0.00}","muted");}
             ((ScrollView)civilisationContent).scrollOffset=new Vector2(0,scroll);
         }
     }

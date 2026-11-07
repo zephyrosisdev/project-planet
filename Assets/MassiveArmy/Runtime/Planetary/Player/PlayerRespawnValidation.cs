@@ -1,0 +1,91 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using MassiveArmy.Industrial;
+using MassiveArmy.Planetary;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UIElements;
+using Object=UnityEngine.Object;
+using Cursor=UnityEngine.Cursor;
+namespace MassiveArmy.EditorTools {
+    public static class PlayerRespawnValidation {
+        [Serializable]sealed class Report {public string status="PASS",error="";public List<string> checks=new List<string>();}
+        const BindingFlags Flags=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
+        static void Set(object target,string name,object value)=>target.GetType().GetField(name,Flags).SetValue(target,value);
+        static object Get(object target,string name)=>target.GetType().GetField(name,Flags).GetValue(target);
+        static object Call(object target,string name,params object[] args)=>target.GetType().GetMethod(name,Flags).Invoke(target,args);
+        static void Click(Button button)=>typeof(Clickable).GetMethod("Invoke",Flags,null,new[]{typeof(EventBase)},null).Invoke(button.clickable,new object[]{null});
+        static void ValidateMovingPlacement(PlanetDevelopment world,PlanetSpacecraft ship,PlanetFirstPersonController player,Camera camera,IndustrialActor actor,object placementView,Action<bool,string> check){
+            var original=ship.Pose;var eye=camera.transform.position;var look=camera.transform.rotation;
+            try{
+                foreach(string type in new[]{"sleeping-bag","sleeping-pod"})foreach(float distance in new[]{27f,54f,160f}){
+                    actor.pose=world.RespawnPose(player.PreciseBodyPosition);
+                    var moved=ship.Pose;moved.position+=new Double3(distance,5,-10);moved.rotation=Quaternion.Euler(12,distance,7);Set(ship,"pose",moved);
+                    ship.VisualForValidation.transform.SetPositionAndRotation(world.RenderBodyPosition(moved.position),moved.rotation);
+                    camera.transform.SetPositionAndRotation(ship.LocalToRender(new Vector3(3,-2.3f,22)),moved.rotation*Quaternion.LookRotation(new Vector3(0,-1,1)));Physics.SyncTransforms();
+                    world.BeginRespawnPlacement(type);Call(placementView,"FindPlacement");
+                    check((bool)Get(placementView,"valid"),type+" remains placeable after a "+distance+" m carrier step with a stale industry observer");
+                    var candidate=(FramePose)Get(placementView,"candidate");var resolved=world.RespawnBodyPose(candidate);
+                    check(actor.pose.Distance(world.RespawnPose(player.PreciseBodyPosition))<.001&&world.IndustrialAuthority.World.PrepareRespawnPlacement(1,type,candidate,resolved,out _)==null,"Preview and commit use the same current observer for "+type+" / "+distance+" m");
+                    check(world.RespawnPlacementPrompt.StartsWith("Ready"),"The placement HUD exposes readiness for "+type+" / "+distance+" m");
+                }
+                var far=world.RespawnPose(player.PreciseBodyPosition+new Double3(100,0,0));
+                check(world.IndustrialAuthority.World.PrepareRespawnPlacement(1,"sleeping-pod",far,far,out _) == "Choose a supported floor within 12 m","Current-frame synchronization preserves the authoritative 12 m reach limit");
+                var selected=(FramePose)Get(placementView,"candidate");world.TryResolveRespawnPose(selected,out var at,out var rotation);
+                var obstruction=GameObject.CreatePrimitive(PrimitiveType.Cube);
+                try{
+                    obstruction.name="Respawn placement obstruction";obstruction.transform.SetPositionAndRotation(world.RenderBodyPosition(at)+rotation*Vector3.up*.7f,rotation);obstruction.transform.localScale=new Vector3(3,1,3);Physics.SyncTransforms();Call(placementView,"FindPlacement");
+                    check(!(bool)Get(placementView,"valid"),"Moving-ship placement still rejects real physical obstructions");
+                    check(world.RespawnPlacementPrompt.Contains("overlaps")||world.RespawnPlacementPrompt.Contains("floor"),"The placement HUD exposes the obstruction reason");
+                }finally{Object.DestroyImmediate(obstruction);}
+            }finally{
+                Set(ship,"pose",original);ship.VisualForValidation.transform.SetPositionAndRotation(world.RenderBodyPosition(original.position),original.rotation);camera.transform.SetPositionAndRotation(eye,look);world.BeginRespawnPlacement("sleeping-pod");Physics.SyncTransforms();
+            }
+        }
+        [InitializeOnLoadMethod]static void Install(){EditorApplication.update-=Pump;EditorApplication.update+=Pump;}
+        static void Pump(){const string path="TestResults/Survival/Respawn/request.txt";if(EditorApplication.isCompiling||EditorApplication.isUpdating||!File.Exists(path))return;File.Delete(path);Run();}
+        [MenuItem("Synthetic Front/Diagnostics/Validate death screen and respawn points")]
+        public static void Run(){
+            var report=new Report();GameObject host=null,cameraObject=null,blocker=null;PlanetDefinition definition=null;PlanetFirstPersonController player=null;IndustrialAuthority authority=null;PlayerDeathScreen screen=null;PanelSettings settings=null;RenderTexture target=null;PlanetDevelopment world=null;Mesh bagMesh=null,podMesh=null;int frames=0;var savedLock=Cursor.lockState;bool savedVisible=Cursor.visible;
+            void Check(bool condition,string label){if(!condition)throw new InvalidOperationException(label);report.checks.Add(label);}
+            void Finish(){EditorApplication.update-=Tick;screen?.Dispose();if(world!=null){Set(world,"industry",null);Call(world,"DisposeRespawn");Set(world,"respawnView",null);Set(world,"player",null);}player?.Dispose();authority?.Dispose();foreach(var go in new[]{blocker,host,cameraObject})if(go!=null)Object.DestroyImmediate(go);foreach(var resource in new Object[]{bagMesh,podMesh,definition,settings})if(resource!=null)Object.DestroyImmediate(resource);if(target!=null){target.Release();Object.DestroyImmediate(target);}Cursor.lockState=savedLock;Cursor.visible=savedVisible;Directory.CreateDirectory("TestResults/Survival/Respawn");File.WriteAllText("TestResults/Survival/Respawn/editor.json",JsonUtility.ToJson(report,true));Debug.Log("Respawn validation "+report.status+": "+report.checks.Count+" checks");}
+            void Fail(Exception e){report.status="FAIL";report.error=e.ToString();Debug.LogException(e);Finish();}
+            void Tick(){try{
+                if(++frames<10)return;var root=screen.Root.panel.visualTree;var native=root.panel;native.GetType().GetMethod("ValidateLayout",Flags,null,Type.EmptyTypes,null)?.Invoke(native,null);
+                var repaint=native.GetType().GetMethod("Repaint",Flags,null,new[]{typeof(Event)},null);if(repaint!=null)repaint.Invoke(native,new object[]{new Event{type=EventType.Repaint}});else native.GetType().GetMethod("Repaint",Flags,null,Type.EmptyTypes,null)?.Invoke(native,null);Check(screen.Points.contentContainer.worldBound.width>screen.Points.contentViewport.worldBound.width,"Many respawn cards extend beyond the horizontal viewport");
+                using(var wheel=WheelEvent.GetPooled(new Event{type=EventType.ScrollWheel,delta=new Vector2(0,3)})){wheel.target=screen.Points;screen.Points.SendEvent(wheel);}Check(screen.Points.scrollOffset.x>0,"Vertical mouse-wheel input scrolls the list horizontally");using(var wheel=WheelEvent.GetPooled(new Event{type=EventType.ScrollWheel,delta=new Vector2(0,-3)})){wheel.target=screen.Points;screen.Points.SendEvent(wheel);}Check(screen.Points.scrollOffset.x==0,"Reverse wheel scrolling returns to the beginning and clamps at zero");
+                var current=RenderTexture.active;var image=new Texture2D(target.width,target.height,TextureFormat.RGB24,false);try{RenderTexture.active=target;GL.Clear(true,true,Color.black);native.GetType().GetMethod("Render",Flags,null,Type.EmptyTypes,null)?.Invoke(native,null);RenderTexture.active=target;image.ReadPixels(new Rect(0,0,target.width,target.height),0,0);image.Apply();int visible=0,redTitle=0;foreach(var pixel in image.GetPixels32()){if(pixel.r>80||pixel.g>80||pixel.b>80)visible++;if(pixel.r>200&&pixel.g<130&&pixel.b<130)redTitle++;}Check(visible>3000,"The death overlay renders readable text and controls into the UI target");Check(redTitle>200,"The death heading is visible alongside the respawn controls");File.WriteAllBytes("TestResults/Survival/Respawn/DeathScreen.png",image.EncodeToPNG());}finally{RenderTexture.active=current;Object.DestroyImmediate(image);}Finish();
+            }catch(Exception e){Fail(e);}}
+            try{
+                Directory.CreateDirectory("TestResults/Survival/Respawn");host=new GameObject("Inactive respawn validation world");host.SetActive(false);world=host.AddComponent<PlanetDevelopment>();world.sessionMode=PlanetGameMode.Survival;definition=ScriptableObject.CreateInstance<PlanetDefinition>();definition.bodyId=1;definition.radius=10000;definition.terrainHeight=0;definition.displayName="Respawn test world";world.definition=definition;var surface=new PlanetSurface(definition);Set(world,"surface",surface);var origin=new FloatingOrigin(default(UniversePosition));Set(world,"origin",origin);cameraObject=new GameObject("Respawn validation camera");var camera=cameraObject.AddComponent<Camera>();camera.enabled=false;Set(world,"view",camera);
+                player=new PlanetFirstPersonController(surface,origin,camera,host.transform){CaptureCursor=false};Set(world,"player",player);var modes=new PlayerControlModeManager();modes.Bind(PlayerControlMode.FirstPerson,enabled=>player.SetActive(enabled));modes.Switch(PlayerControlMode.FirstPerson);Set(world,"modes",modes);var ground=surface.GetSurfacePositionPrecise(Vector3.up,.1);player.EnterBodyPosition(ground,Vector3.forward);
+                var data=new IndustrialWorld{creativeMode=true};var actor=data.Register(1,new FramePose{body=1,x=ground.x,y=ground.y,z=ground.z});authority=new IndustrialAuthority(data);var adapter=new PlanetIndustry(world,authority);Set(world,"industry",adapter);
+                adapter.OpenMenu("crafting");var detached=new VisualElement();adapter.AttachUi(detached);Check(detached.Q<Button>("place-crafted-respawn")==null,"Ordinary material recipes do not offer respawn placement");Check(detached.Q<Button>("recipe-sleeping-bag")!=null&&detached.Q<Button>("recipe-sleeping-pod")!=null,"Both sleeping deployables appear in the crafting recipe grid");Click(detached.Q<Button>("recipe-sleeping-pod"));Check(detached.Q<Button>("place-crafted-respawn")==null,"Crafting details leave placement to the equipped hotbar item");Call(adapter,"OpenMenu","construction");Check(detached.Q<Button>("deploy-sleeping-bag")!=null&&detached.Q<Button>("deploy-sleeping-pod")!=null,"Construction offers both sleeping bag and sleeping pod placement");Call(adapter,"CloseMenu");
+                var pointPose=new FramePose{body=1,x=ground.x,y=ground.y,z=ground.z+5};Check(authority.PlaceRespawnPoint(1,"sleeping-bag",pointPose,pointPose)==null,"Ground sleeping bag placement is backed by a real authoritative record");var point=data.respawnPoints[0];point.readyAtTick=0;player.Environment.Health=0;actor.health=0;Call(world,"UpdateRespawnGameplay");Check(world.LocalPlayerDead&&!player.Active&&Cursor.lockState==CursorLockMode.None&&Cursor.visible,"Death disables the player avatar and releases the cursor");Check(!world.Interact(),"Interaction cannot drive or use machines after death");
+                var bodyArgs=new object[]{point.pose,"sleeping-bag",null,null};Check((bool)Call(world,"TryRespawnExit",bodyArgs),"A ground bag resolves a clear supported exit");
+                blocker=GameObject.CreatePrimitive(PrimitiveType.Cube);world.TryResolveRespawnPose(point.pose,out var body,out var rotation);blocker.transform.SetPositionAndRotation(world.RenderBodyPosition(body)+rotation*Vector3.up*1.7f,rotation);blocker.transform.localScale=new Vector3(8,3.3f,8);Physics.SyncTransforms();bodyArgs=new object[]{point.pose,"sleeping-bag",null,null};Check(!(bool)Call(world,"TryRespawnExit",bodyArgs),"A blocked sleeping bag refuses all four spawn exits");blocker.SetActive(false);
+                var operation=(IEnumerator)Call(world,"RespawnPlayer",point.id);while(operation.MoveNext()){}Check(player.Environment.Health==100&&actor.health==100&&player.Active&&!world.LocalPlayerDead,"Respawn restores the real controller and both health authorities");Check(point.readyAtTick==data.tick+1200,"Successful controller respawn starts only the used point's two-minute cooldown");
+                bagMesh=RespawnPointView.Model(false);podMesh=RespawnPointView.Model(true);Check(bagMesh.vertexCount>20&&podMesh.vertexCount>bagMesh.vertexCount&&podMesh.bounds.size.y>1.4f,"Both deployables have visible distinct prototype meshes");
+                // Ship-local points follow arbitrary translation and rotation, not the old world position.
+                var ship=(PlanetSpacecraft)Activator.CreateInstance(typeof(PlanetSpacecraft),Flags,null,new object[]{world,host.transform},null);Set(ship,"origin",origin);var pose=new SpacePose{position=ground+new Double3(0,8,0),rotation=Quaternion.Euler(0,37,0)};Set(ship,"pose",pose);Set(world,"spacecraft",ship);var canonical=new FramePose{body=1,frame=1,x=3,y=-4,z=22,yaw=90};Check(world.TryResolveRespawnPose(canonical,out var first,out var firstQ),"A pod resolves inside the current ship frame");pose.position+=new Double3(200,30,-90);pose.rotation=Quaternion.Euler(12,123,7);Set(ship,"pose",pose);world.TryResolveRespawnPose(canonical,out var moved,out var movedQ);Check((moved-ship.LocalToBodyPrecise(new Vector3(3,-4,22))).Magnitude<.001&&(moved-first).Magnitude>100&&Quaternion.Angle(firstQ,movedQ)>40,"Ship respawn position and orientation follow moving and rotating carriers");ship.VisualForValidation.transform.SetParent(null);ship.VisualForValidation.transform.SetPositionAndRotation(world.RenderBodyPosition(pose.position),pose.rotation);Set(player,"attached",true);Set(player,"ship",ship);Set(player,"shipPosition",new Vector3(3,-4,22));camera.transform.SetPositionAndRotation(ship.LocalToRender(new Vector3(3,-2.3f,22)),pose.rotation*Quaternion.LookRotation(new Vector3(0,-1,1)));actor.pose=world.RespawnPose(player.PreciseBodyPosition);world.BeginRespawnPlacement("sleeping-pod");Physics.SyncTransforms();var placementView=Get(world,"respawnView");ValidateMovingPlacement(world,ship,player,camera,actor,placementView,Check);Call(placementView,"FindPlacement");Check((bool)Get(placementView,"valid")&&((FramePose)Get(placementView,"candidate")).frame==1,"A pod preview places on the actual rotating ship floor without intersecting its hull");var placedPose=(FramePose)Get(placementView,"candidate");Check(authority.PlaceRespawnPoint(1,"sleeping-pod",placedPose,world.RespawnBodyPose(placedPose))==null,"A ship floor preview commits as a ship-relative respawn record");var shipPoint=data.respawnPoints[data.respawnPoints.Count-1];world.CancelRespawnPlacement();((RespawnPointView)placementView).Tick();var contactSlots=(BoxCollider[])Get(placementView,"contacts");var priorShipPose=pose;pose.position+=new Double3(20,5,-10);Set(ship,"pose",pose);((RespawnPointView)placementView).RebaseShipContacts();world.TryResolveRespawnPose(placedPose,out var expectedContact,out _);Check((contactSlots[0].transform.position-world.RenderBodyPosition(expectedContact)).sqrMagnitude<.001f,"Nearby pod collision follows carrier motion before the player moves");Set(ship,"pose",priorShipPose);Check(authority.ManageRespawnPoint(1,shipPoint.id,world.RespawnBodyPose(placedPose))==null,"Ship-mounted pods can be picked up through their resolved world position");Set(player,"attached",false);Call(ship,"DisposeInterior");Object.DestroyImmediate(ship.VisualForValidation);foreach(string field in new[]{"steel","glass","engine"})Object.DestroyImmediate((Material)Get(ship,field));Set(world,"spacecraft",null);
+                player.Environment.Health=0;actor.health=0;for(int i=0;i<18;i++)data.respawnPoints.Add(new RespawnPoint{id=data.AllocateId(),owner=1,definition=i%2==0?"sleeping-bag":"sleeping-pod",name="Mining outpost "+(i+1),pose=pointPose,readyAtTick=i%2==0?data.tick+1200:0});
+                target=new RenderTexture(1600,1000,24,RenderTextureFormat.ARGB32);target.Create();settings=Object.Instantiate(Resources.Load<PanelSettings>("MassiveArmy/UI/FrontPanel"));settings.targetTexture=target;settings.scaleMode=PanelScaleMode.ConstantPixelSize;settings.scale=1;var property=typeof(PanelSettings).GetProperty("panel",Flags)??typeof(PanelSettings).GetProperty("runtimePanel",Flags);var panel=(IPanel)property.GetValue(settings);typeof(PanelSettings).GetMethod("ApplyPanelSettings",Flags,null,Type.EmptyTypes,null)?.Invoke(settings,null);var root=panel.visualTree;root.Clear();root.style.width=1600;root.style.height=1000;screen=new PlayerDeathScreen(world,root);screen.Show();
+                Check(screen.Root.style.display==DisplayStyle.Flex&&root.Q<Button>("respawn-confirm").enabledSelf,"The death overlay includes an always-available surface respawn");Check(!root.Q<Button>("respawn-point-"+point.id).enabledSelf,"Cooling respawn cards cannot be selected");Check(screen.Points.contentContainer.childCount==20,"The horizontal list shows every owned point plus surface spawn");data.tick+=1200;screen.Refresh(true);Check(root.Q<Button>("respawn-point-"+point.id).enabledSelf,"A cooldown reaching zero unlocks its card without rebuilding the screen");Click(root.Q<Button>("respawn-point-"+point.id));Check((long)Get(screen,"selected")==point.id,"Clicking a ready card selects that individual respawn point");point.readyAtTick=data.tick+1;screen.Refresh(true);Check(!root.Q<Button>("respawn-confirm").enabledSelf,"The confirmation button rechecks the selected point cooldown");Click(root.Q<Button>("respawn-point-0"));Check(root.Q<Button>("respawn-confirm").enabledSelf,"Selecting the default spawn remains possible while a selected bag cools");for(int i=1;i<data.respawnPoints.Count;i++)if(i%2==0)data.respawnPoints[i].readyAtTick=data.tick+1200;screen.Refresh(true);EditorApplication.update+=Tick;
+            }catch(Exception e){Fail(e);}
+        }
+    }
+}
+
+
+#endif
+
+
+
+
+
+
+

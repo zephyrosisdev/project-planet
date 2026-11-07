@@ -1,6 +1,7 @@
 #pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
 #define PLANET_SPECIALIZE_TERRAIN 1
 #pragma kernel Generate
+#pragma kernel ClearHistory
 #pragma target 5.0
 #include "PlanetTopology.hlsl"
 #include "PlanetSurface.hlsl"
@@ -8,14 +9,26 @@ struct Candidate {float4 patch;float score;uint level;uint2 padding;};
 RWStructuredBuffer<Candidate> _Queue;
 RWStructuredBuffer<float4> _Patches;
 RWStructuredBuffer<uint> _Stats,_DrawArgs;
-float4 _Planes[6];float3 _Observer;float _Projection,_Error;
-uint _Budget,_Vertices;
+StructuredBuffer<uint> _HistoryRead;RWStructuredBuffer<uint> _HistoryWrite;
+uint _HistoryCapacity;float _LodBufferLayers,_MergeThreshold;
+float4 _Planes[6];float3 _Observer,_DetailObserver;float _Projection,_Error,_DetailSafety;
+uint _Budget,_Vertices;static float observerSurfaceRadius,safetySurfaceRadius;
 float3 Direction(float4 patch,float2 offset){return PlanetDirection((uint)patch.w,patch.xy+offset*patch.z);}
+uint SplitKey(float4 patch){uint h=asuint(patch.x)*1597334677u^asuint(patch.y)*3812015801u^asuint(patch.z)*2798796415u^(uint)patch.w*2246822519u;h^=h>>16;h*=0x7feb352du;h^=h>>15;return h|1u;}
+bool WasSplit(float4 patch){uint key=SplitKey(patch),slot=key&(_HistoryCapacity-1);[unroll]for(uint i=0;i<8;i++){uint value=_HistoryRead[(slot+i)&(_HistoryCapacity-1)];if(value==key)return true;if(value==0)return false;}return false;}
+void RememberSplit(float4 patch){uint key=SplitKey(patch),slot=key&(_HistoryCapacity-1);[unroll]for(uint i=0;i<8;i++){uint at=(slot+i)&(_HistoryCapacity-1),value=_HistoryWrite[at];if(value==0||value==key){_HistoryWrite[at]=key;return;}}}
+[numthreads(64,1,1)]void ClearHistory(uint3 id:SV_DispatchThreadID){if(id.x<_HistoryCapacity)_HistoryWrite[id.x]=0;}
 bool Visible(float4 patch,out float distance){
-    float3 axis=Direction(patch,.5),centre=axis*_PlanetRadius;float minimum=1;
-    [unroll]for(uint y=0;y<2;y++)[unroll]for(uint x=0;x<2;x++)minimum=min(minimum,dot(axis,Direction(patch,float2(x,y))));
-    float bound=_PlanetRadius*sqrt(max(0,2-2*minimum))+_PlanetReliefBound*3+abs(_PlanetOcean);
-    distance=max(1,length(_Observer-centre)-bound);
+    float3 axis=Direction(patch,.5),centre=axis*_PlanetRadius;float chord=0;
+    [unroll]for(uint y=0;y<2;y++)[unroll]for(uint x=0;x<2;x++)chord=max(chord,length(axis-Direction(patch,float2(x,y))));
+    // Subtract directions before measuring: 2-2*dot rounds to zero for small patches.
+    float patchRadius=_PlanetRadius*chord;float bound=patchRadius+_PlanetReliefBound*3+abs(_PlanetOcean);
+    // Visibility retains conservative displacement/skirt bounds. Detail uses
+    // local surface radius and patch footprint, so global relief cannot flatten
+    // the priority of kilometres of ground around a first-person camera.
+    distance=max(1,length(_DetailObserver-axis*observerSurfaceRadius)-patchRadius);
+    // Keep near-observer coverage, at lower priority than the camera's look target.
+    [branch]if(_DetailSafety>0)distance=min(distance,max(1,length(_Observer-axis*safetySurfaceRadius)-patchRadius)*_DetailSafety);
     [unroll]for(uint i=0;i<6;i++)if(dot(_Planes[i].xyz,centre)+_Planes[i].w < -bound)return false;
     float rmin=max(1,_PlanetRadius-_PlanetReliefBound),lengthObserver=length(_Observer);
     if(lengthObserver>rmin&&dot(centre,_Observer/lengthObserver)+bound<rmin*rmin/lengthObserver-_PlanetReliefBound*2)return false;
@@ -23,9 +36,13 @@ bool Visible(float4 patch,out float distance){
 }
 float Score(float4 patch,uint level){float distance;if(level>=20||!Visible(patch,distance))return 0;
     float segment=_PlanetRadius*patch.z/16;
+    bool retained=WasSplit(patch);distance=max(1,distance-segment*_LodBufferLayers);
+    // Reserve near-field refinement before distant error candidates consume the
+    // heap, especially where three cube faces meet. Still the same fixed budget.
+    if(distance<(retained?48:32)&&segment>1)return 1000000+segment;
     float curvature=max((.125+80*_PlanetReliefBound/max(1,_PlanetRadius))/max(1,_PlanetRadius),PlanetReliefCurvature());
-    if(_PlanetCraterCount>0){float3 axis=Direction(patch,.5);float minimum=1;[unroll]for(uint y=0;y<2;y++)[unroll]for(uint x=0;x<2;x++)minimum=min(minimum,dot(axis,Direction(patch,float2(x,y))));float bound=_PlanetRadius*sqrt(max(0,2-2*minimum))+_PlanetReliefBound*3+abs(_PlanetOcean);curvature=max(curvature,PlanetFeatureCurvature(axis*_PlanetRadius,bound));}
-    return segment*segment*curvature*_Projection/distance/_Error;
+    if(_PlanetCraterCount>0){float3 axis=Direction(patch,.5);float chord=0;[unroll]for(uint y=0;y<2;y++)[unroll]for(uint x=0;x<2;x++)chord=max(chord,length(axis-Direction(patch,float2(x,y))));float bound=_PlanetRadius*chord+_PlanetReliefBound*3+abs(_PlanetOcean);curvature=max(curvature,PlanetFeatureCurvature(axis*_PlanetRadius,bound));}
+    return segment*segment*curvature*_Projection/distance/_Error/(retained?_MergeThreshold:1);
 }
 void Push(float4 patch,uint level,inout uint count){
     Candidate value;value.patch=patch;value.level=level;value.score=Score(patch,level);value.padding=0;
@@ -37,10 +54,13 @@ Candidate Pop(inout uint count){Candidate result=_Queue[0],last=_Queue[--count];
 // Small bounded residency heap; surface vertices and all LOD decisions remain on the GPU.
 // Cost depends on the resident budget, never on the number of potential planetary tiles.
 [numthreads(1,1,1)]void Generate(uint3 id:SV_DispatchThreadID){
+    observerSurfaceRadius=max(1,_PlanetRadius+PlanetHeight(normalize(_DetailObserver)));
+    safetySurfaceRadius=observerSurfaceRadius;
+    [branch]if(_DetailSafety>0)safetySurfaceRadius=max(1,_PlanetRadius+PlanetHeight(normalize(_Observer)));
     uint count=0,leaves=0,resident=0,deepest=0,limited=0;
     for(uint face=0;face<6;face++)Push(float4(-1,-1,2,face),0,count);
     while(count>0){Candidate candidate=Pop(count);
-        if(candidate.score>1&&leaves+count+4<=_Budget){float4 p=candidate.patch;p.z*=.5;
+        if(candidate.score>1&&leaves+count+4<=_Budget){RememberSplit(candidate.patch);float4 p=candidate.patch;p.z*=.5;
             for(uint y=0;y<2;y++)for(uint x=0;x<2;x++)Push(float4(p.xy+float2(x,y)*p.z,p.z,p.w),candidate.level+1,count);
         }else{if(candidate.score>1)limited=1;leaves++;deepest=max(deepest,candidate.level);float distance;if(Visible(candidate.patch,distance))_Patches[resident++]=candidate.patch;}
     }

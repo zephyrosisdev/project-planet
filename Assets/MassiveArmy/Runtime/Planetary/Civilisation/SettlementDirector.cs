@@ -1,68 +1,104 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 namespace MassiveArmy.Planetary {
-    /// <summary>Paid, bounded settlement planning; HQ road connectivity and supply precede military spending.</summary>
+    /// <summary>Small district lists and bounded, staggered infrastructure decisions.</summary>
     public sealed class SettlementDirector {
-        int roadTurn;readonly System.Collections.Generic.Dictionary<(int,int),int> supplyTurns=new System.Collections.Generic.Dictionary<(int,int),int>();readonly System.Collections.Generic.Dictionary<(int,int),int> roadCursors=new System.Collections.Generic.Dictionary<(int,int),int>();
-        readonly CivilisationRuntime civilisation;readonly System.Collections.Generic.Dictionary<int,double> nextThoughts=new System.Collections.Generic.Dictionary<int,double>();
+        internal const int SurveyBudget=64;
+        sealed class Totals {
+            internal readonly Dictionary<string,int> counts=new Dictionary<string,int>();
+            internal int housing;internal double power,demand;internal RtsBuilding root;
+            internal int Count(string id)=>counts.TryGetValue(id,out int n)?n:0;
+            internal void Add(RtsBuilding b){if(b.definition.id=="command")root=b;counts[b.definition.id]=Count(b.definition.id)+1;housing+=b.definition.housingCapacity*b.level;power+=b.definition.generation;demand+=b.definition.consumption;}
+        }
+        sealed class Survey {
+            internal int cursor,limit,turn,roadCursor,fallbackTurn;internal bool ready;
+            internal double next;internal RtsBuilding pendingRoad;
+            internal Totals[] current,working;
+            internal Survey(int teams){current=New(teams);working=New(teams);}
+            internal static Totals[] New(int teams){var result=new Totals[teams];for(int i=0;i<teams;i++)result[i]=new Totals();return result;}
+        }
+        readonly Dictionary<PlanetRtsBase,Survey> surveys=new Dictionary<PlanetRtsBase,Survey>();
+        readonly CivilisationRuntime civilisation;readonly System.Random random=new System.Random(93017);
+        static readonly string[] bootstrapFallback={"wind","civil_mine_water","civil_farm_wheat","civil_food_processing","civil_housing","lab"};
+        static readonly string[][] DistrictBuildings={
+            new[]{"civil_social_home","civil_housing","civil_rental_home"},
+            new[]{"civil_farm_wheat","civil_farm_wheat","civil_farm_potatoes","civil_farm_vegetables","civil_beef_shed"},
+            new[]{"civil_food_shop","civil_drinks_shop","civil_market","civil_pharmacy","civil_pub","civil_gun_shop","civil_blade_shop"},
+            new[]{"civil_food_processing","civil_drinks_plant","civil_fabricator","civil_smelter","civil_butcher","civil_electronics","civil_chemistry","civil_oil_refinery"},
+            new[]{"civil_school","civil_council","civil_gathering_camp","lab","advanced_lab","strategic_lab","civil_warehouse","civil_port","civil_freight_station","civil_oil_depot","civil_gas_depot"},
+            new[]{"autocannon","factory","at_turret","aa_turret"},
+            new[]{"civil_mine_iron","civil_mine_carbon","civil_mine_silicon","civil_mine_copper","civil_mine_methane","civil_oil_well","civil_mine_sulfur"}
+        };
         public SettlementDirector(CivilisationRuntime civilisation){this.civilisation=civilisation;}
-        public void Tick(PlanetRtsBase local){if(!local.World.StrategyEnabled||nextThoughts.TryGetValue(local.World.definition.bodyId,out double next)&&civilisation.SimulationTime<next)return;nextThoughts[local.World.definition.bodyId]=civilisation.SimulationTime+civilisation.Settings.strategyTickSeconds;
-            int roadBudget=Mathf.Max(1,civilisation.Settings.roadExtensionsPerTick),first=roadTurn++&1;
-            for(int slot=0;slot<2;slot++){int team=(first+slot)&1;var faction=civilisation.State.Faction(team);var colony=civilisation.Colony(civilisation.BodyId(local.World.definition.bodyId),team);if(colony==null)continue;int cargoFleet=0;foreach(var carrier in colony.cargoVehicles)if(!carrier.funeral)cargoFleet++;
-                RtsBuilding warehouse=null,hq=null;int producers=0,housing=0,homes=0,destinations=0;double installedPower=0,futureDemand=0;
-                foreach(var b in local.Buildings)if(b.team==team&&!b.removed){if(warehouse==null&&b.definition.id=="civil_warehouse")warehouse=b;if(b.definition.id=="command")hq=b;if(b.definition.extraction>0||b.definition.production.Length>0||b.definition.id.StartsWith("civil_"))producers++;
-                    if(b.roadSuspended)continue;if(b.definition.foodUse>0)destinations++;housing+=b.definition.housingCapacity*b.level;if(b.definition.housingCapacity>0)homes++;installedPower+=b.definition.generation;futureDemand+=b.definition.consumption;}
-                var root=hq??warehouse;bool extended=false,criticalRoad=false;
-                if(root!=null&&faction.autonomous){foreach(var site in local.Buildings)if(site.team==team&&!site.removed&&site.roadSuspended){if(civilisation.Logistics.Connected(local,site)){site.roadSuspended=false;site.roadRetryAfter=0;site.roadFailures=0;local.NotifyChanged();}else {extended=local.PlanFreightAccess(site,root);break;}}}
-                if(faction.autonomous&&colony.inventory.Get("construction_materials")>civilisation.Settings.aiConstructionReserve*2)foreach(var carrier in colony.cargoVehicles)if(carrier.freight&&carrier.phase==CargoVehiclePhase.Idle&&civilisation.Logistics.UpgradeCarrier(local,team,carrier.id))break;
-                if(root!=null&&root.Complete&&(civilisation.Settings.autoExtendSettlementRoads||faction.autonomous)){
-                    var pending=new System.Collections.Generic.List<RtsBuilding>();int priority=3;
-                    foreach(var b in local.Buildings)if(b.team==team&&!b.removed&&b!=root){if(local.Roads.Connected(b,root)||civilisation.Logistics.Connected(local,b)){if(b.roadSuspended){b.roadSuspended=false;b.roadFailures=0;b.roadRetryAfter=0;local.NotifyChanged();}continue;}if(civilisation.SimulationTime<b.roadRetryAfter)continue;int rank=b.definition.extraction>0||b==warehouse?0:b.definition.id.StartsWith("civil_")?1:2;if(rank<priority){pending.Clear();priority=rank;}if(rank==priority)pending.Add(b);}
-                    criticalRoad=pending.Count>0&&priority<2;
-                    if(pending.Count>0&&roadBudget>0){roadBudget--;var key=(local.World.definition.bodyId,team);roadCursors.TryGetValue(key,out int cursor);var building=pending[cursor%pending.Count];roadCursors[key]=cursor+1;
-                        extended=local.Roads.ConnectToNetwork(building,root,out string reason);
-                        if(extended){building.roadFailures=0;building.roadRetryAfter=0;if(local.Roads.Connected(building,root))building.roadSuspended=false;}
-                        else if(reason.StartsWith("No dry",StringComparison.Ordinal)&&++building.roadFailures>=3){building.roadSuspended=true;building.roadRetryAfter=civilisation.SimulationTime+60;local.NotifyChanged();}
-                        faction.reason=extended?reason:building.definition.name+": "+reason;if(team==0)local.Notice=faction.reason;}
-                }
-                if(!faction.autonomous)continue;
-                civilisation.Orbitals.Plan(local,team);
-                bool Build(string id){var definition=local.Catalog.Buildings[id];faction.reason="Constructing "+definition.name;if(local.TryConstructInfrastructure(id,team))return true;
-                    bool expanded=definition.terrain==TerrainRule.Node?local.ExpandForDeposit(id,team)||local.SurveyFrontierDeposit(id,team):local.BuildSettlementFrontier(id,team);
-                    faction.reason=expanded?"Developing frontier for "+definition.name:local.Factions[team].wallet.CanAfford(definition.cost)?"Seeking a clear serviced site for "+definition.name:"Waiting for construction resources: "+definition.name;return expanded;}
-                bool Required(string id){if(local.HasProductiveBuilding(id,team))return false;faction.priority="Secure supply: "+local.Catalog.Buildings[id].name;if(!Build(id))local.ExpandForDeposit(id,team);return true;}
-                if(criticalRoad||extended){faction.priority="Connect production to main HQ";continue;}
-                if(warehouse==null){faction.priority="Build settlement storage";Build("civil_warehouse");continue;}
-                int minimumMines=Math.Max(civilisation.Settings.aiMinimumMaterialMines,(producers+23)/24);
-                if(local.ProductiveCount("mine",team)<minimumMines){faction.priority="Establish material production";if(Build("mine")||local.ProductiveCount("mine",team)<civilisation.Settings.aiMinimumMaterialMines)continue;}
-                // Food-starved existing power/housing is a delivery problem, not a reason to duplicate structures.
-                if(installedPower<futureDemand+15){faction.priority="Increase installed electrical capacity";Build("wind");continue;}
-                if(cargoFleet+colony.cargoOrders.Count<Math.Min(civilisation.Settings.maximumCargoVehicles,Math.Max(3,(Math.Max(destinations,producers)+1)/2))){faction.priority="Increase supply transport capacity";if((cargoFleet+colony.cargoOrders.Count<3||local.AiCanSpend(team,new ResourceCost{materials=civilisation.Settings.cargoVehicleMaterialCost}))&&civilisation.Logistics.Order(local,team,false))continue;}
-                if(Required("civil_mine_water")||Required("civil_farm_wheat")||Required("civil_food_processing"))continue;
-                if(colony.deaths.Count>0&&!local.HasProductiveBuilding(CivilisationRuntime.Graveyard,team)&&Build(CivilisationRuntime.Graveyard))continue;
-                if((colony.security.civilianDeathsToday+colony.security.civilianDeathsYesterday>0||colony.population>=24)&&!local.HasProductiveBuilding(CivilisationRuntime.PoliceHeadquarters,team)&&Build(CivilisationRuntime.PoliceHeadquarters))continue;
-                if(colony.inventory.Get("propellant")<civilisation.Settings.aiLogisticsFuelReserve*2&&Required("oil"))continue;
-                int desiredMines=local.Factions[team].wallet.Stock.materials<civilisation.Settings.aiConstructionReserve*2&&local.MaterialBacklog(team)<civilisation.Settings.cargoCapacity*2?Math.Max(minimumMines,civilisation.Settings.aiMaximumMaterialMines+producers/32):minimumMines;
-                if(local.ProductiveCount("mine",team)<desiredMines){faction.priority="Scale material extraction";if((local.AiCanSpend(team,local.Catalog.Buildings["mine"].cost)&&Build("mine"))||local.ExpandForDeposit("mine",team))continue;}
-                foreach(string supply in new[]{"civil_mine_water","civil_farm_wheat","civil_food_processing"})if(local.AiSupplyShort(supply,team)&&local.AiCanSpend(team,local.Catalog.Buildings[supply].cost)&&Build(supply)){extended=true;break;}
-                if(extended)continue;
-                if(homes<colony.households.Count+2||housing<Math.Max(colony.population+12,(int)Math.Ceiling(colony.plannedWorkerDemand*1.3)+12)){faction.priority="Provide civilian housing";Build(colony.households.Count%3==0?"civil_social_home":colony.households.Count%3==1?"civil_rental_home":"civil_housing");continue;}
-                if(colony.council.treasury>=5&&local.AiEconomyReady(team)){
-                    if(colony.council.priority==CivicPriority.Education&&!local.HasProductiveBuilding("civil_school",team)&&local.AiCanSpend(team,local.Catalog.Buildings["civil_school"].cost)&&Build("civil_school"))continue;
-                    if(colony.council.priority==CivicPriority.Defence&&local.AiCanSpend(team,local.Catalog.Buildings["autocannon"].cost)){if(!local.HasProductiveBuilding("autocannon",team)&&Build("autocannon"))continue;if(local.BuildLocalDefences(team,0))continue;}
-                }
-                if(!PlanetRtsBase.DevelopmentWorkforceReady(colony)){faction.priority="Grow civilian workforce";faction.reason="Waiting for supplied housing: population "+colony.population+", planned jobs "+colony.plannedWorkerDemand;continue;}
-                if(local.AiEconomyReady(team)&&(local.PlanRegionalStorage(root)||local.PlanRegionalRail(warehouse??root))){faction.priority="Expand regional freight infrastructure";continue;}
-                string[] priorities={"civil_school","civil_council","civil_gathering_camp","civil_mine_water","civil_farm_wheat","civil_food_processing","civil_farm_potatoes","civil_mine_iron","civil_mine_carbon","civil_smelter","civil_mine_silicon","civil_fabricator","civil_beef_shed","civil_butcher","civil_drinks_plant","civil_food_shop","civil_drinks_shop","civil_pharmacy","civil_market","civil_mine_methane","civil_mine_copper","civil_electronics","civil_oil_well","civil_oil_refinery","civil_farm_vegetables","civil_chemistry","civil_mine_sulfur"};
-                faction.priority="Balance connected production";faction.reason=$"Materials {local.Factions[team].wallet.Stock.materials:0}; extractors {local.ProductiveCount("mine",team)}; reserve {civilisation.Settings.aiConstructionReserve:0}";
-                var supplyKey=(local.World.definition.bodyId,team);supplyTurns.TryGetValue(supplyKey,out int supplyTurn);supplyTurns[supplyKey]=(supplyTurn+1)%priorities.Length;
-                for(int attempt=0;attempt<priorities.Length;attempt++){int at=(supplyTurn+attempt)%priorities.Length;string id=priorities[at];if(local.AiSupplyShort(id,team)&&local.AiCanSpend(team,local.Catalog.Buildings[id].cost)&&(Build(id)||local.ExpandForDeposit(id,team))){supplyTurns[supplyKey]=(at+1)%priorities.Length;extended=true;break;}}
-                if(!extended&&colony.workforce>=colony.plannedWorkerDemand+4&&local.AiEconomyReady(team)){
-                    string[] enterprises={"civil_farm_wheat","civil_food_processing","civil_gathering_camp","civil_drinks_plant","civil_food_shop","civil_fabricator"};
-                    int start=(int)(civilisation.SimulationTime/civilisation.Settings.strategyTickSeconds)%enterprises.Length;
-                    for(int i=0;i<enterprises.Length;i++){string id=enterprises[(start+i)%enterprises.Length];if((id!="civil_fabricator"||local.AiSupplyShort(id,team))&&local.AiCanSpend(team,local.Catalog.Buildings[id].cost)&&Build(id)){faction.priority="Expand local employment";break;}}
+        public void Tick(PlanetRtsBase local){
+            if(civilisation.Settings.regionalSettlements){civilisation.RegionalPlanner.Tick(local);return;}
+            if(!local.World.StrategyEnabled)return;
+            if(!surveys.TryGetValue(local,out var survey)){survey=new Survey(local.Factions.Length);surveys.Add(local,survey);}
+            // Only infrastructure metadata. No CPU army mirror, and no full-city scan in one decision.
+            if(survey.cursor==0)survey.limit=local.Buildings.Count;
+            if(survey.limit>local.Buildings.Count){survey.cursor=0;survey.limit=local.Buildings.Count;survey.working=Survey.New(local.Factions.Length);}
+            int end=Math.Min(survey.limit,survey.cursor+SurveyBudget);
+            for(;survey.cursor<end;survey.cursor++){var b=local.Buildings[survey.cursor];if(!b.removed&&(b.node<0||local.Nodes[b.node].remaining>0))survey.working[b.team].Add(b);}
+            if(survey.cursor==survey.limit){survey.current=survey.working;survey.working=Survey.New(local.Factions.Length);survey.cursor=0;survey.ready=true;civilisation.PlanRegionalConnections(local);}
+            if(!survey.ready||civilisation.SimulationTime<survey.next)return;
+            int active=0;for(int i=0;i<local.Factions.Length;i++)if(local.Settlements?[i]!=null&&civilisation.Autonomous(local,i))active++;
+            survey.next=civilisation.SimulationTime+Math.Max(.1,civilisation.Settings.strategyTickSeconds/Math.Max(1,active));
+            // Service one road endpoint, rather than testing every building's connectivity.
+            if(local.Buildings.Count>0){var site=survey.pendingRoad??local.Buildings[survey.roadCursor++%local.Buildings.Count];survey.pendingRoad=null;
+                if(!site.removed&&civilisation.Autonomous(local,site.team)&&civilisation.SimulationTime>=site.roadRetryAfter){
+                    var root=survey.current[site.team].root;
+                    if(root!=null&&!root.removed&&site!=root){
+                        if(local.Roads.Connected(site,root)){if(site.roadSuspended){site.roadSuspended=false;site.roadFailures=0;local.NotifyChanged();}}
+                        else if(!local.Roads.ConnectToNetwork(site,root,out _))site.roadRetryAfter=civilisation.SimulationTime+60;
+                        else if(!local.Roads.Connected(site,root))survey.pendingRoad=site;
+                    }
                 }
             }
+            int team=survey.turn++%local.Factions.Length;for(int skipped=0;skipped<local.Factions.Length-1&&(!civilisation.Autonomous(local,team)||local.Settlements?[team]==null);skipped++)team=survey.turn++%local.Factions.Length;
+            if(!civilisation.Autonomous(local,team))return;
+            var colony=local.Settlements?[team];if(colony==null)return;
+            var totals=survey.current[team];var faction=civilisation.State.Faction(team);
+            if(totals.Count("command")==0)return;
+            bool Build(string id,bool essential=false){
+                if(!local.Catalog.Buildings.TryGetValue(id,out var d))return false;var price=civilisation.Settings.ambientSettlementLife&&(id=="civil_park"||id.StartsWith("civil_farm_"))?new ResourceCost{materials=civilisation.Settings.landTileMaterialCost}:d.cost;if(!(essential?local.Factions[team].wallet.CanAfford(price):local.AiCanSpend(team,price))){faction.reason="Saving resources for "+d.name;return false;}
+                faction.priority="Grow "+d.district+" district";faction.reason="Placing nearby "+d.name;
+                bool built=(id=="civil_port"||id=="civil_freight_station")?totals.root!=null&&local.BuildTerminalNear(totals.root,id=="civil_port",id=="civil_freight_station"):local.TryConstructInfrastructure(id,team);
+                if(built&&civilisation.Settings.ambientSettlementLife&&(id=="civil_park"||id.StartsWith("civil_farm_"))){totals.counts[id]=totals.Count(id)+1;return true;}
+                if(built){var added=local.Buildings[local.Buildings.Count-1];totals.Add(added);survey.pendingRoad=added;if(survey.cursor>0&&local.Buildings.Count-1>=survey.limit)survey.working[team].Add(added);}
+                else faction.reason="Waiting for a suitable nearby plot or resources";
+                return built;
+            }
+            string required=null;
+            if(totals.Count("civil_warehouse")==0)required="civil_warehouse";
+            else if(totals.Count("mine")<civilisation.Settings.aiMinimumMaterialMines)required="mine";
+            else if(totals.power<totals.demand+15)required="wind";
+            else if(totals.Count("civil_mine_water")==0)required="civil_mine_water";
+            else if(totals.Count("civil_farm_wheat")==0&&local.LandUse.CropCount(team,"wheat")==0)required="civil_farm_wheat";
+            else if(totals.Count("civil_food_processing")==0)required="civil_food_processing";
+            else if(totals.housing<Math.Max(colony.population+12,Math.Ceiling(colony.plannedWorkerDemand*1.3)+12))required=DistrictBuildings[0][random.Next(3)];
+            else if(colony.population>=24&&totals.Count(CivilisationRuntime.PoliceHeadquarters)==0)required=CivilisationRuntime.PoliceHeadquarters;
+            else if(colony.deaths.Count>0&&totals.Count(CivilisationRuntime.Graveyard)==0)required=CivilisationRuntime.Graveyard;
+            else if(colony.deaths.Count>0&&totals.Count(CivilisationRuntime.FuneralDirectors)==0)required=CivilisationRuntime.FuneralDirectors;
+            else if(totals.Count("lab")==0)required="lab";
+            else if(colony.population>=24&&local.LandUse.ParkCount(team)==0)required="civil_park";
+            if(required!=null){if(Build(required,true))return;
+                // An unavailable deposit/plot must not block every other bootstrap service.
+                // One alternate per thought, rotating across a fixed small list.
+                string fallback=bootstrapFallback[survey.fallbackTurn++%bootstrapFallback.Length];
+                bool needed=fallback=="wind"?totals.power<totals.demand+15:fallback=="civil_housing"?totals.housing<colony.population+12:fallback=="civil_farm_wheat"?local.LandUse.CropCount(team,"wheat")==0&&totals.Count(fallback)==0:totals.Count(fallback)==0;
+                if(needed&&fallback!=required&&Build(fallback,true))return;
+            }
+            int fleet=colony.cargoVehicles.Count+colony.cargoOrders.Count;
+            if(!civilisation.Settings.ambientSettlementLife&&fleet<Math.Min(civilisation.Settings.maximumCargoVehicles,Math.Max(3,(colony.population+19)/20))&&local.AiCanSpend(team,new ResourceCost{materials=civilisation.Settings.cargoVehicleMaterialCost})){
+                if(civilisation.Logistics.Order(local,team,false))return;
+            }
+            if(!PlanetRtsBase.DevelopmentWorkforceReady(colony)){faction.reason="Growing housing and waiting for workforce";return;}
+            // Essential services above are deterministic; optional growth samples one district/type.
+            var choices=DistrictBuildings[1+random.Next(DistrictBuildings.Length-1)];
+            string choice=choices[random.Next(choices.Length)];
+            if(choice.StartsWith("civil_farm_")&&civilisation.Settings.ambientSettlementLife){if(local.LandUse.CropCount(team,choice.Substring(11))<Math.Max(2,colony.population/12))Build(choice);}else if(totals.Count(choice)<Math.Max(1,(colony.population+79)/80))Build(choice);
+            civilisation.Orbitals.Plan(local,team);
         }
     }
 }

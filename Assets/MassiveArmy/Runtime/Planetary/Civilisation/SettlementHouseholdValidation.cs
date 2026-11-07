@@ -8,7 +8,7 @@ using UnityEngine.Rendering;
 namespace MassiveArmy.Planetary {
     [DefaultExecutionOrder(-230)]public sealed partial class SettlementHouseholdValidation:MonoBehaviour {
         [Serializable]sealed class Report {public string status="PASS",error="";public List<string> checks=new List<string>();public int runtimeErrors,population,households;public long flowBytes;}
-        struct Walker {public Vector4 position;public uint node,next,initialised,pad;}
+        struct Walker {public Vector4 position;public uint node,next,initialised,pad;public Vector4 low;}
         readonly Report report=new Report();PlanetDevelopment world;string output;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]static void Install(){if(!Application.isEditor&&(Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-household-validation")>=0||Array.IndexOf(Environment.GetCommandLineArgs(),"-planet-civic-validation")>=0))new GameObject("Household validation").AddComponent<SettlementHouseholdValidation>();}
         void Awake(){var args=Environment.GetCommandLineArgs();output=args[Array.IndexOf(args,"-planet-output")+1];Directory.CreateDirectory(output);world=FindAnyObjectByType<PlanetDevelopment>();world.sessionMode=Array.IndexOf(args,"-planet-orbital-validation")>=0?PlanetGameMode.Rts:PlanetGameMode.AiTest;world.currentRtsContent=true;world.configuredRadius=120000;world.requestedCapacity=8192;world.ambientZombies=0;world.Paused=true;Application.logMessageReceived+=Log;}

@@ -9,7 +9,7 @@ RWStructuredBuffer<float> _PressureWrite;
 int2 CrowdOffset(int2 c,int x,int y){return PlanetNeighbour(PlanetNeighbour(c,int2(x,0),_Res),int2(0,y),_Res);}
 float CrowdArea(int2 c){float2 uv=(float2(c.x%_Res,c.y)+.5)*2/_Res-1;return 4*_PlanetRadius*_PlanetRadius/(_Res*_Res)*pow(1+dot(uv,uv),-1.5);}
 float3 CrowdVelocity(UnitState u){float3 d=PlanetDecode(u.position);uint face=min((uint)floor(u.position.x),5u);float3 right=normalize(PlanetU[face]-d*dot(PlanetU[face],d));return right*u.velocity.x+cross(right,d)*u.velocity.y;}
-float3 CrowdNormal(float3 v){return v*rsqrt(max(dot(v,v),1e-12));}
+float3 CrowdNormal(float3 v){return v*rsqrt(max(dot(v,v),1e-24));}
 void ClearCrowdCell(uint i){if(i<6*_Res*_Res)_CrowdMass[i]=0;if(i<4)_CrowdDispatch[i]=i==1||i==2?1:0;uint tiles=6*((_Res+15)/16)*((_Res+15)/16);if(i<tiles)_CrowdWork[i]=0;}
 [numthreads(128,1,1)]void ClearCrowd(uint3 id:SV_DispatchThreadID){ClearCrowdCell(id.x);}
 void SplatCrowdUnit(UnitState u){if(_Types[Type(u)].movement>=3)return;

@@ -51,13 +51,17 @@ namespace MassiveArmy.Planetary
             for(int depth=MaximumDepth;depth>=0;depth--){commands.SetComputeIntParam(shader,"_CbtDepth",depth);commands.DispatchCompute(shader,fold,(12*(1<<depth)+127)/128,1,1);}
             commands.DispatchCompute(shader,work,1,1,1);
         }
-        public void Update(Camera camera,Vector3 planetRenderCentre,float errorPixels=2,bool disableCulling=false,bool refine=true)
+        Vector3 lastDetailCamera;bool lastHadDetail;
+        public void Update(Camera camera,Vector3 planetRenderCentre,float errorPixels=2,bool disableCulling=false,bool refine=true,Vector3? detailFocus=null)
         {
             var position=camera.transform.position-planetRenderCentre;var projection=camera.projectionMatrix;
-            if(!hasConfiguration||(position-lastCamera).sqrMagnitude>1e-8f||Quaternion.Angle(camera.transform.rotation,lastRotation)>.005f||!projection.Equals(lastProjection)||lastPixelHeight!=camera.pixelHeight||lastRadius!=definition.radius||lastHeight!=definition.ReliefBound||lastTerrainRevision!=definition.Edits.Revision||lastOcean!=definition.oceanHeight||lastSeed!=definition.terrainSeed||lastError!=errorPixels||lastNoCull!=disableCulling){
+            var detail=detailFocus??position;
+            if(!hasConfiguration||lastHadDetail!=detailFocus.HasValue||(lastDetailCamera-detail).sqrMagnitude>1e-8f||(position-lastCamera).sqrMagnitude>1e-8f||Quaternion.Angle(camera.transform.rotation,lastRotation)>.005f||!projection.Equals(lastProjection)||lastPixelHeight!=camera.pixelHeight||lastRadius!=definition.radius||lastHeight!=definition.ReliefBound||lastTerrainRevision!=definition.Edits.Revision||lastOcean!=definition.oceanHeight||lastSeed!=definition.terrainSeed||lastError!=errorPixels||lastNoCull!=disableCulling){
+                lastDetailCamera=detail;lastHadDetail=detailFocus.HasValue;
                 hasConfiguration=true;revision++;settled=false;lastCamera=position;lastRotation=camera.transform.rotation;lastProjection=projection;lastPixelHeight=camera.pixelHeight;lastRadius=definition.radius;lastHeight=definition.ReliefBound;lastTerrainRevision=definition.Edits.Revision;lastOcean=definition.oceanHeight;lastSeed=definition.terrainSeed;lastError=errorPixels;lastNoCull=disableCulling;
             }
             PlanetDevelopment.BindSurface(shader,definition);shader.SetVector("_CbtCamera",camera.transform.position-planetRenderCentre);shader.SetFloat("_CbtProjection",camera.pixelHeight/(2*Mathf.Tan(camera.fieldOfView*.5f*Mathf.Deg2Rad)));shader.SetFloat("_CbtErrorPixels",Mathf.Max(.1f,errorPixels));shader.SetInt("_CbtDisableCulling",disableCulling?1:0);
+            shader.SetVector("_CbtDetailCamera",detail);shader.SetFloat("_CbtDetailEnabled",detailFocus.HasValue?1:0);
             GeometryUtility.CalculateFrustumPlanes(camera,frustum);
             for(int i=0;i<6;i++)planes[i]=new Vector4(frustum[i].normal.x,frustum[i].normal.y,frustum[i].normal.z,frustum[i].distance+Vector3.Dot(frustum[i].normal,planetRenderCentre));
             shader.SetVectorArray("_CbtPlanes",planes);

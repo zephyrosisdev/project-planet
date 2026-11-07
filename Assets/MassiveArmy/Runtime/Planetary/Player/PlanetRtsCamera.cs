@@ -41,14 +41,14 @@ namespace MassiveArmy.Planetary
             var up=FocusDirection.normalized;tangent=Vector3.ProjectOnPlane(tangent,up).normalized;
             if(tangent.sqrMagnitude<.5f){CubeSphere.Project(up,out var face,out _);tangent=Vector3.ProjectOnPlane(CubeSphere.Up[(int)face],up).normalized;}
             var rotation=Quaternion.LookRotation(tangent,up)*Quaternion.Euler(Pitch,0,0);
-            var target=following?focus:new Double3(up)*(Surface.Definition.radius+(double)Mathf.Max(Surface.Definition.oceanHeight,Surface.SampleHeight(up)));
+            var direction=new Double3(up);var target=following?focus:direction*((Surface.Definition.radius+(double)Mathf.Max(Surface.Definition.oceanHeight,Surface.SampleHeight(up)))/direction.Magnitude);
             Double3 local=target-new Double3(rotation*Vector3.forward)*Distance;
             if(!following){
                 // Map navigation can land over deep ocean or on the uphill side of a ridge.
                 // Keep the observer above the visible surface, then continue aiming at the focus.
                 var cameraUp=local.Float.normalized;
                 double minimum=Surface.Definition.radius+(double)Mathf.Max(Surface.Definition.oceanHeight,Surface.SampleHeight(cameraUp))+2;
-                if(local.Magnitude<minimum){local=new Double3(cameraUp)*minimum;rotation=Quaternion.LookRotation((target-local).Float,up);}
+                if(local.Magnitude<minimum){local=local*(minimum/local.Magnitude);rotation=Quaternion.LookRotation((target-local).Float,up);}
             }
             var observer=Surface.Definition.position.Add(local);Origin.Anchor(observer);
             transform.SetPositionAndRotation(Vector3.zero,rotation);

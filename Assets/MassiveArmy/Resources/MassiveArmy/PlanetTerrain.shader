@@ -12,6 +12,7 @@ Shader "MassiveArmy/Planet development terrain"
 #pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
 #define PLANET_SPECIALIZE_TERRAIN 1
             #pragma target 5.0
+            #pragma multi_compile _ PLANET_GPU_DOUBLE
             #pragma vertex Vert
             #pragma multi_compile_vertex _ PLANET_CBT
             #pragma multi_compile_vertex _ PLANET_STREAMED
@@ -52,6 +53,7 @@ Shader "MassiveArmy/Planet development terrain"
             #include "PlanetTerrainGeometry.hlsl"
             #ifdef PLANET_SURFACE_TEXTURES
             #include "PlanetTerrainSurface.hlsl"
+            #include "PlanetRoadSurface.hlsl"
             #endif
             #ifdef PLANET_COMBAT_DECALS
             #include "PlanetCombatDecals.hlsl"
@@ -60,18 +62,30 @@ Shader "MassiveArmy/Planet development terrain"
             #include "PlanetResourceDecals.hlsl"
             #endif
             float _PlanetLightingDebug;
-            float4 Frag(Varying i):SV_Target {float3 d=normalize(i.direction);float h=PlanetHeight(d);float2 climate=PlanetClimate(d);float t=climate.x,m=climate.y;uint biome;
+            float4 Frag(Varying i):SV_Target {
+                // Reject covered shoreline pixels before procedural height evaluation,
+                // especially the experimental native-double height/noise path.
+                if(_OceanOnly!=0)clip(_PlanetOcean-.02-i.height);else if(_PlanetCameraAboveOcean>.5)clip(i.height-(_PlanetOcean-.02));
+                float3 d=normalize(i.direction);
+                #ifdef PLANET_GPU_DOUBLE
+                double3 preciseDirection=PlanetEditUnit((double3)i.world+(double3)_PlanetObserverHigh+(double3)_PlanetObserverLow);
+                float h=PlanetHeight(preciseDirection);
+                #else
+                float h=PlanetHeight(d);
+                #endif
+                float2 climate=PlanetClimate(d);float t=saturate(climate.x-max(0,h-_PlanetOcean)/max(1000,abs(_PlanetHeight)*1.7)*.65),m=climate.y;uint biome;
                 if(_OceanOnly!=0)biome=0;else if(h<_PlanetOcean)biome=0;else if(h<_PlanetOcean+1)biome=4;else if(t<.14)biome=19;else if(t<.3)biome=16;
                 else if(t>.68)biome=m<.38?8:m<.53?7:m<.68?6:5;else biome=m<.3?9:m<.5?10:m>.7?12:11;
                 float3 normal=normalize(i.normal),albedo=_TintOverride.a>0?_TintOverride.rgb:_BiomeColours[biome].rgb;float roughness=1;
+                if(_OceanOnly!=0){float depth=max(0,_PlanetOcean-h);float foam=OceanFoam(i.world,depth,i.oceanCrest);albedo=lerp(albedo,float3(.86,.93,.94),foam);roughness=lerp(.2,.8,foam);}
                 #ifdef PLANET_SURFACE_TEXTURES
-                if(_OceanOnly==0&&_TintOverride.a==0)albedo=EvaluatePlanetTerrain(d,h,normal,normal,roughness);
+                if(_OceanOnly==0&&_TintOverride.a==0){float textureHeight;albedo=EvaluatePlanetTerrain(d,h,normal,i.world-_PlanetTextureCamera,normal,roughness,textureHeight);albedo=ApplyPlanetRoad(albedo,d,i.world,textureHeight,normal,roughness);}
                 #endif
                 #ifdef PLANET_RESOURCE_DECALS
-                if(_OceanOnly==0){float4 deposit=PlanetResourceDecal(d,h,normal);albedo=lerp(albedo,deposit.rgb,deposit.a);}
+                if(_OceanOnly==0){float4 deposit=PlanetResourceDecal(d,h,i.world,normal);albedo=lerp(albedo,deposit.rgb,deposit.a);}
                 #endif
                 #ifdef PLANET_COMBAT_DECALS
-                if(_OceanOnly==0){float4 remains=PlanetRemainsDecal(d,h,normal);albedo=lerp(albedo,remains.rgb,remains.a);albedo*=PlanetNuclearScorch(d,normal);}
+                if(_OceanOnly==0){float4 remains=PlanetRemainsDecal(d,h,i.world,normal);albedo=lerp(albedo,remains.rgb,remains.a);albedo*=PlanetNuclearScorch(d,i.world,normal);}
                 #endif
                 if(_PlanetLightingDebug>.5)return float4(10000,10000,10000,1);
                 float3 rws=GetCameraRelativePositionWS(i.world),V=GetWorldSpaceNormalizeViewDir(rws);
@@ -79,7 +93,7 @@ Shader "MassiveArmy/Planet development terrain"
                 SurfaceData surface;ZERO_INITIALIZE(SurfaceData,surface);
                 surface.materialFeatures=MATERIALFEATUREFLAGS_LIT_STANDARD;surface.baseColor=albedo;surface.normalWS=normal;surface.geomNormalWS=normalize(i.normal);
                 surface.tangentWS=normalize(cross(abs(surface.geomNormalWS.y)>.95?float3(1,0,0):float3(0,1,0),surface.geomNormalWS));
-                surface.perceptualSmoothness=_OceanOnly!=0?.78:1-saturate(roughness);surface.ambientOcclusion=1;surface.specularOcclusion=1;
+                surface.perceptualSmoothness=1-saturate(roughness);surface.ambientOcclusion=1;surface.specularOcclusion=1;
                 BuiltinData builtin;InitBuiltinData(position,1,normal,-surface.geomNormalWS,0,0,builtin);builtin.renderingLayers=1u;PostInitBuiltinData(V,position,surface,builtin);
                 BSDFData bsdf=ConvertSurfaceDataToBSDFData(i.position.xy,surface);PreLightData prelight=GetPreLightData(V,position,bsdf);
                 LightLoopOutput lighting;LightLoop(V,position,prelight,bsdf,builtin,LIGHT_FEATURE_MASK_FLAGS_OPAQUE,lighting);
@@ -97,6 +111,7 @@ Shader "MassiveArmy/Planet development terrain"
 #pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
 #define PLANET_SPECIALIZE_TERRAIN 1
             #pragma target 5.0
+            #pragma multi_compile _ PLANET_GPU_DOUBLE
             #pragma vertex Vert
             #pragma multi_compile_vertex _ PLANET_CBT
             #pragma multi_compile_vertex _ PLANET_STREAMED
@@ -108,7 +123,7 @@ Shader "MassiveArmy/Planet development terrain"
             #include "PlanetTopology.hlsl"
             #include "PlanetSurface.hlsl"
             #include "PlanetTerrainGeometry.hlsl"
-            float4 DepthFrag():SV_Target{return 0;}
+            float4 DepthFrag(Varying i):SV_Target{if(_OceanOnly!=0)clip(_PlanetOcean-.02-i.height);else if(_PlanetCameraAboveOcean>.5)clip(i.height-(_PlanetOcean-.02));return 0;}
             ENDHLSL
         }
     }

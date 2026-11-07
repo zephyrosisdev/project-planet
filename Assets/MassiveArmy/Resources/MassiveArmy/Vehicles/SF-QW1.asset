@@ -1,0 +1,152 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27719f69f40c43d42a2417bfd009d538, type: 3}
+  m_Name: SF-QW1
+  m_EditorClassIdentifier: Assembly-CSharp::MassiveArmy.Planetary.VehicleDefinition
+  id: SF-QW1
+  displayName: SF-QW1 Quadruped
+  cameraSettings: {fileID: 11400000, guid: 218223d064574517bdd9cf27a8b5f971, type: 2}
+  locomotion: 0
+  prefab: {fileID: 1301985097581521273, guid: e6961f36e76a1c743be78bcc4fc7acd6, type: 3}
+  size: {x: 5.8, y: 4.2, z: 7}
+  chassisCentre: {x: 0, y: 2.3659997, z: 0}
+  chassisSize: {x: 3.19, y: 1.05, z: 5.25}
+  centreOfMass: {x: 0, y: 2.3659997, z: 0}
+  mass: 18000
+  maximumSpeed: 8
+  reverseSpeed: 3.2
+  acceleration: 1.8
+  braking: 7
+  turnSpeed: 30
+  turnAcceleration: 54
+  suspensionSpring: 45
+  suspensionDamping: 12
+  grip: 6
+  torsoYaw: 100
+  torsoPitch: 35
+  traversal:
+    maximumSlope: 38
+    maximumStep: 0.7
+    maximumDrop: 1.5
+    clearance: 0.25
+  seats:
+  - name: Driver 1
+    role: 0
+    permissions: 1
+    position: {x: -0.45, y: 2.5419998, z: 0.2}
+    eye: {x: -0.45, y: 3.192, z: 0.5}
+    entry: {x: -3.5, y: 0, z: 0.2}
+    exit: {x: -3.9, y: 0, z: 0.2}
+    aiByDefault: 0
+  - name: Gunner 2
+    role: 2
+    permissions: 6
+    position: {x: 0.45, y: 2.5419998, z: 0.2}
+    eye: {x: 0.45, y: 3.192, z: 0.5}
+    entry: {x: 3.5, y: 0, z: 0.2}
+    exit: {x: 3.9, y: 0, z: 0.2}
+    aiByDefault: 1
+  legs:
+  - name: Front left
+    hip: {x: -1.276, y: 2.0159998, z: 2.03}
+    stance: {x: -2.204, y: 0.08, z: 2.03}
+    pole: {x: -0.15, y: 0, z: 1}
+    upperLength: 1.1692798
+    lowerLength: 1.1692798
+    footWidth: 0.92800003
+    footLength: 2.1000001
+    stride: 1.386
+    stepHeight: 0.54599994
+    stepDuration: 0.3
+    maxReach: 2.2800956
+    compression: 0.63
+    probeHeight: 1.68
+    probeDepth: 4.2
+    strength: 1
+    minimumKneeAngle: 8
+    maximumKneeAngle: 155
+    damage: 0
+  - name: Front right
+    hip: {x: 1.276, y: 2.0159998, z: 2.03}
+    stance: {x: 2.204, y: 0.08, z: 2.03}
+    pole: {x: 0.15, y: 0, z: 1}
+    upperLength: 1.1692798
+    lowerLength: 1.1692798
+    footWidth: 0.92800003
+    footLength: 2.1000001
+    stride: 1.386
+    stepHeight: 0.54599994
+    stepDuration: 0.3
+    maxReach: 2.2800956
+    compression: 0.63
+    probeHeight: 1.68
+    probeDepth: 4.2
+    strength: 1
+    minimumKneeAngle: 8
+    maximumKneeAngle: 155
+    damage: 0
+  - name: Rear left
+    hip: {x: -1.276, y: 2.0159998, z: -2.03}
+    stance: {x: -2.204, y: 0.08, z: -2.03}
+    pole: {x: -0.15, y: 0, z: -1}
+    upperLength: 1.1692798
+    lowerLength: 1.1692798
+    footWidth: 0.92800003
+    footLength: 2.1000001
+    stride: 1.386
+    stepHeight: 0.54599994
+    stepDuration: 0.3
+    maxReach: 2.2800956
+    compression: 0.63
+    probeHeight: 1.68
+    probeDepth: 4.2
+    strength: 1
+    minimumKneeAngle: 8
+    maximumKneeAngle: 155
+    damage: 0
+  - name: Rear right
+    hip: {x: 1.276, y: 2.0159998, z: -2.03}
+    stance: {x: 2.204, y: 0.08, z: -2.03}
+    pole: {x: 0.15, y: 0, z: -1}
+    upperLength: 1.1692798
+    lowerLength: 1.1692798
+    footWidth: 0.92800003
+    footLength: 2.1000001
+    stride: 1.386
+    stepHeight: 0.54599994
+    stepDuration: 0.3
+    maxReach: 2.2800956
+    compression: 0.63
+    probeHeight: 1.68
+    probeDepth: 4.2
+    strength: 1
+    minimumKneeAngle: 8
+    maximumKneeAngle: 155
+    damage: 0
+  gaits:
+  - name: Walk
+    groups: 00000000020000000300000001000000i
+    minimumGrounded: 3
+    cadence: 1.4
+    strideMultiplier: 1
+    maximumSpeed: 4.4
+    bodyBob: 0.04
+  - name: Travel
+    groups: 00000000010000000100000000000000i
+    minimumGrounded: 2
+    cadence: 2.2
+    strideMultiplier: 1.15
+    maximumSpeed: 8
+    bodyBob: 0.04
+  wheels: []
+  detailDistances: {x: 90, y: 250, z: 650}
+  debugDraw: 0

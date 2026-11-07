@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 namespace MassiveArmy.Planetary {
-    public enum DeathCause {ZombieAttack,OldAge,Murder,Robbery,PoliceViolence}
+    public enum DeathCause {ZombieAttack,OldAge,Murder,Robbery,PoliceViolence,Infection,RaiderAttack}
     [Serializable] public sealed class DeathRecord {
         public long id,resident,household,graveyard,hearse;public string name;public double age,time,ceremonyDue,ceremonyAt,burialAt;
         public bool discovered=true;public double discoveredAt;public long discoveredBy;
@@ -16,7 +16,7 @@ namespace MassiveArmy.Planetary {
     }
     public sealed partial class CivilisationRuntime {
         public const int MaximumFuneralVehicles=8;
-        public const string PoliceHeadquarters="civil_police_hq",Graveyard="civil_graveyard";
+        public const string PoliceHeadquarters="civil_police_hq",Graveyard="civil_graveyard",FuneralDirectors="civil_funeral_director";
         internal long CivicDay(double time)=>(long)Math.Floor(time/Math.Max(60,Settings.settlementDaySeconds)+1.0/3);
         internal double NextFuneralMorning(double time)=>(CivicDay(time)+1)*Math.Max(60,Settings.settlementDaySeconds);
         public string CivicDate(double time){double daySeconds=Math.Max(60,Settings.settlementDaySeconds);long day=CivicDay(time);int yearDays=Math.Max(1,Settings.calendarDaysPerYear);double hour=((time/daySeconds*24+8)%24+24)%24;return $"Year {day/yearDays+1}, day {day%yearDays+1} · {(int)hour:00}:{(int)((hour%1)*60):00}";}
@@ -29,7 +29,7 @@ namespace MassiveArmy.Planetary {
             if(heir!=null)heir.savings+=person.savings;else colony.council.treasury+=person.savings;person.savings=0;
             foreach(var h in colony.households)if(h.owner==person.id)h.owner=heir?.id??0;
             foreach(var e in colony.enterprises)if(e.owner==person.id)e.owner=heir?.id??0;
-            if(cause==DeathCause.ZombieAttack&&!record.policeHonours){RollSecurityDay(colony,Math.Max(SimulationTime,time));long died=CivicDay(time);if(died==colony.security.day)colony.security.civilianDeathsToday++;else if(died==colony.security.day-1)colony.security.civilianDeathsYesterday++;}
+            if((cause==DeathCause.ZombieAttack||cause==DeathCause.RaiderAttack)&&!record.policeHonours){RollSecurityDay(colony,Math.Max(SimulationTime,time));long died=CivicDay(time);if(died==colony.security.day)colony.security.civilianDeathsToday++;else if(died==colony.security.day-1)colony.security.civilianDeathsYesterday++;}
             colony.deaths.Add(record);colony.societyRevision++;return record;
         }
         void RollSecurityDay(ColonyState c,double now){long day=CivicDay(now);if(day<=c.security.day)return;c.security.civilianDeathsYesterday=c.security.day==day-1?c.security.civilianDeathsToday:0;c.security.civilianDeathsToday=0;c.security.day=day;}
@@ -41,19 +41,24 @@ namespace MassiveArmy.Planetary {
             if(c.security.automaticPatrols)c.security.requestedPatrols=Math.Clamp(Math.Max(c.security.requestedPatrols,2+c.security.civilianDeathsToday+c.security.civilianDeathsYesterday/2),0,32);
             c.security.patrolStops.RemoveAll(id=>SocietyBuilding(local,id)==null);
             if(c.security.patrolStops.Count==0){var hq=local.Buildings.Find(b=>b.team==c.faction&&!b.removed&&b.Complete&&b.definition.id==PoliceHeadquarters);if(hq!=null){c.security.patrolStops.Add(hq.persistentId);foreach(var b in local.Buildings)if(c.security.patrolStops.Count<4&&b.team==c.faction&&!b.removed&&b.Complete&&b!=hq&&b.definition.housingCapacity>0&&local.Roads.Connected(hq,b))c.security.patrolStops.Add(b.persistentId);}}
+            foreach(var pub in local.Buildings)if(pub.team==c.faction&&pub.definition.id=="civil_pub"&&!pub.removed){var installation=FindInstallation(c,pub.persistentId);if(installation!=null){if(installation.playerRentalRoom!=0&&installation.playerRentUntil<=now){pub.modularDoors&=~(1u<<(installation.playerRentalRoom+2));installation.playerRentalRoom=0;installation.modularDoors=pub.modularDoors;local.NotifyChanged();}bool open=PubOpen(local,pub);if(installation.pubOpen!=open){installation.pubOpen=open;if(!open){pub.modularDoors&=~1u;installation.modularDoors=pub.modularDoors;}local.NotifyChanged();}}}
+            var directors=local.Buildings.Find(b=>b.team==c.faction&&b.definition.id==FuneralDirectors&&CivicServiceReady(b));
+            if(directors!=null)foreach(var vehicle in c.cargoVehicles)if(vehicle.funeral&&vehicle.phase==CargoVehiclePhase.Idle&&vehicle.warehouse!=directors.persistentId){long previous=vehicle.warehouse;vehicle.warehouse=directors.persistentId;if(vehicle.funeralDeath!=0&&c.deaths.Exists(d=>d.id==vehicle.funeralDeath&&d.interred)){vehicle.phase=CargoVehiclePhase.Returning;vehicle.destination=previous;vehicle.departure=now;}vehicle.navigationVersion=0;}
             int hearses=0;foreach(var vehicle in c.cargoVehicles)if(vehicle.funeral)hearses++;
-            foreach(var graveyard in local.Buildings)if(hearses<MaximumFuneralVehicles&&graveyard.team==c.faction&&graveyard.definition.id==Graveyard&&CivicServiceReady(graveyard)&&!c.cargoVehicles.Exists(v=>v.funeral&&v.warehouse==graveyard.persistentId)){c.cargoVehicles.Add(new CargoVehicleState{id=State.AllocateId(),warehouse=graveyard.persistentId,funeral=true});hearses++;}
+            foreach(var graveyard in local.Buildings)if(hearses<MaximumFuneralVehicles&&graveyard.team==c.faction&&graveyard.definition.id==Graveyard&&CivicServiceReady(graveyard)&&!c.cargoVehicles.Exists(v=>v.funeral&&v.warehouse==(directors?.persistentId??graveyard.persistentId))){c.cargoVehicles.Add(new CargoVehicleState{id=State.AllocateId(),warehouse=directors?.persistentId??graveyard.persistentId,funeral=true});hearses++;}
             foreach(var hearse in c.cargoVehicles)if(hearse.funeral){
                 var home=SocietyBuilding(local,hearse.warehouse);if(!CivicServiceReady(home))continue;
                 var death=c.deaths.Find(d=>d.id==hearse.funeralDeath);
-                if(hearse.phase!=CargoVehiclePhase.Idle&&local.CargoNavigation?.Arrived(hearse)==true&&death!=null){
+                if(hearse.phase!=CargoVehiclePhase.Idle&&local.CargoNavigation?.Arrived(hearse)==true&&(death!=null||hearse.phase==CargoVehiclePhase.Returning)){
                     if(hearse.phase==CargoVehiclePhase.Collecting){death.collected=true;hearse.phase=CargoVehiclePhase.Delivering;}
-                    else{death.delivered=true;hearse.phase=CargoVehiclePhase.Idle;}
+                    else if(hearse.phase==CargoVehiclePhase.Returning){hearse.phase=CargoVehiclePhase.Idle;}
+                    else {death.delivered=true;if(home.definition.id==FuneralDirectors){if(!death.interred)continue;hearse.phase=CargoVehiclePhase.Returning;hearse.destination=death.graveyard;hearse.departure=now;}else hearse.phase=CargoVehiclePhase.Idle;}
                     hearse.navigationVersion=0;local.NotifyChanged();
                 }
                 if(hearse.phase!=CargoVehiclePhase.Idle)continue;
                 var pending=c.deaths.Find(d=>d.discovered&&!d.delivered&&(d.hearse==0||d.hearse==hearse.id));if(pending==null)continue;
-                pending.hearse=hearse.id;pending.graveyard=home.persistentId;hearse.funeralDeath=pending.id;hearse.funeralPickup=pending.place;hearse.source=hearse.destination=home.persistentId;hearse.phase=pending.collected?CargoVehiclePhase.Delivering:CargoVehiclePhase.Collecting;hearse.departure=now;hearse.navigationVersion=0;local.NotifyChanged();
+                var cemetery=local.Buildings.Find(b=>b.team==c.faction&&b.definition.id==Graveyard&&CivicServiceReady(b));if(cemetery==null)continue;
+                pending.hearse=hearse.id;pending.graveyard=cemetery.persistentId;hearse.funeralDeath=pending.id;hearse.funeralPickup=pending.place;hearse.source=home.persistentId;hearse.destination=cemetery.persistentId;hearse.phase=pending.collected?CargoVehiclePhase.Delivering:CargoVehiclePhase.Collecting;hearse.departure=now;hearse.navigationVersion=0;local.NotifyChanged();
             }
             if(c.security.activeFuneral!=0){if(now<c.security.funeralUntil)return;var ended=c.deaths.Find(d=>d.id==c.security.activeFuneral);if(ended!=null){ended.interred=true;ended.burialAt=now;}c.security.activeFuneral=0;local.NotifyChanged();}
             var next=c.deaths.Find(d=>d.delivered&&!d.interred&&d.ceremonyDue<=now&&CivicServiceReady(SocietyBuilding(local,d.graveyard)));

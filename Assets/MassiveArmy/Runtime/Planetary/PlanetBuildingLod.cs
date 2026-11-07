@@ -40,7 +40,7 @@ namespace MassiveArmy.Planetary {
         }
         void LegacyRebaseInfrastructure(){foreach(var b in Buildings){PlaceTransform(b.visual.transform,b.definition,CubeSphere.Decode(b.position),b.rotation);b.visual.transform.localScale=Vector3.one*(b.Complete?1:Mathf.Lerp(.1f,1,b.construction/b.definition.time));}
             for(int i=0;i<markers.Count;i++){var up=CubeSphere.Decode(Nodes[i].position);markers[i].transform.SetPositionAndRotation(fixture.RenderBodyPosition(surface.GetSurfacePositionPrecise(up)),Quaternion.FromToRotation(Vector3.up,up));}if(ghost!=null)PlaceTransform(ghost.transform,Placing,ghostDirection,PlacementRotation);}
-        void RebaseInfrastructure(){
+        void RebaseInfrastructure(){using var timing=SettlementPerformance.Sample("InfrastructureRebase");
             if(LegacyCityPresentation){LegacyRebaseInfrastructure();return;}
             for(int i=pendingConstructionViews.Count-1;i>=0;i--){var state=pendingConstructionViews[i];var b=state.building;if(b.removed){pendingConstructionViews.RemoveAt(i);continue;}float size=b.Complete?1:Mathf.Lerp(.1f,1,b.construction/b.definition.time);if(size!=state.scale){state.root.localScale=Vector3.one*size;state.scale=size;scaleRevision++;}if(b.Complete)pendingConstructionViews.RemoveAt(i);}
             int terrain=fixture.definition.Edits.Revision;var centre=fixture.PlanetRenderCentre;
@@ -54,7 +54,7 @@ namespace MassiveArmy.Planetary {
             }
             if(ghost!=null)PlaceTransform(ghost.transform,Placing,ghostDirection,PlacementRotation);UpdateBuildingViews();UpdateModularViews();
         }
-        void UpdateBuildingViews(){
+        void UpdateBuildingViews(){using var timing=SettlementPerformance.Sample("BuildingViews");
             var camera=fixture.View;if(camera==null)return;var matrix=camera.projectionMatrix*camera.worldToCameraMatrix;var centre=fixture.PlanetRenderCentre;int height=camera.pixelHeight;
             if(viewCount==buildingViews.Count&&viewTerrain==fixture.definition.Edits.Revision&&buildingCamera==matrix&&buildingCentre==centre&&buildingHeight==height&&lastViewRevision==Revision&&lastViewScaleRevision==scaleRevision)return;
             lastViewScaleRevision=scaleRevision;lastViewRevision=Revision;buildingCamera=matrix;buildingCentre=centre;buildingHeight=height;viewCount=buildingViews.Count;viewTerrain=fixture.definition.Edits.Revision;

@@ -22,7 +22,7 @@ AppendStructuredBuffer<uint2> _CbtVisible;
 uint _CbtTreeWords,_CbtMaxDepth,_CbtVertexCount,_CbtRequestWords,_CbtDepth;
 float3 _CbtCamera;
 float4 _CbtPlanes[6];
-float _CbtProjection,_CbtErrorPixels;
+float _CbtProjection,_CbtErrorPixels,_CbtDetailEnabled;float3 _CbtDetailCamera;
 uint _CbtDisableCulling;
 uint MidpointKey(uint root,uint depth,int2 a,int2 c){return depth*_CbtVertexCount+CbtVertexIndex(root,(a+c)/2);}
 uint2 SelectLeaf(uint rank){uint root=0;for(;root<11;root++){uint count=_CbtCounts[root*_CbtTreeWords+1];if(rank<count)break;rank-=count;}
@@ -42,7 +42,9 @@ bool Visible(uint root,int2 a,int2 b,int2 c){if(_CbtDisableCulling!=0)return tru
 }
 float Error(uint root,int2 a,int2 b,int2 c){float3 pa=PlanetPosition(CbtDirection(root,a)),pb=PlanetPosition(CbtDirection(root,b)),pc=PlanetPosition(CbtDirection(root,c));
     float error=max(length(PlanetPosition(CbtDirectionFloat(root,(float2(a)+c)*.5))-(pa+pc)*.5),max(length(PlanetPosition(CbtDirectionFloat(root,(float2(a)+b)*.5))-(pa+pb)*.5),length(PlanetPosition(CbtDirectionFloat(root,(float2(b)+c)*.5))-(pb+pc)*.5)));
-    float distance=max(.1,min(length(pa-_CbtCamera),min(length(pb-_CbtCamera),length(pc-_CbtCamera))));return error*_CbtProjection/distance;
+    float distance=max(.1,min(length(pa-_CbtCamera),min(length(pb-_CbtCamera),length(pc-_CbtCamera))));
+    [branch]if(_CbtDetailEnabled>.5)distance=min(distance*2,max(.1,min(length(pa-_CbtDetailCamera),min(length(pb-_CbtDetailCamera),length(pc-_CbtDetailCamera)))));
+    return error*_CbtProjection/distance;
 }
 [numthreads(128,1,1)]void Initialize(uint3 id:SV_DispatchThreadID){if(id.x>=12*_CbtTreeWords)return;_CbtStates[id.x]=id.x%_CbtTreeWords==1?1:0;_CbtCounts[id.x]=0;}
 [numthreads(128,1,1)]void ClearRequests(uint3 id:SV_DispatchThreadID){if(id.x<_CbtRequestWords){_SplitRequests[id.x]=0;_MergeRequests[id.x]=0;}if(id.x<8)_CbtStats[id.x]=0;}

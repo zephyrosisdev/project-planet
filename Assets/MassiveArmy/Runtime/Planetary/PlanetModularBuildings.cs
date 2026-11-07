@@ -19,7 +19,14 @@ namespace MassiveArmy.Planetary {
             VisibleModularRooms=0;foreach(var detail in modularDetails)if(detail.Building!=null){detail.RefreshTerrain(surface,fixture);detail.Update(camera);VisibleModularRooms+=detail.VisibleRooms;}
             foreach(var state in buildingViews)if(state.modular!=null&&state.shell!=null&&state.lod==0){bool detailed=false;foreach(var detail in modularDetails)if(detail.Building==state.building){detailed=true;break;}var mesh=detailed?state.near:state.far;if(state.shell.sharedMesh!=mesh)state.shell.sharedMesh=mesh;}
         }
-        public bool InteractModularDoor(Ray ray){foreach(var detail in modularDetails)if(detail.Interact(ray)){foreach(var colony in Settlements)if(colony!=null){var installation=SettlementLogistics.Find(colony,detail.Building.persistentId);if(installation!=null)installation.modularDoors=detail.Building.modularDoors;}Notice="Building door toggled Â· F to interact";return true;}return false;}
+        public bool InteractModularDoor(Ray ray){
+            foreach(var detail in modularDetails){bool locked=false;
+                if(!detail.Interact(ray,door=>{var building=detail.Building;if(building.definition.id!="civil_pub")return true;var local=building.visual.transform.InverseTransformPoint(ray.origin);bool inside=Mathf.Abs(local.x)<12&&local.z<11.5f&&local.z>-12;
+                    bool allowed=door==0?(CivilisationRuntime.PubOpen(this,building)||fixture.PlayerHasPubLease(building)||inside):door<3||fixture.PlayerHasPubLease(building,door-2);locked=!allowed;return allowed;}))continue;
+                foreach(var colony in Settlements)if(colony!=null){var installation=SettlementLogistics.Find(colony,detail.Building.persistentId);if(installation!=null)installation.modularDoors=detail.Building.modularDoors;}
+                Notice=locked?"Door locked · pub hours 11:00–23:00; apartments require a lease":"Building door toggled · F to interact";return true;
+            }return false;
+        }
         internal void ValidateModularDetail(System.Action<bool,string> check,System.Action<string> capture=null){
             RtsBuilding building=null;foreach(var candidate in Buildings)if(candidate.definition.id=="civil_housing"&&art.FindBuilding(candidate.definition)?.modular!=null){building=candidate;break;}
             if(building==null)return;var layout=art.FindBuilding(building.definition).modular;var portal=System.Array.Find(layout.portals,p=>p.b<0&&!p.window);var transform=building.visual.transform;var camera=fixture.View;var originalPosition=camera.transform.position;var originalRotation=camera.transform.rotation;uint oldDoors=building.modularDoors;

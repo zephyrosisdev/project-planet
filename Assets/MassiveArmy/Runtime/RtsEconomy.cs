@@ -75,7 +75,7 @@ namespace MassiveArmy
             f.efficiency=f.demand<=0?1:Mathf.Clamp((f.demand+net)/f.demand,.25f,1);f.battery=Mathf.Min(f.battery,f.energyCapacity);
             if(Battle.Statistics!=null)f.wallet.Spend(new ResourceCost{materials=Battle.Statistics[88+f.team]*dt*.2f});
             foreach(var b in owned){var d=b.definition;b.Efficiency=b.powered?f.efficiency*Modifier(f,"production")*(owned.Any(o=>o.definition.id=="logistics"&&o.powered&&Field.Distance(o.position,b.position)<220)?1.15f:1):0;if(!b.powered)continue;
-                if(b.node>=0){var node=Nodes[b.node];float amount=Mathf.Min(node.remaining,d.extraction*node.rateMultiplier*b.level*b.Efficiency*Modifier(f,"extraction")*dt);node.remaining-=f.wallet.Deposit(node.resource,amount);}
+                if(b.node>=0){var node=Nodes[b.node];float amount=Mathf.Min(node.Available,d.extraction*node.rateMultiplier*b.level*b.Efficiency*Modifier(f,"extraction")*dt);node.Consume(f.wallet.Deposit(node.resource,amount));}
                 else if(d.id=="synthetic"){float amount=d.extraction*b.level*b.Efficiency*dt;if(f.wallet.Spend(new ResourceCost{materials=amount*.5f}))f.wallet.Deposit(ResourceKind.Fuel,amount);}
                 if(d.researchRate>0)f.wallet.Deposit(ResourceKind.Research,d.researchRate*b.level*b.Efficiency*dt);
                 if((b.repairing||(Battle.SensorData!=null&&(Battle.SensorData[b.index*4]>>16)>0))&&b.health<b.MaxHealth){float heal=Mathf.Min(b.MaxHealth-b.health,80*b.Efficiency*Modifier(f,"repair")*dt);if(f.wallet.Spend(new ResourceCost{materials=heal*.06f}))b.health+=heal;}

@@ -7,8 +7,8 @@ namespace MassiveArmy.Planetary {
     public static class SettlementCrimeView {
         public const int PageSize=12;
         public static bool Visible(CrimeCase record,bool observer)=>observer||record.reported;
-        public static bool Known(ColonyState c,long person,bool observer)=>observer||c.crime!=null&&c.crime.cases.Exists(q=>q.reported&&q.suspect==person);
-        public static string Cause(DeathCause cause){switch(cause){case DeathCause.OldAge:return "Old age";case DeathCause.Murder:return "Homicide";case DeathCause.Robbery:return "Robbery";case DeathCause.PoliceViolence:return "Police violence";default:return "Zombie attack";}}
+        public static bool Known(ColonyState c,long person,bool observer)=>observer||CivilisationRuntime.Person(c,person)?.crime?.knownToPolice==true||c.crime!=null&&c.crime.cases.Exists(q=>q.reported&&q.suspect==person);
+        public static string Cause(DeathCause cause){switch(cause){case DeathCause.Infection:return "Infection / conversion";case DeathCause.RaiderAttack:return "Raider attack";case DeathCause.OldAge:return "Old age";case DeathCause.Murder:return "Homicide";case DeathCause.Robbery:return "Robbery";case DeathCause.PoliceViolence:return "Police violence";default:return "Zombie attack";}}
         public static string Activity(CrimeActivity activity){switch(activity){case CrimeActivity.None:return "No recorded activity";case CrimeActivity.IndependentSexWorker:return "Independent adult sex work";case CrimeActivity.ExploitedSexWorker:return "Victim of exploitation";case CrimeActivity.Exploiter:return "Exploitation";case CrimeActivity.Begging:return "Begging";default:return activity.ToString();}}
         public static string Custody(CustodyStage stage){switch(stage){case CustodyStage.AwaitingCourt:return "Awaiting court";case CustodyStage.AwaitingPrison:return "Awaiting prison transfer";case CustodyStage.FederalPrison:return "Federal prison";case CustodyStage.CountyJail:return "County jail";default:return "Not in custody";}}
         static string Person(ColonyState c,long id)=>id==0?"Unknown":CivilisationRuntime.Person(c,id)?.name??"Resident #"+id;

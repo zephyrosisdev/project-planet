@@ -27,18 +27,17 @@ namespace MassiveArmy.Planetary {
             internal RtsBuilding Get(int offset)=>count==0?null:sites[(next-1-offset%count+sites.Length)%sites.Length];
         }
         readonly Dictionary<(int,SettlementDistrict),PlanningFrontier> planningFrontiers=new Dictionary<(int,SettlementDistrict),PlanningFrontier>();
-        readonly Dictionary<(int,string),PlanningFrontier> cropFrontiers=new Dictionary<(int,string),PlanningFrontier>();
+        readonly Dictionary<(int,string),PlanningFrontier> typeFrontiers=new Dictionary<(int,string),PlanningFrontier>();
         readonly PlanningFrontier[] allFrontiers=System.Linq.Enumerable.Range(0,PlanetCountries.Maximum).Select(_=>new PlanningFrontier()).ToArray();
-        readonly Dictionary<(int,string),int> failedPlanningOffsets=new Dictionary<(int,string),int>();
         readonly Dictionary<(int,string),int> planningCursors=new Dictionary<(int,string),int>();
         readonly List<RtsBuilding> planningAnchors=new List<RtsBuilding>(12);
-        readonly List<(Vector3 point,int rotation,float score)> districtCandidates=new List<(Vector3,int,float)>();
         internal int LastPlanningCandidates {get;private set;}
-        void RegisterPlanningSite(RtsBuilding b){var key=(b.team,b.definition.district);if(!planningFrontiers.TryGetValue(key,out var ring)){ring=new PlanningFrontier();planningFrontiers.Add(key,ring);}var area=Area(b);ring.Add(b,area);allFrontiers[b.team].Add(b,area);if(b.definition.id.StartsWith("civil_farm_")){var cropKey=(b.team,b.definition.id);if(!cropFrontiers.TryGetValue(cropKey,out var crop)){crop=new PlanningFrontier();cropFrontiers.Add(cropKey,crop);}crop.Add(b,area);}}
+        void RegisterPlanningSite(RtsBuilding b){var key=(b.team,b.definition.district);if(!planningFrontiers.TryGetValue(key,out var ring)){ring=new PlanningFrontier();planningFrontiers.Add(key,ring);}var area=Area(b);ring.Add(b,area);allFrontiers[b.team].Add(b,area);{var cropKey=(b.team,b.definition.id);if(!typeFrontiers.TryGetValue(cropKey,out var crop)){crop=new PlanningFrontier();typeFrontiers.Add(cropKey,crop);}crop.Add(b,area);}}
         int PlanningCursor(BuildingDefinition d,int team){var key=(team,d.id);planningCursors.TryGetValue(key,out int cursor);planningCursors[key]=(cursor+1)&int.MaxValue;return cursor;}
         void PlanningAnchors(BuildingDefinition d,int team,int cursor){
             planningAnchors.Clear();var district=d.district;
-            PlanningFrontier preferred=null;if(d.id.StartsWith("civil_farm_"))cropFrontiers.TryGetValue((team,d.id),out preferred);if(preferred==null)planningFrontiers.TryGetValue((team,district),out preferred);if(preferred!=null)Add(preferred,6);
+            if(PlanningSettlement!=null){if(RegionalAnchors!=null)foreach(var b in RegionalAnchors)if(InPlanningSettlement(b)&&b.Complete&&(b.definition.district==d.district||b.definition.id=="command")&&!planningAnchors.Contains(b))planningAnchors.Add(b);var hub=FindBuilding(PlanningSettlement.hub);if(hub!=null&&!planningAnchors.Contains(hub))planningAnchors.Add(hub);return;}
+            PlanningFrontier preferred=null;if(d.id.StartsWith("civil_farm_"))typeFrontiers.TryGetValue((team,d.id),out preferred);if(preferred==null)planningFrontiers.TryGetValue((team,district),out preferred);if(preferred!=null)Add(preferred,6);
             if(d.district==SettlementDistrict.Agricultural&&planningFrontiers.TryGetValue((team,SettlementDistrict.Agricultural),out var fields)&&fields!=preferred)Add(fields,4);
             Add(allFrontiers[team],d.district==SettlementDistrict.Agricultural?2:4);
             // Headquarters remain military anchors after economic frontier rings roll over.
@@ -46,25 +45,34 @@ namespace MassiveArmy.Planetary {
             void Add(PlanningFrontier ring,int budget){for(int i=0;i<Math.Min(budget,ring.count);i++){var b=i<budget/2?ring.GetEdge((cursor%96)*(budget/2)+i):ring.Get((cursor%ring.count)*(budget/2)+i-budget/2);if(b==null||b.removed||!b.Complete&&!(d.id.StartsWith("civil_farm_")&&b.definition.id==d.id)||!CivilianExpansion(d)&&b.definition.buildRadius<=0||planningAnchors.Contains(b))continue;planningAnchors.Add(b);}}
         }
         internal bool CivilianExpansion(BuildingDefinition d)=>Civilisation!=null&&d.district!=SettlementDistrict.Military&&d.id!="command"&&d.id!="outpost";
+        // Random local growth: no candidate ranking, city-wide search, or retry storm.
+        // Persistent type/district frontier rings have fixed capacity regardless of city size.
+        readonly System.Random districtRandom=new System.Random(72913);
         bool BuildDistrict(BuildingDefinition d,int team){
-            using var timing=SettlementPerformance.Sample("DistrictPlacement");int cursor=PlanningCursor(d,team);PlanningAnchors(d,team,cursor);var occupancy=CaptureConstructionOccupancy();bool seedField=d.id.StartsWith("civil_farm_")&&!planningAnchors.Exists(b=>b.definition.id==d.id);var candidates=districtCandidates;candidates.Clear();LastPlanningCandidates=0;
-            if(d.housingCapacity>0)AddStreetCandidates(d,team,candidates,occupancy);
-            foreach(var anchorBuilding in planningAnchors){var a=Area(anchorBuilding);
-                // Farms grow as contiguous blocks; housing grows by shared frontage.
-                if(d.district==SettlementDistrict.Agricultural&&anchorBuilding.definition.district==SettlementDistrict.Agricultural)for(int side=-1;side<=1;side+=2){int width=(a.rotation&1)==0?d.footprintWidth:d.footprintDepth,depth=(a.rotation&1)==0?d.footprintDepth:d.footprintWidth;double dx=(a.rotation&1)==0?side*(a.width+width)*.5:0,dy=(a.rotation&1)!=0?side*(a.depth+depth)*.5:0;Add(a.x+a.width*.5+dx,a.y+a.depth*.5+dy,a.rotation,-100000);}
-                var offset=anchorBuilding.definition.district==d.district?Vector2.zero:SettlementDistricts.Offset(d.district);int stride=Math.Max(d.footprintWidth,d.footprintDepth)+2;
-                for(int edge=0;edge<16;edge++){int side=edge/4,along=edge%4-1;int x=side==0?-2:side==1?2:along,y=side==2?-2:side==3?2:along;
-                    double px=a.x+a.width*.5+offset.x+x*stride,py=a.y+a.depth*.5+offset.y+y*stride;var p=Grid.Point(a.face,px,py);
-                    int turn=0;float best=float.MaxValue;for(int rotation=0;rotation<4;rotation++){float score=(Grid.Direction(Grid.Port(Grid.Area(d,p,rotation)))-Homes[team]).sqrMagnitude;if(score<best){best=score;turn=rotation;}}
-                    Add(px,py,turn,Mathf.Abs(x)+Mathf.Abs(y));
-                }
-                void Add(double x,double y,int rotation,float priority){LastPlanningCandidates++;var p=Grid.Point(a.face,x,y);if(!DistrictClear(d,p,team)||!GridClear(Grid.Area(d,p,rotation),out _,d,occupancy))return;
-                    if(seedField){var field=Grid.Area(d,p,rotation);bool space=false;for(int sign=-1;sign<=1;sign+=2){int dx=(rotation&1)==0?sign*field.width:0,dy=(rotation&1)!=0?sign*field.depth:0;var next=Grid.Point(field.face,field.x+field.width*.5+dx,field.y+field.depth*.5+dy);if(DistrictClear(d,next,team)&&GridClear(Grid.Area(d,next,rotation),out _,d,occupancy))space=true;}if(!space)return;}
-                    // Local road length and district compatibility are constant-work rules.
-                    var port=Grid.Port(Grid.Area(d,p,rotation));var anchorPort=Grid.Port(a);float road=port.face==anchorPort.face?Mathf.Abs(port.x-anchorPort.x)+Mathf.Abs(port.y-anchorPort.y):100;
-                    candidates.Add((p,rotation,priority+road*.8f));}
+            using var timing=SettlementPerformance.Sample("DistrictPlacement");
+            int cursor=PlanningCursor(d,team);PlanningAnchors(d,team,cursor);
+            typeFrontiers.TryGetValue((team,d.id),out var sameType);
+            var occupancy=CaptureConstructionOccupancy();LastPlanningCandidates=0;
+            for(int attempt=0;attempt<8;attempt++){
+                RtsBuilding anchor=null;
+                // Most attempts grow a block of the same building; the remainder use its district.
+                if(sameType!=null&&sameType.count>0&&districtRandom.Next(4)!=0)anchor=sameType.GetEdge(districtRandom.Next(48))??sameType.Get(districtRandom.Next(sameType.count));
+                if(!InPlanningSettlement(anchor))anchor=planningAnchors.Count==0?null:planningAnchors[districtRandom.Next(planningAnchors.Count)];
+                if(!InPlanningSettlement(anchor))continue;
+                var area=Area(anchor);int rotation=anchor.definition.district==d.district?area.rotation:districtRandom.Next(4);
+                int w=(rotation&1)==0?d.footprintWidth:d.footprintDepth,h=(rotation&1)==0?d.footprintDepth:d.footprintWidth;
+                int side=districtRandom.Next(4),gap=1+attempt/4; // leave space for roads between blocks
+                double x=area.x+area.width*.5,y=area.y+area.depth*.5;
+                if(side<2)x+=(side==0?-1:1)*(area.width*.5+w*.5+gap);
+                else y+=(side==2?-1:1)*(area.depth*.5+h*.5+gap);
+                if(anchor.definition.district!=d.district){var offset=SettlementDistricts.Offset(d.district);x+=offset.x*(1+attempt/2);y+=offset.y*(1+attempt/2);}
+                if(x<w*.5||y<h*.5||x+w*.5>Grid.Resolution||y+h*.5>Grid.Resolution)continue;
+                var point=Grid.Point(area.face,x,y);LastPlanningCandidates++;if(!InPlanningRange(point))continue;
+                if(!DistrictClear(d,point,team)||!GridClear(Grid.Area(d,point,rotation),out _,d,occupancy))continue;
+                // At most one expensive final validation/GPU clearance per decision.
+                return ConstructOriented(d,team,point,rotation);
             }
-            candidates.Sort((a,b)=>a.score.CompareTo(b.score));var key=(team,d.id);failedPlanningOffsets.TryGetValue(key,out int attemptOffset);for(int i=0;i<Math.Min(3,candidates.Count);i++){var c=candidates[(attemptOffset+i)%candidates.Count];if(ConstructOriented(d,team,c.point,c.rotation)){failedPlanningOffsets[key]=0;return true;}}failedPlanningOffsets[key]=candidates.Count==0?0:(attemptOffset+3)%candidates.Count;return false;
+            return false;
         }
         internal bool BuildSettlementFrontier(string requested,int team){var d=Catalog.Buildings[requested];return CivilianExpansion(d)&&d.terrain!=TerrainRule.Node&&BuildDistrict(d,team);}
         readonly List<(Vector3 point,int rotation,float score)> previewStreetCandidates=new List<(Vector3,int,float)>();
@@ -97,7 +105,7 @@ namespace MassiveArmy.Planetary {
                 }
             }
         }
-        bool ConstructOriented(BuildingDefinition d,int team,Vector3 direction,int rotation){direction=SnapBuilding(d,direction,rotation);var valid=Validate(d,direction,rotation,true,team);if(!valid.valid||!fixture.IsFootprintClear(direction,FootprintRadius(d))||!ConstructionCost(team,direction,d.cost,true))return false;
-            var b=Create(d,direction,rotation,false,team);b.node=ResolveResourceNode(valid.node);Civilisation?.SponsorProject(this,b);if(b.node>=0)Nodes[b.node].claimedBy=b.index;fixture.RefreshBuildingCosts(Buildings);Rebase();return true;}
+        bool ConstructOriented(BuildingDefinition d,int team,Vector3 direction,int rotation){direction=SnapBuilding(d,direction,rotation);var valid=Validate(d,direction,rotation,true,team);if(!valid.valid||fixture.ResidentActive&&!fixture.IsFootprintClear(direction,FootprintRadius(d))||!ConstructionCost(team,direction,d.cost,true))return false;
+            var b=Create(d,direction,rotation,false,team);b.node=ResolveResourceNode(valid.node);Civilisation?.SponsorProject(this,b);if(b.node>=0)Nodes[b.node].claimedBy=b.index;RefreshConstructionCosts();Rebase();return true;}
     }
 }

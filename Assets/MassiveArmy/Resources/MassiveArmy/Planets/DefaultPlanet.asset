@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1e8d55c9dd9d9ca49800d96463c74ffc, type: 3}
   m_Name: DefaultPlanet
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   stampTerrain: 1
   bodyId: 1
   terrainSeed: 73129
@@ -24,12 +24,79 @@ MonoBehaviour:
   axialTilt: 0
   hasAtmosphere: 1
   breathable: 1
-  atmosphereHeight: 10000
+  atmosphereHeight: 66000
   surfacePressure: 1
   oxygenLevel: 0.21
+  weather:
+    quality: 3
+    renderScaleOverride: 0
+    marchStepsOverride: 0
+    shadowResolutionOverride: 2048
+    shadowLayersOverride: 0
+    shadowUpdateVoxelsPerFrame: 1048576
+    shadowRefreshInterval: 0.25
+    fullDetailScreenFraction: 0.2
+    clouds: 1
+    coverage: 0.439
+    cloudAltitude: 22000
+    cloudThickness: 2872
+    windSpeed: 25
+    cloudDensity: 1
+    adaptiveLocalDetail: 1
+    localDetailDistance: 50000
+    localDetailFeatureSize: 350
+    localDetailStrength: 0.25
+    noiseFeatureSize: 0.05
+    detailNoiseOctaves: 8
+    octavePersistence: 0.1
+    octaveLacunarity: 1.2
+    detailNoiseFrequency: 0.31
+    detailErosion: 0.916
+    fineNoiseStrength: 0.3
+    fineNoiseFrequency: 5.1
+    noiseContrast: 0.32
+    detailCounterDrift: 0
+    interiorSoftness: 0.011
+    interiorExtinction: 1
+    multipleScattering: 0.475
+    forwardScattering: 0.65
+    cloudBrightness: 0.894
+    interiorAmbient: 0.6
+    lightScattering: 0.881
+    cloudShadowStrength: 1
+    internalShadowContrast: 3
+    cloudDetailDistance: 1
+    haze: 0.45
+    physicalAtmosphere: 1
+    neutralSunlight: 1
+    rayleighStrength: 1
+    aerosolStrength: 1
+    airDensityNoise: 0.06
+    airDensityNoiseScale: 32
+    airSolarTide: 0.025
+    airGravityTide: 0.012
+    atmosphereColour: {r: 0.6650944, g: 0.8360412, b: 1, a: 0.4117647}
+    cloudColour: {r: 1, g: 1, b: 1, a: 1}
   position:
     sectorX: 0
     sectorY: 0
     sectorZ: 0
-    local: {x: 0, y: 0, z: 0}
-  velocity: {x: 0, y: 0, z: 0}
+    local:
+      x: 0
+      y: 0
+      z: 0
+  velocity:
+    x: 0
+    y: 0
+    z: 0
+  oceanWaveHeight: 1.2
+  oceanWaveLength: 40
+  oceanWaveSpeed: 6
+  oceanWaveSteepness: 0.6
+  oceanFoamWidth: 3
+  oceanFoamStrength: 0.55
+  oceanFoamNoiseScale: 2.5
+  oceanShoreAttenuationDepth: 12
+  oceanFoamDepth: 5
+  experimentalGpuDoublePrecision: 0
+  gpuDoubleMinimumRadius: 2097152

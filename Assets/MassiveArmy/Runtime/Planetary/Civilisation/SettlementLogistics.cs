@@ -5,7 +5,8 @@ namespace MassiveArmy.Planetary
 {
     public enum CargoVehiclePhase {Idle,Collecting,Delivering,Returning}
     [Serializable]public sealed class CargoVehicleState {
-        public bool funeral;public long funeralDeath;public Vector2 funeralPickup;
+        public bool ambient;[NonSerialized]public bool ambientVisible;[NonSerialized]public double ambientNext;
+        public double lastRaided=-1000;public bool funeral;public long funeralDeath;public Vector2 funeralPickup;
         public uint navigationStatus;public long id,warehouse,source,destination;public bool aerial,freight,seaborne,train,returningUndelivered;public bool shuttleReturning;public int tier=1,level=1,pendingTier,pendingLevel,leg;public double upgradeRemaining;public double legDeparture,legArrival;public List<long> stops=new List<long>();public CargoVehiclePhase phase;
         public string resource;public double requested,loaded,buffered,transferred,departure,arrival,delivered,routeMetres;
         public List<Vector2> path=new List<Vector2>(); // Strategic endpoints only; no CPU road route or live pose.
@@ -35,20 +36,22 @@ namespace MassiveArmy.Planetary
         static bool Storage(SurfaceInstallation item)=>item.definition=="civil_warehouse"||item.definition=="civil_market";
         public static SurfaceInstallation Find(ColonyState colony,long id){foreach(var item in colony.installations)if(item.id==id)return item;return null;}
         static RtsBuilding Building(PlanetRtsBase local,long id)=>local.FindBuilding(id);
-        public bool Order(PlanetRtsBase local,int faction,bool aerial){
+        public bool Order(PlanetRtsBase local,int faction,bool aerial){if(civilisation.Settings.ambientSettlementLife)return false;
             var colony=civilisation.Colony(civilisation.BodyId(local.World.definition.bodyId),faction);if(colony==null||colony.cargoVehicles.Count+colony.cargoOrders.Count>=civilisation.Settings.maximumCargoVehicles)return false;
             RtsBuilding producer=null;foreach(var b in local.Buildings)if(b.team==faction&&!b.removed&&b.Complete&&(aerial?b.definition.id=="helipad":b.definition.id=="light_depot")){producer=b;break;}
             if(producer==null||!Connected(local,producer))return false;double cost=aerial?civilisation.Settings.airCargoVehicleMaterialCost:civilisation.Settings.cargoVehicleMaterialCost;
             var warehouse=RegionalWarehouse(local,colony,producer);if(warehouse==null||!warehouse.inventory.Spend("construction_materials",cost))return false;colony.cargoOrders.Add(new CargoVehicleOrder{producer=producer.persistentId,warehouse=warehouse.id,aerial=aerial});return true;
         }
         public bool Connected(PlanetRtsBase local,RtsBuilding building){
+            if(civilisation.Settings.ambientSettlementLife)return building!=null&&!building.removed;
             var colony=civilisation.Colony(civilisation.BodyId(local.World.definition.bodyId),building.team);if(colony==null)return false;
             foreach(var item in colony.installations)if(Storage(item)){var warehouse=Building(local,item.id);if(warehouse==null||!warehouse.Complete)continue;if(local.Roads.Connected(building,warehouse))return true;}
             foreach(var vehicle in colony.cargoVehicles)if(vehicle.aerial&&!vehicle.freight)return true;
             foreach(var vehicle in colony.cargoVehicles)if(vehicle.freight){var home=Building(local,vehicle.warehouse);if(home!=null&&TryFreightRoute(local,home,building,vehicle.seaborne,null,vehicle.train))return true;}return false;
         }
         public void Tick(PlanetRtsBase local,ColonyState colony,double dt){
-            var settings=civilisation.Settings;double now=civilisation.SimulationTime;
+            if(civilisation.Settings.ambientSettlementLife){civilisation.TickAmbientTraffic(local,colony);return;}
+            var settings=civilisation.Settings;double now=civilisation.SimulationTime;OrderDepotTankers(local,colony);
             dispatchBusy.Clear();dispatchHorizons.Clear();dispatchRecipes.Clear();failedDispatches.Clear();dispatchColony=colony;foreach(var vehicle in colony.cargoVehicles)TrackBusy(vehicle,1);
             try {
             for(int i=colony.cargoOrders.Count-1;i>=0;i--){var order=colony.cargoOrders[i];var producer=Building(local,order.producer);if(producer==null){colony.cargoOrders.RemoveAt(i);continue;}if(!producer.powered||producer.paused||!producer.Complete)continue;order.progress+=dt*producer.Efficiency;if(order.progress<settings.cargoVehicleSeconds)continue;
@@ -112,6 +115,10 @@ namespace MassiveArmy.Planetary
                 if(item.definition=="civil_warehouse")foreach(string supply in warehouseSupplies){if(essentialOnly&&supply=="construction_materials"||supply=="seeds"&&warehouse.inventory.Get("seeds")<=20)continue;double target=supply=="construction_materials"?civilisation.Settings.aiConstructionReserve: supply=="seeds"?10:100;double shortage=target-item.inventory.Get(supply);if(shortage>target*.5&&warehouse.inventory.Get(supply)>.1&&!Busy(colony,item.id,supply)&&Start(local,vehicle,home,producer,supply,Math.Min(shortage,warehouse.inventory.Get(supply)),false,colony))return true;}
                 if(producer.definition.id==CivilisationRuntime.PoliceHeadquarters||colony.crime.businesses.Exists(x=>x.building==producer.persistentId&&!x.shutDown))foreach(string supply in producer.definition.id==CivilisationRuntime.PoliceHeadquarters?new[]{"service_weapons","ammunition"}:new[]{"industrial_chemicals","steel","machine_parts"}){double target=supply=="ammunition"?48:12,shortage=target-item.inventory.Get(supply);if(shortage>target*.5&&warehouse.inventory.Get(supply)>.01&&!Busy(colony,item.id,supply)&&Start(local,vehicle,home,producer,supply,Math.Min(shortage,warehouse.inventory.Get(supply)),false,colony))return true;}
                 if(!string.IsNullOrEmpty(producer.definition.retailResource)){string resource=producer.definition.retailResource;double target=RetailTarget(colony,producer,SupplyHorizon(local,home,producer,vehicle.aerial)),stock=item.inventory.Get(resource);if(stock<target*.5&&warehouse.inventory.Get(resource)>.01&&!Busy(colony,item.id,resource)&&Start(local,vehicle,home,producer,resource,Math.Min(target-stock,warehouse.inventory.Get(resource)),false,colony))return true;}
+                if(CivilisationRuntime.DepotResource(item.definition)!=null&&item.inventory.Get("propellant")<15&&warehouse.inventory.Get("propellant")>0&&!Busy(colony,item.id,"propellant")&&Start(local,vehicle,home,producer,"propellant",Math.Min(30-item.inventory.Get("propellant"),warehouse.inventory.Get("propellant")),false,colony))return true;
+                if(producer.definition.id=="civil_gun_shop"||producer.definition.id=="civil_blade_shop"||producer.definition.id=="civil_pawn_shop"||producer.definition.id=="civil_black_market"||producer.definition.id=="civil_pub"){
+                    string[] supplies=producer.definition.id=="civil_pub"?new[]{"drinks","water"}:new[]{"ammunition","steel"};foreach(string resource in supplies)if(item.inventory.Get(resource)<30&&warehouse.inventory.Get(resource)>0&&!Busy(colony,item.id,resource)&&Start(local,vehicle,home,producer,resource,Math.Min(60-item.inventory.Get(resource),warehouse.inventory.Get(resource)),false,colony))return true;
+                }
                 // Inputs are replenished before exporting output, using finite warehouse stock and reserved vehicle capacity.
                 IndustryRecipe recipe=DispatchRecipe(item);
                 if(recipe!=null)foreach(var input in recipe.inputs){double target=InputTarget(input,recipe,producer,SupplyHorizon(local,home,producer,vehicle.aerial)),shortage=target-item.inventory.Get(input.resource);if(item.inventory.Get(input.resource)<target*.5&&shortage>.01&&warehouse.inventory.Get(input.resource)>.01&&!Busy(colony,item.id,input.resource)&&Start(local,vehicle,home,producer,input.resource,Math.Min(shortage,warehouse.inventory.Get(input.resource)),false,colony))return true;}
@@ -163,6 +170,7 @@ namespace MassiveArmy.Planetary
         }
         void AssignCore(PlanetRtsBase local,ColonyState colony,CargoVehicleState vehicle){
             var warehouse=Find(colony,vehicle.warehouse);var home=warehouse==null?null:Building(local,warehouse.id);if(home==null||!home.Complete)return;
+            string liquid=CivilisationRuntime.DepotResource(warehouse.definition);if(liquid!=null){AssignTanker(local,colony,vehicle,warehouse,home,liquid);return;}
             // Successful assignments rotate between complete supply-chain roles.
             // Constant food demand cannot indefinitely preempt grain/water or material haulage.
             haulTurns.TryGetValue(warehouse.id,out int turn);
@@ -185,7 +193,7 @@ namespace MassiveArmy.Planetary
         bool Export(PlanetRtsBase local,ColonyState colony,CargoVehicleState vehicle,SurfaceInstallation warehouse,RtsBuilding home){
             exportCursors.TryGetValue(colony.id,out int cursor);
             for(int scan=0;scan<colony.installations.Count;scan++){int at=(cursor+scan)%colony.installations.Count;var item=colony.installations[at];
-                if(item.id==warehouse.id)continue;var producer=Building(local,item.id);if(producer==null||!producer.Complete)continue;
+                if(item.id==warehouse.id||CivilisationRuntime.DepotResource(item.definition)!=null)continue;var producer=Building(local,item.id);if(producer==null||!producer.Complete)continue;
                 double upkeep=producer.definition.foodUse*producer.level+(producer.definition.housingCapacity>0?Math.Min(colony.population,producer.definition.housingCapacity*producer.level)*civilisation.Settings.populationFoodPerSecond:0);
                 IndustryRecipe recipe=DispatchRecipe(item);
                 foreach(var resource in civilisation.Catalogue.resources){if(item.definition=="civil_launch_pad"&&resource.id=="orbital_kit")continue;double stored=item.inventory.Get(resource.id);if(stored<=0)continue;double surplus=stored-RegionalReserve(item,resource.id);if(recipe!=null){foreach(var input in recipe.inputs)if(input.resource==resource.id)surplus-=InputTarget(input,recipe,producer,SupplyHorizon(local,home,producer,vehicle.aerial));}if(item.definition.StartsWith("civil_farm_")){if(resource.id=="water"||resource.id=="fertiliser")continue;if(resource.id=="seeds")surplus-=3;}

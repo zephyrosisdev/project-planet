@@ -31,7 +31,17 @@ namespace MassiveArmy.Planetary
         public static float ReliefCurvature(PlanetDefinition d)=>d.radius>=20000?Mathf.Abs(d.terrainHeight)*(.0000018f):80*Mathf.Abs(d.terrainHeight)/Mathf.Max(1,d.radius*d.radius);
         public void PrepareStartingAreas(Vector3 a,Vector3 b){plateauCount=2;for(int i=0;i<2;i++){var d=(i==0?a:b).normalized;plateaus[i]=new Vector4(d.x,d.y,d.z,Mathf.Max(definition.oceanHeight+35,BaseHeight(definition,d)));}Changed();}
         static float Profile(float q,float depth){float bowl=q<1?-depth*Mathf.Pow(1-q*q,2):0;float rim=Mathf.Max(0,1-Mathf.Abs(q-1)/.25f);return bowl+depth*.18f*rim*rim;}
-        public float Height(Vector3 direction){var d=direction.normalized;float h=BaseHeight(definition,d);for(int i=0;i<plateauCount;i++){var p=plateaus[i];float distance=(d-new Vector3(p.x,p.y,p.z)).magnitude*definition.radius;float blend=Mathf.SmoothStep(0,1,Mathf.InverseLerp(260,540,distance));h=Mathf.Lerp(p.w,h,blend);}return h+Delta(d);}
+        public float Height(Vector3 direction){if(PreciseEdits)return Height(new Double3(direction));var d=direction.normalized;float h=BaseHeight(definition,d);for(int i=0;i<plateauCount;i++){var p=plateaus[i];float distance=(d-new Vector3(p.x,p.y,p.z)).magnitude*definition.radius;float blend=Mathf.SmoothStep(0,1,Mathf.InverseLerp(260,540,distance));h=Mathf.Lerp(p.w,h,blend);}return h+Delta(d);}
+        bool PreciseEdits=>definition.experimentalGpuDoublePrecision&&definition.radius>=definition.gpuDoubleMinimumRadius;
+        // Only local collision/contact probes use this path. Army state remains on the GPU.
+        public float Height(Double3 direction){
+            if(!PreciseEdits)return Height(PlanetPrecisionPolicy.Direction(direction));
+            var d=direction*(1/Math.Max(1e-30,direction.Magnitude));float h=BaseHeight(definition,d.Float);
+            double Distance(Vector4 value){var centre=new Double3(value.x,value.y,value.z);centre*=1/centre.Magnitude;return (d-centre).Magnitude*definition.radius;}
+            for(int i=0;i<plateauCount;i++){var p=plateaus[i];float distance=(float)Distance(p);h=Mathf.Lerp(p.w,h,Mathf.SmoothStep(0,1,Mathf.InverseLerp(260,540,distance)));}
+            uint bits=Count==0?0:Mask(d.Float);float low=0,high=0;
+            for(int i=0;i<Count;i++)if((bits&(1u<<i))!=0){float delta=Profile((float)(Distance(craters[i])/craters[i].w),profiles[i].x);low=Mathf.Min(low,delta);high=Mathf.Max(high,delta);}return h+low+high;
+        }
         public float Delta(Vector3 direction){if(Count==0)return 0;uint bits=Mask(direction);float low=0,high=0;for(int i=0;i<Count;i++)if((bits&(1u<<i))!=0){var c=craters[i];float q=(direction-new Vector3(c.x,c.y,c.z)).magnitude*definition.radius/c.w;float delta=Profile(q,profiles[i].x);low=Mathf.Min(low,delta);high=Mathf.Max(high,delta);}return low+high;}
         public float FeatureCurvature(Vector3 center,float bound){float value=0;for(int i=0;i<Count;i++){var c=craters[i];if(Vector3.Distance(center,new Vector3(c.x,c.y,c.z)*definition.radius)<=bound+c.w*1.25f)value=Mathf.Max(value,8*profiles[i].x/(c.w*c.w));}return value;}
         uint Mask(Vector3 direction){var cell=CubeSphere.Cell(definition.bodyId,direction,Grid);var v=masks[cell.Index(Grid)];return (uint)v.x|((uint)v.y<<16);}

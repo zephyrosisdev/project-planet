@@ -11,16 +11,16 @@ namespace MassiveArmy.Planetary
         readonly CustomPassVolume volume;
         [Serializable]sealed class TerrainPass : CustomPass
         {
-            public PlanetDevelopment owner;
+            [NonSerialized] public PlanetDevelopment planet;
             protected override void Execute(CustomPassContext ctx){
-                if(owner==null||!owner.Ready||ctx.hdCamera.camera!=owner.View)return;
+                if(planet==null||!planet.Ready||ctx.hdCamera.camera!=planet.View)return;
                 CoreUtils.SetRenderTarget(ctx.cmd,ctx.cameraColorBuffer,ctx.cameraDepthBuffer,ClearFlag.None);
-                owner.RenderTerrain(ctx.cmd);owner.RenderWeather(ctx);
+                planet.RenderTerrain(ctx.cmd);planet.RenderWeather(ctx);
             }
         }
         public PlanetTerrainRenderer(PlanetDevelopment owner){
             volume=owner.gameObject.AddComponent<CustomPassVolume>();volume.isGlobal=true;volume.injectionPoint=CustomPassInjectionPoint.BeforeTransparent;
-            volume.customPasses.Add(new TerrainPass{owner=owner,name="Planet lit terrain",targetColorBuffer=CustomPass.TargetBuffer.None,targetDepthBuffer=CustomPass.TargetBuffer.None});
+            volume.customPasses.Add(new TerrainPass{planet=owner,name="Planet lit terrain",targetColorBuffer=CustomPass.TargetBuffer.None,targetDepthBuffer=CustomPass.TargetBuffer.None});
         }
         public void Dispose(){if(volume!=null)volume.enabled=false;ArmyLifetime.Destroy(volume);}
     }

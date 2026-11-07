@@ -18,6 +18,14 @@ namespace MassiveArmy.Planetary
         public static readonly Vector3[] Right={Vector3.back,Vector3.forward,Vector3.right,Vector3.right,Vector3.right,Vector3.left};
         public static readonly Vector3[] Up={Vector3.up,Vector3.up,Vector3.back,Vector3.forward,Vector3.up,Vector3.up};
         public static Vector3 Direction(CubeFace face,Vector2 uv){int f=(int)face;return (Normal[f]+Right[f]*uv.x+Up[f]*uv.y).normalized;}
+        // Unity's Vector3.normalized discards short vectors. Planet-space drags
+        // can be far smaller than its epsilon while still spanning metres.
+        internal static bool TryFormationRight(Vector3 start,Vector3 end,out Vector3 right){
+            right=Vector3.ProjectOnPlane(end-start,(start+end).normalized);
+            float length=right.magnitude;
+            if(!(length>1e-10f)){right=Vector3.zero;return false;}
+            right/=length;return true;
+        }
         public static void Project(Vector3 direction,out CubeFace face,out Vector2 uv)
         {
             if(direction.sqrMagnitude<1e-20f)throw new ArgumentException("Planet direction is zero");

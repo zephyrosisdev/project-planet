@@ -9,6 +9,9 @@ namespace MassiveArmy.Planetary
         struct Star {public Vector4 position,colour,properties;}
         readonly GalaxyModel galaxy;readonly int[] nodes;readonly Star[] records;readonly GraphicsBuffer buffer;readonly Material material;
         readonly GalaxyBackdrop backdrop;
+        int appearanceNode=-2,appearanceInstance;bool appearanceNeutral;
+        internal void SetSunAppearance(int node,bool neutral){if(node==appearanceNode&&neutral==appearanceNeutral)return;appearanceNode=node;appearanceNeutral=neutral;appearanceInstance=Array.IndexOf(nodes,node);material.SetVector("_GalaxySunOverride",new Vector4(appearanceInstance,neutral?1:0,0,0));}
+        internal void SetSunPreview(Vector3 direction,bool enabled)=>material.SetVector("_GalaxyPreviewSun",new Vector4(direction.x,direction.y,direction.z,enabled?1:0));
         UniversePosition anchor;double lastRefresh=-1e9;bool initialized;int count;
         public int RefreshCount {get;private set;}
         public int StarCount=>count;
@@ -47,3 +50,4 @@ namespace MassiveArmy.Planetary
         public void Dispose(){backdrop.Dispose();buffer.Dispose();ArmyLifetime.Destroy(material);}
     }
 }
+

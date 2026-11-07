@@ -1,3 +1,6 @@
+#pragma multi_compile _ PLANET_COMPANIONS
+#pragma multi_compile _ PLANET_STRATEGIC_LOD
+#pragma multi_compile _ PLANET_VEHICLES
 #pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
 #define PLANET_SPECIALIZE_TERRAIN 1
 #pragma multi_compile _ PLANET_REGIONAL_NAV
@@ -47,13 +50,13 @@ float _PlanetDt,_PlanetSpeed,_PlanetSpacing;
 float2 _PlanetStart,_PlanetGoal;
 StructuredBuffer<UnitArchetype> _Archetypes;
 StructuredBuffer<UnitTraits> _Traits;
-StructuredBuffer<float4> _PlanetBuildings;uint _PlanetBuildingCount,_PlanetSpawnSlot,_PlanetSpawnType,_PlanetSpawnTeam,_PlanetSpawnGroup;
+StructuredBuffer<float4> _PlanetBuildings;uint _PlanetBuildingCount,_PlanetSpawnSlot,_PlanetSpawnType,_PlanetSpawnTeam,_PlanetSpawnGroup,_PlanetSpawnFlags;float3 _StrategicObserver;float _StrategicDetailRange;
 RWStructuredBuffer<uint> _PlacementOccupied;float3 _PlacementDirection;float _PlacementRadius;uint _PlacementAir;
 [numthreads(128,1,1)]void CheckClearance(uint3 id:SV_DispatchThreadID){if(id.x>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[id.x];if((u.flags&ALIVE)==0)return;UnitArchetype archetype=_Archetypes[Type(u)];if((archetype.movement==3)!=(_PlacementAir!=0))return;
  if(PlanetArc(PlanetDecode(u.position),_PlacementDirection,_PlanetRadius)<_PlacementRadius+archetype.radius+1)InterlockedOr(_PlacementOccupied[0],1);
 }
 [numthreads(128,1,1)]void ConfigureCatalog(uint3 id:SV_DispatchThreadID){if(id.x>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[id.x];uint type=id.x%4==0?1:id.x%4==1?3:0;u.packed=type<<8;u.health=_Archetypes[type].health;u.flags=ALIVE|STOPPED;_PlanetUnits[id.x]=u;}
-[numthreads(1,1,1)]void SpawnCatalog(uint3 id:SV_DispatchThreadID){UnitState u=(UnitState)0;u.position=_PlanetStart;u.previous=u.position;u.destination=u.position;u.flags=ALIVE|(_PlanetSpawnTeam==1?ATTACK_MOVE:STOPPED);u.packed=(_PlanetSpawnType<<8)|_PlanetSpawnTeam;u.group=_PlanetSpawnGroup;u.health=_Archetypes[_PlanetSpawnType].health;u.target=INVALID;_PlanetUnits[_PlanetSpawnSlot]=u;}
+[numthreads(1,1,1)]void SpawnCatalog(uint3 id:SV_DispatchThreadID){UnitState u=(UnitState)0;u.position=_PlanetStart;u.previous=u.position;u.destination=u.position;u.flags=ALIVE|_PlanetSpawnFlags|(_PlanetSpawnTeam==2&&_PlanetSpawnType==31?ZOMBIE_UNIT|ZOMBIE_WANDERING:_PlanetSpawnTeam!=0||(_PlanetSpawnFlags&STRATEGIC_AI)!=0?ATTACK_MOVE:STOPPED);u.packed=(_PlanetSpawnType<<8)|_PlanetSpawnTeam;u.group=_PlanetSpawnGroup;u.health=_Archetypes[_PlanetSpawnType].health;u.target=INVALID;_PlanetUnits[_PlanetSpawnSlot]=u;}
 [numthreads(128,1,1)]void StampBuildings(uint3 id:SV_DispatchThreadID){
 #ifdef PLANET_REGIONAL_NAV
  return;
@@ -64,23 +67,39 @@ uint n=6*_PlanetNavRes*_PlanetNavRes;if(id.x>=n)return;float3 d=PlanetCellDirect
 [numthreads(128,1,1)]void GenerateCosts(uint3 id:SV_DispatchThreadID){uint n=6*_PlanetNavRes*_PlanetNavRes;if(id.x>=n)return;float3 d=PlanetCellDirection(PlanetCell(id.x,_PlanetNavRes),_PlanetNavRes);float h=PlanetHeight(d);for(uint m=0;m<5;m++)_PlanetCosts[m*n+id.x]=m==3?1:m==4?(h<_PlanetOcean?1:INF):(h>=_PlanetOcean?1:INF);}
 [numthreads(128,1,1)]void Spawn(uint3 id:SV_DispatchThreadID){if(id.x>=_PlanetUnitCount)return;UnitState u=(UnitState)0;float3 d=PlanetDecode(_PlanetStart);uint face=min((uint)floor(_PlanetStart.x),5u),columns=(uint)ceil(sqrt((float)_PlanetUnitCount));float3 right=normalize(PlanetU[face]-d*dot(PlanetU[face],d)),forward=cross(right,d);float2 offset=(float2(id.x%columns,id.x/columns)-(columns-1)*.5)*_PlanetSpacing;u.position=PlanetEncode(normalize(d+(right*offset.x+forward*offset.y)/max(1,_PlanetRadius)));u.previous=u.position;u.destination=_PlanetGoal;u.health=1000;u.flags=ALIVE;u.target=INVALID;_PlanetUnits[id.x]=u;}
 void MoveUnit(uint unitIndex,uint dispatchMode){uint3 id=uint3(unitIndex,0,0);if(id.x>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[id.x];uint fieldOffset=0;float dt=_PlanetDt;bool dormant=false;
+    if((u.flags&VEHICLE_DRIVEN)!=0)return;
 #ifdef PLANET_ENCOUNTERS
     dormant=dispatchMode==2||(dispatchMode==0&&_PlanetInterestEnabled!=0&&_PlanetActivity[id.x]==0);
     if(_PlanetInterestEnabled!=0){if(dormant&&(_PlanetInterestTick&31u)!=(id.x&31u))return;uint elapsed=min(32u,_PlanetInterestTick-_PlanetLastSimulationTick[id.x]);_PlanetLastSimulationTick[id.x]=_PlanetInterestTick;if(elapsed==0)return;dt*=elapsed;u.cooldown=max(0,u.cooldown-_PlanetDt*(dormant?elapsed:elapsed-1));}
+#ifdef PLANET_STRATEGIC_LOD
+    if(_PlanetInterestEnabled==0&&(u.flags&(RAIDER_UNIT|STRATEGIC_AI))!=0&&length(PlanetDecode(u.position)-_StrategicObserver)*_PlanetRadius>_StrategicDetailRange){if((_PlanetInterestTick&31u)!=(id.x&31u))return;dt*=32;dormant=true;}
+#endif
     if(dormant){if((u.flags&ALIVE)==0||(_PlanetInterestTick&31u)!=(id.x&31u))return;u.target=INVALID;
         if((u.flags&ZOMBIE_WANDERING)!=0){float3 d=PlanetDecode(u.position);if(PlanetArc(d,PlanetDecode(u.destination),_PlanetRadius)<3||(u.flags&ARRIVED)!=0){u.destination=PlanetEncode(RoamDestination(id.x,_PlanetInterestTick));u.flags&=~ARRIVED;}}
     }
 #endif
 #ifdef PLANET_GROUP_COMMANDS
-    if((u.flags&ALIVE)==0||(u.flags&STOPPED)!=0){u.previous=u.position;u.velocity=0;_PlanetUnits[id.x]=u;return;}
+    if((u.flags&ALIVE)==0||(u.flags&STOPPED)!=0){if((u.flags&PLANET_POSITION_RESIDUAL)==0)u.previous=u.position;u.velocity=0;_PlanetUnits[id.x]=u;return;}
 #ifdef PLANET_ENCOUNTERS
     if((u.flags&ZOMBIE_WANDERING)==0)
 #endif
-    u.destination=_Groups[u.group].destination;fieldOffset=u.group*6*_PlanetNavRes*_PlanetNavRes;
+    #ifdef PLANET_COMPANIONS
+    if((u.flags&COMPANION_UNIT)==0)
+#endif
+    if((u.flags&FORMATION)==0)u.destination=_Groups[u.group].destination;fieldOffset=u.group*6*_PlanetNavRes*_PlanetNavRes;
 #else
     u.destination=_PlanetGoal;
 #endif
     float3 d=PlanetDecode(u.position),goal=PlanetDecode(u.destination);int2 cell=PlanetPositionCell(u.position,_PlanetNavRes);uint index=PlanetIndex(cell,_PlanetNavRes);bool localSteering=false;
+#ifdef PLANET_GROUP_COMMANDS
+    [branch]if((u.flags&FORMATION)!=0&&length((goal-d)*_PlanetRadius)<.6){
+        // Stop chasing tiny steering corrections once the assigned slot is reached.
+        u.position=u.destination;u.previous=u.position;u.flags&=~PLANET_POSITION_RESIDUAL;u.velocity=0;u.flags=(u.flags&~(PASS_RIGHT|PASS_LEFT))|ARRIVED;
+        float3 formationRight=PlanetDecode(_Groups[u.group].right),heading=cross(formationRight,goal);
+        uint face=min((uint)floor(u.position.x),5u);float3 right=normalize(PlanetU[face]-goal*dot(PlanetU[face],goal)),forward=cross(right,goal);
+        u.facing=atan2(dot(heading,right),dot(heading,forward));if(u.target==INVALID)u.turret=u.facing;_PlanetUnits[id.x]=u;return;
+    }
+#endif
 #ifdef PLANET_ENCOUNTERS
     localSteering=_PlanetCrowdEnabled!=0&&!dormant;
 #endif
@@ -100,23 +119,30 @@ void MoveUnit(uint unitIndex,uint dispatchMode){uint3 id=uint3(unitIndex,0,0);if
 #ifdef PLANET_ENCOUNTERS
     if(!dormant&&_PlanetSteering[id.x].w>1||dormant&&(u.flags&ZOMBIE_WANDERING)!=0)unreachable=false;
 #endif
-    if(unreachable){u.previous=u.position;u.velocity=0;_PlanetUnits[id.x]=u;return;}
+    if(unreachable){if((u.flags&PLANET_POSITION_RESIDUAL)==0)u.previous=u.position;u.velocity=0;_PlanetUnits[id.x]=u;return;}
     if(!localSteering&&best<.001)target=goal;
     else if(!localSteering)for(uint k=0;k<4;k++){int2 c=PlanetNeighbour(cell,steps[k],_PlanetNavRes);uint j=PlanetIndex(c,_PlanetNavRes);float v=_PlanetField[fieldOffset+j];if(v<best){best=v;target=PlanetCellDirection(c,_PlanetNavRes);}}
     #ifdef PLANET_REGIONAL_NAV
     if(regionalRoute)target=regionalTarget;
+#ifdef PLANET_GROUP_COMMANDS
+    [branch] if((u.flags&FORMATION)!=0){float3 formationCentre=PlanetDecode(_Groups[u.group].destination);if(PlanetArc(d,formationCentre,_PlanetRadius)<PlanetArc(goal,formationCentre,_PlanetRadius)+80)target=goal;}
 #endif
-    float3 tangent=target-d*dot(target,d);float lengthT=length(tangent);u.previous=u.position;
+#endif
+    float3 tangent=target-d*dot(target,d);float lengthT=length(tangent);if((u.flags&PLANET_POSITION_RESIDUAL)==0)u.previous=u.position;
     float terrainHeight=PlanetHeight(d),speed=_PlanetSpeed,travelRadius=_PlanetRadius+terrainHeight,velocityRadius=_PlanetRadius;uint movementClass=2;
 #ifdef PLANET_RTS_CONTENT
-    speed=_Archetypes[Type(u)].speed;movementClass=_Archetypes[Type(u)].movement;
+    speed=_Archetypes[Type(u)].speed;
+#ifdef PLANET_STRATEGIC_LOD
+ if(dormant&&(u.flags&ZOMBIE_WANDERING)!=0)speed*=.4;
+#endif
+movementClass=_Archetypes[Type(u)].movement;
     travelRadius=_PlanetRadius+(movementClass==4?max(terrainHeight,_PlanetOcean):terrainHeight)+_Traits[Type(u)].altitude;
     velocityRadius=travelRadius;
 #endif
 #ifdef PLANET_ENCOUNTERS
     float4 steering=dormant?float4(0,0,0,0):_PlanetSteering[id.x];if(dormant&&(u.flags&ZOMBIE_WANDERING)!=0){float3 pursuit=goal-d*dot(goal,d);steering=float4(dot(pursuit,pursuit)>1e-10?normalize(pursuit)*min(speed,PlanetArc(d,goal,travelRadius)/max(dt,1e-6)):0,3);}
     float3 velocity=0;
-    if(lengthT>1e-6)velocity=tangent/lengthT*min(speed,PlanetArc(d,target,travelRadius)/max(dt,1e-6));
+    if(lengthT>1e-12)velocity=tangent/lengthT*min(speed,PlanetArc(d,target,travelRadius)/max(dt,1e-6));
     if(_PlanetCrowdEnabled!=0&&!dormant)velocity=steering.xyz;else if(steering.w>0)velocity=steering.xyz;else if(steering.w<0)velocity=steering.xyz;else velocity+=steering.xyz;
     float magnitude=length(velocity);float step=min(speed,magnitude)*dt/max(1,travelRadius);u.velocity=0;
     if(magnitude>1e-6&&step>0){tangent=velocity/magnitude;float3 side=cross(d,tangent),next=d,chosen=tangent;bool moved=false;
@@ -129,16 +155,16 @@ void MoveUnit(uint unitIndex,uint dispatchMode){uint3 id=uint3(unitIndex,0,0);if
 #endif
             if((u.flags&ZOMBIE_WANDERING)!=0&&!StartingRefugeClear(candidate))allowed=false;
             if(allowed){next=candidate;chosen=forward;moved=true;break;}}
-        if(moved){u.flags&=~ARRIVED;u.position=PlanetEncode(next);uint f=min((uint)floor(u.position.x),5u);float3 right=normalize(PlanetU[f]-next*dot(PlanetU[f],next)),forward=cross(right,next);u.facing=atan2(dot(chosen,right),dot(chosen,forward));u.turret=u.facing;u.velocity=float2(dot(chosen,right),dot(chosen,forward))*(velocityRadius*step/max(dt,1e-6));}else u.flags|=ARRIVED;
+        if(moved){u.flags&=~ARRIVED;if(step<1e-5||(u.flags&PLANET_POSITION_RESIDUAL)!=0)PlanetAdvancePosition(u.position,u.previous,u.flags,d,chosen,step);else u.position=PlanetEncode(next);uint f=min((uint)floor(u.position.x),5u);float3 right=normalize(PlanetU[f]-next*dot(PlanetU[f],next)),forward=cross(right,next);u.facing=atan2(dot(chosen,right),dot(chosen,forward));u.turret=u.facing;u.velocity=float2(dot(chosen,right),dot(chosen,forward))*(velocityRadius*step/max(dt,1e-6));}else u.flags|=ARRIVED;
     }else if((u.flags&ZOMBIE_WANDERING)!=0)u.flags|=ARRIVED;
 #else
     float angle=PlanetArc(d,target,1),step=min(speed*dt/max(1,travelRadius),angle);u.velocity=0;
-    if(lengthT>1e-6&&step>0){tangent/=lengthT;float3 next=normalize(d*cos(step)+tangent*sin(step));uint j=PlanetIndex(PlanetPositionCell(PlanetEncode(next),_PlanetNavRes),_PlanetNavRes);
+    if(lengthT>1e-12&&step>0){tangent/=lengthT;float3 next=normalize(d*cos(step)+tangent*sin(step));uint j=PlanetIndex(PlanetPositionCell(PlanetEncode(next),_PlanetNavRes),_PlanetNavRes);
         bool allowed=_PlanetCosts[movementClass*6*_PlanetNavRes*_PlanetNavRes+j]<INF*.5;
 #ifdef PLANET_REGIONAL_NAV
         allowed=RegionalTerrainClear(u.group,next,movementClass);
 #endif
-        if(allowed){u.position=PlanetEncode(next);uint f=min((uint)floor(u.position.x),5u);float3 right=normalize(PlanetU[f]-next*dot(PlanetU[f],next)),forward=cross(right,next);u.facing=atan2(dot(tangent,right),dot(tangent,forward));u.turret=u.facing;u.velocity=float2(dot(tangent,right),dot(tangent,forward))*(velocityRadius*step/max(dt,1e-6));}}
+        if(allowed){if(step<1e-5||(u.flags&PLANET_POSITION_RESIDUAL)!=0)PlanetAdvancePosition(u.position,u.previous,u.flags,d,tangent,step);else u.position=PlanetEncode(next);uint f=min((uint)floor(u.position.x),5u);float3 right=normalize(PlanetU[f]-next*dot(PlanetU[f],next)),forward=cross(right,next);u.facing=atan2(dot(tangent,right),dot(tangent,forward));u.turret=u.facing;u.velocity=float2(dot(tangent,right),dot(tangent,forward))*(velocityRadius*step/max(dt,1e-6));}}
 #endif
     _PlanetUnits[id.x]=u;
 }

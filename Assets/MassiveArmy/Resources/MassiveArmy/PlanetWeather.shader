@@ -1,6 +1,7 @@
 Shader "MassiveArmy/Planet weather" {
  SubShader {Tags {"RenderType"="Transparent"}
  HLSLINCLUDE
+ #pragma multi_compile _ PLANET_GPU_DOUBLE
  #include "UnityCG.cginc"
  // HDRP can allocate camera depth as an array even for a non-XR camera.
  #if defined(WEATHER_DEPTH_ARRAY)
@@ -11,12 +12,13 @@ Shader "MassiveArmy/Planet weather" {
  float SceneDepth(int2 pixel){return _WeatherSceneDepth.Load(int3(pixel,0));}
  #endif
  Texture2D<float> _WeatherLocalDepth;
- Texture2D<float4> _WeatherIntegrated;Texture3D<float> _WeatherNoise;SamplerState sampler_WeatherNoise;
+ Texture2D<float4> _WeatherIntegrated,_WeatherTransmission;Texture3D<float> _WeatherNoise;SamplerState sampler_WeatherNoise;
  float4 _WeatherFullSize,_WeatherHalfSize,_WeatherView,_WeatherBounds,_WeatherAtmosphere,_WeatherCloud,_WeatherWind,_WeatherDepthProjection;
  float3 _WeatherRight,_WeatherUp,_WeatherForward,_WeatherCentre,_WeatherSun,_WeatherAirColour,_WeatherCloudColour;
- float _WeatherRadius,_WeatherLocal,_WeatherNoiseLod;
+ float4 _WeatherAdaptiveDetail,_WeatherLocalAnchor,_WeatherLocalRotation;
+ float _WeatherRadius,_WeatherLocal,_WeatherNoiseLod,_WeatherEyeAltitude;
  Texture3D<float> _WeatherLightCache;SamplerState sampler_WeatherLightCache;
- float4 _WeatherLighting;float3 _WeatherSunColour;
+ float4 _WeatherLighting,_WeatherCloudLod,_WeatherLightEffects,_WeatherLightSize;float _WeatherPrecisionEnabled;float3 _WeatherSunColour;
  float4 _WeatherCabinEye;float4x4 _WeatherWorldToCabin;
  float3 _WeatherAftMin,_WeatherAftMax,_WeatherBridgeMin,_WeatherBridgeMax;
  struct V {float4 position:SV_POSITION;float2 ndc:TEXCOORD0;};
@@ -33,11 +35,17 @@ Shader "MassiveArmy/Planet weather" {
  }
  // Decode using the same projection that wrote the procedural scene depth.
  // UnityCG's legacy camera constant buffer is not HDRP's ShaderVariablesGlobal buffer.
- float Eye(float d){return HasDepth(d)?abs(_WeatherDepthProjection.y/(d*_WeatherDepthProjection.z+_WeatherDepthProjection.w+_WeatherDepthProjection.x)):1e20;}
+ float Eye(float d){
+  if(!isfinite(d)||!HasDepth(d))return 1e20;
+  float denominator=d*_WeatherDepthProjection.z+_WeatherDepthProjection.w+_WeatherDepthProjection.x;
+  if(abs(denominator)<1e-12)return 1e20;
+  float depth=abs(_WeatherDepthProjection.y/denominator);
+  return isfinite(depth)?min(depth,1e20):1e20;
+ }
  float NearDepth(int2 halfPixel){
-  int2 p=halfPixel*2,limit=int2(_WeatherFullSize.xy)-1;
+  float2 ratio=_WeatherFullSize.xy/max(1,_WeatherHalfSize.xy);int2 p=(int2)floor(halfPixel*ratio),last=(int2)ceil((halfPixel+1)*ratio)-1,limit=int2(_WeatherFullSize.xy)-1;
   float nearest=1e20;
-  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++)nearest=min(nearest,Eye(_WeatherLocalDepth.Load(int3(min(p+int2(x,y),limit),0))));
+  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++)nearest=min(nearest,Eye(_WeatherLocalDepth.Load(int3(min(p+int2(x,y)*max(int2(0,0),last-p),limit),0))));
   return nearest;
  }
  float CopyDepth(V i):SV_Target{return SceneDepth(int2(i.position.xy));}
@@ -56,23 +64,44 @@ Shader "MassiveArmy/Planet weather" {
  }
  bool Sphere(float3 ray,float radius,out float2 range){float along=dot(ray,_WeatherCentre);float3 side=_WeatherCentre-ray*along;float disc=radius*radius-dot(side,side);range=0;if(disc<0)return false;float root=sqrt(disc);range=float2(along-root,along+root);return range.y>0;}
  #include "PlanetWeatherDensity.hlsl"
+ #include "PlanetAirScattering.hlsl"
  float Day(float3 p){float r=length(p),horizon=-sqrt(saturate(1-1/(r*r)));return smoothstep(horizon-.025,horizon+.055,dot(p/r,_WeatherSun));}
- float CloudOpticalDepth(float3 p){
-  float radius=length(p),layer=saturate((radius-1-_WeatherAtmosphere.z)/_WeatherAtmosphere.w);float3 up=p/radius;
-  [branch]if(_WeatherLighting.z>.5){float3 uv=float3(atan2(up.z,up.x)/6.283185307+.5,asin(clamp(up.y,-1,1))/3.141592654+.5,(layer*7+.5)/8);return _WeatherLightCache.SampleLevel(sampler_WeatherLightCache,uv,0);}
-  return Coverage(up)*.58*_WeatherCloud.y*_WeatherAtmosphere.w*(1-layer)/max(.12,dot(up,_WeatherSun));
+ bool SphereAltitude(float3 ray,float altitude,out float2 range){return _WeatherPrecisionEnabled>.5?WeatherRayShell(_WeatherCentre,_WeatherEyeAltitude,ray,altitude,range):Sphere(ray,1+altitude,range);}
+ float CloudLayerAlongRay(float3 ray,float t){
+  #ifdef PLANET_GPU_DOUBLE
+  if(_WeatherNativeDouble>.5){double3 e=-(double3)_WeatherCentre,changeRay=(double3)ray*(double)t;double a=e.x*e.x+e.y*e.y+e.z*e.z;double3 next=e+changeRay;double b=next.x*next.x+next.y*next.y+next.z*next.z;double ia=(double)rsqrt((float)a),ib=(double)rsqrt((float)b);ia*=1.5-.5*a*ia*ia;ia*=1.5-.5*a*ia*ia;ib*=1.5-.5*b*ib*ib;ib*=1.5-.5*b*ib*ib;double numerator=2*(e.x*changeRay.x+e.y*changeRay.y+e.z*changeRay.z)+changeRay.x*changeRay.x+changeRay.y*changeRay.y+changeRay.z*changeRay.z;return saturate((float)(((double)_WeatherEyeAltitude+numerator/(a*ia+b*ib)-(double)_WeatherAtmosphere.z)/(double)_WeatherAtmosphere.w));}
+  #endif
+  float3 eye=-_WeatherCentre,delta=ray*t;
+  float change=(2*dot(eye,delta)+dot(delta,delta))/(length(eye+delta)+length(eye));
+  return saturate((_WeatherEyeAltitude+change-_WeatherAtmosphere.z)/_WeatherAtmosphere.w);
  }
+ float CloudOpticalDepthAt(float3 p,float layer){
+  float radius=length(p);float3 up=p/radius;
+  [branch]if(_WeatherLighting.z>.5){float3 uv=float3(atan2(up.z,up.x)/6.283185307+.5,asin(clamp(up.y,-1,1))/3.141592654+.5,(layer*max(1,_WeatherLightSize.z-1)+.5)/max(1,_WeatherLightSize.z));return _WeatherLightCache.SampleLevel(sampler_WeatherLightCache,uv,0);}
+  float3 shape=CloudShape(up);float remaining=max(0,shape.z-max(layer,shape.y));
+  return shape.x*.58*.575*_WeatherCloud.y*_WeatherAtmosphere.w*remaining/max(.12,dot(up,_WeatherSun));
+ }
+ float CloudOpticalDepth(float3 p){return CloudOpticalDepthAt(p,saturate(WeatherLayer(p)));}
  float3 CloudLight(float3 p,float layer,float3 ray){
   float day=Day(p),sun=day*(.16+.84*saturate(dot(normalize(p),_WeatherSun))),mu=dot(ray,_WeatherSun);
   float3 simple=_WeatherCloudColour*(.018+sun*(.35+1.25*saturate(layer)))*(1+pow(saturate(mu),12)*.55);
   [branch]if(_WeatherLighting.x<=0)return simple;
-  float tau=CloudOpticalDepth(p),direct=exp(-tau);
+  float contrast=_WeatherCloudLod.y>0?max(.5,_WeatherCloudLod.y):1.65;
+  float tau=CloudOpticalDepthAt(p,layer),direct=exp(-tau*contrast);
   // Forward scattering plus a broad, attenuated multiple-scattering approximation.
-  float phase=.5775/pow(max(.1225,1.4225-1.3*mu),1.5);
-  float multiple=.45*(1-exp(-tau*.7))*exp(-tau*.16);
+  float anisotropy=clamp(_WeatherLightEffects.x,0,.85);
+  float phase=(1-anisotropy*anisotropy)/pow(max(.02,1+anisotropy*anisotropy-2*anisotropy*mu),1.5);
+  float interior=1-exp(-tau*.7);
+  phase=lerp(phase,1,interior*.6);
+  float multiple=saturate(_WeatherLightEffects.y)*interior*exp(-tau*.32);
   float energy=direct*(.45+.55*min(4,phase))+multiple;
-  float3 scattered=_WeatherCloudColour*(.018+_WeatherSunColour*day*(.10+energy*1.15));
-  return lerp(simple,scattered,_WeatherLighting.x);
+  // Contrast belongs in the shadow response, not an overall exposure reduction:
+  // most daylight cloud surfaces stay white, with dense pockets dropping to grey.
+  float shade=lerp(clamp(_WeatherLightEffects.z,.02,.6),1.12,smoothstep(.02,.38,energy));
+  float3 sunlight=_WeatherSunColour;
+  [branch]if(_AirScattering.x>.5)sunlight*=AirSunTransmission(normalize(p),max(0,length(p)-1));
+  float3 scattered=_WeatherCloudColour*(.012+sunlight*day*shade);
+  return lerp(simple,scattered,_WeatherLighting.x)*max(.25,_WeatherLightEffects.w);
  }
  float GroundCloudShadow(float3 ray,float stop){
   [branch]if(_WeatherLighting.y<=0||_WeatherCloud.w<.5||stop>1e15)return 0;
@@ -82,63 +111,113 @@ Shader "MassiveArmy/Planet weather" {
   if(radius<.98||radius>=bottom+_WeatherAtmosphere.w)return 0;
   float day=saturate(dot(p/radius,_WeatherSun)*5);if(day<=0)return 0;
   if(radius<bottom){float2 enter;if(!WeatherSphereFrom(p,_WeatherSun,bottom,enter))return 0;p+=_WeatherSun*max(0,enter.y);}
-  return _WeatherLighting.y*day*(1-exp(-CloudOpticalDepth(p)));
+  // Optical depth integrates the varying cloud column: thin wisps transmit
+  // sunlight, while thick banks approach the configured maximum shadow.
+  float contrast=_WeatherCloudLod.y>0?max(.5,_WeatherCloudLod.y):1.65;
+  float strength=min(.75,_WeatherLighting.y*(5.0/3.0));
+  return saturate(strength*day*(1-exp(-CloudOpticalDepth(p)*contrast)));
  }
- float4 Air(float3 ray,float start,float end){
-  float step=(end-start)/6,transmission=1;float3 colour=0;float scale=max(.00001,_WeatherAtmosphere.x*.18);
-  [unroll]for(int i=0;i<6;i++){float3 p=ray*(start+(i+.5)*step)-_WeatherCentre;float altitude=max(0,length(p)-1);float density=exp(-altitude/scale);float a=1-exp(-density*step/scale*_WeatherAtmosphere.y*.32);
+ float4 Air(float3 ray,float start,float end,int samples){
+  if(end<=start)return 0;
+  float step=(end-start)/samples,transmission=1;float3 colour=0;float scale=max(.00001,_WeatherAtmosphere.x*.18);
+  [loop]for(int i=0;i<samples;i++){float3 p=ray*(start+(i+.5)*step)-_WeatherCentre;float altitude=max(0,length(p)-1);float density=exp(-altitude/scale);float a=1-exp(-density*step/scale*_WeatherAtmosphere.y*.32);
    float day=Day(p),mu=dot(ray,_WeatherSun);float3 lit=_WeatherAirColour*(.018+day*(.65+.35*mu*mu))+float3(1,.73,.42)*day*pow(saturate(mu),24)*.35;
    colour+=transmission*a*lit*3;transmission*=1-a;
   }return float4(colour,1-transmission);
+ }
+ AirIntegral Atmosphere(float3 ray,float start,float end,int samples){
+  [branch]if(_AirScattering.x>.5)return ScatterAir(ray,start,end,samples);
+  float4 legacy=Air(ray,start,end,samples);AirIntegral a;a.light=legacy.rgb;a.transmission=1-legacy.a;return a;
  }
  // Keep a small amount of night-time transmission for city lights. This
  // affects cloud extinction only; existing opaque depth still bounds the ray.
  float4 NightCloud(float4 cloud,float3 p){float cap=lerp(1,.88,1-Day(p));float scale=min(1,cap/max(.00001,cloud.a));return cloud*scale;}
  float4 Clouds(float3 ray,float begin,float stop,float jitter){
   if(_WeatherCloud.w<.5)return 0;float bottom=1+_WeatherAtmosphere.z,top=bottom+_WeatherAtmosphere.w;float2 outer,inner;
-  if(!Sphere(ray,top,outer))return 0;float start=max(begin,outer.x),end=min(stop,outer.y);
+  if(!SphereAltitude(ray,_WeatherAtmosphere.z+_WeatherAtmosphere.w,outer))return 0;float start=max(begin,outer.x),end=min(stop,outer.y);
   if(end<=start)return 0;
   // A ray can cross cloud, empty space below its base, then cloud again.
   // Keep both cloud intervals: dropping the second creates a circular cutoff
   // at the inner sphere's silhouette when the camera enters the cloud base.
   float gapStart=end,gapEnd=end;
-  if(Sphere(ray,bottom,inner)){gapStart=clamp(inner.x,start,end);gapEnd=clamp(inner.y,start,end);}
+  if(SphereAltitude(ray,_WeatherAtmosphere.z,inner)){gapStart=clamp(inner.x,start,end);gapEnd=clamp(inner.y,start,end);}
   float first=gapStart-start,gap=gapEnd-gapStart,distance=end-start-gap;
   if(distance<=0)return 0;
-  // Pack the occupied path into the same twelve samples, skipping the gap.
+  // All detail levels share shell geometry, lighting and shadow evaluation.
   float middlePath=distance*.5,middle=start+middlePath+(middlePath>=first?gap:0);
-  float3 middlePoint=ray*middle-_WeatherCentre,up=normalize(middlePoint);float mask=Coverage(up);
-  float farAlpha=1-exp(-mask*_WeatherCloud.y*distance*.58);float4 farCloud=float4(CloudLight(middlePoint,.65,ray)*farAlpha,farAlpha);
+  float3 middlePoint=ray*middle-_WeatherCentre,up=normalize(middlePoint),shape=CloudShape(up);float mask=shape.x;
+  float farAlpha=1-exp(-mask*_WeatherCloud.y*distance*.58*.575*(shape.z-shape.y)*(1+CloudInterior(1,mask)*_WeatherDetailMotion.w));float4 farCloud=float4(CloudLight(middlePoint,.65,ray)*farAlpha,farAlpha);
   [branch]if(_WeatherCloud.z<=.001)return NightCloud(farCloud,middlePoint);
-  float transmission=1,step=distance/12;float3 colour=0;
-  [loop]for(int i=0;i<12;i++){
-   float path=(i+jitter)*step,t=start+path+(path>=first?gap:0);float3 p=ray*t-_WeatherCentre;float layer=saturate((length(p)-bottom)/_WeatherAtmosphere.w);
-   float vertical=smoothstep(0,.18,layer)*(1-smoothstep(.65,1,layer));
-   float cover=Coverage(normalize(p));if(cover<.001||vertical<.001)continue;float3 detail=WeatherPoint(p)*_WeatherRadius/350+float3(_WeatherWind.z,_WeatherWind.w,0);
-   float erosion=Noise(detail)*.65+Noise(detail*2.1)*.35;float density=saturate(cover-erosion*.42*_WeatherCloud.z)*vertical;
+  // Keep the original maximum cost; reduce marching and noise bandwidth with
+  // distance. Non-resident planets are capped at four samples by the renderer.
+  int maximum=_WeatherCloudLod.x>0?(int)_WeatherCloudLod.x:12;
+  int samples=_WeatherCloud.z>.66?maximum:_WeatherCloud.z>.33?max(4,maximum*2/3):4;
+  if(_WeatherCloudLod.x>0)samples=min(samples,(int)_WeatherCloudLod.x);
+  float transmission=1,step=distance/samples;float3 colour=0;
+  [loop]for(int i=0;i<samples;i++){
+   float path=(i+jitter)*step,t=start+path+(path>=first?gap:0);float3 p=ray*t-_WeatherCentre;float layer=CloudLayerAlongRay(ray,t);
+   float3 localShape=CloudShape(normalize(p));
+   float halfWidth=abs(dot(normalize(p),ray))*step*.5/max(1e-8,_WeatherAtmosphere.w);
+   float vertical=CloudVerticalFiltered(layer,localShape,halfWidth);
+   float cover=localShape.x;if(cover<.001||vertical<.001)continue;float density=CloudSampleDensity(p,vertical,cover,_WeatherCloud.z);
+   [branch]if(_WeatherAdaptiveDetail.x>0){
+    float3 relative=ray*(t*_WeatherRadius);float sn=_WeatherLocalRotation.x,cs=_WeatherLocalRotation.y;
+    float3 rotated=float3(relative.x*cs-relative.z*sn,relative.y,relative.x*sn+relative.z*cs);
+    float3 local=(_WeatherLocalAnchor.xyz+rotated)/max(1,_WeatherAdaptiveDetail.y);
+    float erosion=WeatherNoiseAt(local,0)*.6+WeatherNoiseAt(local*2+17.3,0)*.4;
+    float localDensity=saturate(cover-erosion*saturate(_WeatherNoiseTuning.x))*vertical*(1+CloudInterior(vertical,cover)*_WeatherDetailMotion.w);
+    density=lerp(density,localDensity,_WeatherAdaptiveDetail.x);
+   }
    float a=1-exp(-density*_WeatherCloud.y*step);colour+=transmission*a*CloudLight(p,layer,ray);transmission*=1-a;if(transmission<.015)break;
   }
   return NightCloud(lerp(farCloud,float4(colour,1-transmission),_WeatherCloud.z),middlePoint);
  }
- float4 Integrate(V i):SV_Target{
+ struct WeatherIntegral {float4 light:SV_Target0;float4 transmission:SV_Target1;};
+ WeatherIntegral WeatherOutput(float3 light,float3 transmission){WeatherIntegral result;result.light=float4(max(0,light),1-dot(saturate(transmission),float3(.2126,.7152,.0722)));result.transmission=float4(saturate(transmission),1);return result;}
+ WeatherIntegral Integrate(V i){
   float3 ray=normalize(_WeatherForward+_WeatherRight*(i.ndc.x*_WeatherView.x*_WeatherView.y)+_WeatherUp*(i.ndc.y*_WeatherView.y*_WeatherView.z));
-  float2 atmosphere;if(!Sphere(ray,1+_WeatherAtmosphere.x,atmosphere))return 0;float start=max(CabinExit(ray)/_WeatherRadius,max(0,atmosphere.x)),end=atmosphere.y;
-  int2 pixel=clamp(int2(i.position.xy*2),int2(0,0),int2(_WeatherFullSize.xy)-1);float forward=max(.001,dot(ray,_WeatherForward));
+  float2 atmosphere;if(!SphereAltitude(ray,max(_WeatherAtmosphere.x,_WeatherAtmosphere.z+_WeatherAtmosphere.w),atmosphere))return WeatherOutput(0,1);float start=max(CabinExit(ray)/_WeatherRadius,max(0,atmosphere.x)),end=atmosphere.y;
+  // Use the actual integration-to-camera ratio: Ultra is full resolution,
+  // High is 3/4 and overrides can vary. A fixed x2 samples unrelated depth.
+  float2 depthRatio=_WeatherFullSize.xy/max(1,_WeatherHalfSize.xy);
+  int2 pixel=clamp(int2(i.position.xy*depthRatio),int2(0,0),int2(_WeatherFullSize.xy)-1);float forward=max(.001,dot(ray,_WeatherForward));
   float rawLocal=_WeatherLocalDepth.Load(int3(pixel,0));float stop=NearDepth(int2(i.position.xy))/forward;
   {float raw=SceneDepth(pixel);if(HasDepth(raw)&&abs(raw-rawLocal)>1e-10){float scaled=Eye(raw)/forward;float physical=scaled<10000?10000*scaled/max(.0001,10000-scaled):1e20;stop=min(stop,physical);}}
   float shadow=GroundCloudShadow(ray,stop);
-  end=min(end,stop/_WeatherRadius);float2 ground;if(Sphere(ray,1,ground)&&ground.x>0)end=min(end,ground.x);if(end<=start)return float4(0,0,0,shadow);
+  end=min(end,stop/_WeatherRadius);float2 ground;if(SphereAltitude(ray,0,ground)&&ground.x>0)end=min(end,ground.x);if(end<=start)return WeatherOutput(0,1-shadow);
   uint key=(uint)pixel.x*1973u+(uint)pixel.y*9277u+89173u;key^=key>>16;key*=0x7feb352du;key^=key>>15;float jitter=(key&65535u)/65536.0;
-  float4 air=Air(ray,start,end),cloud=Clouds(ray,start,end,jitter),result=cloud+air*(1-cloud.a);
+  float4 cloud=Clouds(ray,start,end,jitter);AirIntegral result;float2 cloudRange;
+  // Air between the eye and a cloud must composite in front of that cloud.
+  // The former cloud-over-all-air blend reversed this order. Split the same
+  // six air samples around the first cloud entry; retain twelve cloud samples.
+  if(cloud.a>0&&SphereAltitude(ray,_WeatherAtmosphere.z+_WeatherAtmosphere.w,cloudRange)){
+   float split=clamp(cloudRange.x,start,end);int frontSamples=split>start?3:0;
+   AirIntegral front=EmptyAir();if(frontSamples>0)front=Atmosphere(ray,start,split,frontSamples);
+   AirIntegral back=Atmosphere(ray,split,end,6-frontSamples);
+   result.light=front.light+front.transmission*(cloud.rgb+back.light*(1-cloud.a));
+   result.transmission=front.transmission*back.transmission*(1-cloud.a);
+  }else result=Atmosphere(ray,start,end,6);
   // The soft shadow attenuates the opaque scene before atmospheric scattering.
-  result.a+=shadow*(1-result.a);return result;
+  result.transmission*=1-shadow;
+  // Invalid reconstruction must leave the opaque scene intact. A single NaN
+  // reaching HDRP exposure/bloom can contaminate the entire zoomed-out view.
+  if(!all(isfinite(result.light))||!all(isfinite(result.transmission)))return WeatherOutput(0,1);
+  return WeatherOutput(result.light,result.transmission);
  }
  float4 Composite(V i):SV_Target{
-  int2 pixel=int2(i.position.xy);float current=Eye(_WeatherLocalDepth.Load(int3(pixel,0)));float2 hp=(pixel+.5)*.5-.5;int2 base=(int2)floor(hp);float2 f=frac(hp);float4 colour=0;float total=0;
+  int2 pixel=int2(i.position.xy);float current=Eye(_WeatherLocalDepth.Load(int3(pixel,0)));float2 hp=(pixel+.5)*_WeatherHalfSize.xy/_WeatherFullSize.xy-.5;int2 base=(int2)floor(hp);float2 f=frac(hp);float4 colour=0;float total=0;
   [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++){int2 at=clamp(base+int2(x,y),int2(0,0),int2(_WeatherHalfSize.xy)-1);float d=NearDepth(at);
    float weight=(x?f.x:1-f.x)*(y?f.y:1-f.y)*exp(-abs(d-current)/max(.5,current*.01));colour+=_WeatherIntegrated.Load(int3(at,0))*weight;total+=weight;
   // Never fall back to a background-cloud sample on a thin foreground silhouette.
-  }return total>1e-5?colour/total:0;
+  }if(total<=1e-5||!isfinite(total)||!all(isfinite(colour)))return 0;
+  return float4(max(0,colour.rgb/total),saturate(colour.a/total));
+ }
+ float4 CompositeTransmission(V i):SV_Target{
+  int2 pixel=int2(i.position.xy);float current=Eye(_WeatherLocalDepth.Load(int3(pixel,0)));float2 hp=(pixel+.5)*_WeatherHalfSize.xy/_WeatherFullSize.xy-.5;int2 base=(int2)floor(hp);float2 f=frac(hp);float3 transmission=0;float total=0;
+  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++){int2 at=clamp(base+int2(x,y),int2(0,0),int2(_WeatherHalfSize.xy)-1);float d=NearDepth(at);
+   float weight=(x?f.x:1-f.x)*(y?f.y:1-f.y)*exp(-abs(d-current)/max(.5,current*.01));transmission+=_WeatherTransmission.Load(int3(at,0)).rgb*weight;total+=weight;
+  }if(total<=1e-5||!isfinite(total)||!all(isfinite(transmission)))return 1;
+  return float4(saturate(transmission/total),1);
  }
  ENDHLSL
  Pass {Cull Off ZWrite Off ZTest Always
@@ -149,7 +228,7 @@ Shader "MassiveArmy/Planet weather" {
  #pragma multi_compile_local _ WEATHER_DEPTH_ARRAY
  ENDHLSL
  }
- Pass {Cull Off ZWrite Off ZTest Always Blend One OneMinusSrcAlpha
+ Pass {Cull Off ZWrite Off ZTest Always Blend 0 One OneMinusSrcAlpha Blend 1 Zero SrcColor
  HLSLPROGRAM
  #pragma target 5.0
  #pragma vertex Body
@@ -158,6 +237,22 @@ Shader "MassiveArmy/Planet weather" {
  ENDHLSL
  }
  Pass {Cull Off ZWrite Off ZTest Always Blend One OneMinusSrcAlpha
+ HLSLPROGRAM
+ #pragma target 5.0
+ #pragma vertex Full
+ #pragma fragment Composite
+ ENDHLSL
+ }
+ // Spectral extinction cannot fit a scalar alpha. Multiply opaque RGB first,
+ // then add the same depth-aware upsampled in-scattering, without a scene-colour copy.
+ Pass {Cull Off ZWrite Off ZTest Always Blend DstColor Zero
+ HLSLPROGRAM
+ #pragma target 5.0
+ #pragma vertex Full
+ #pragma fragment CompositeTransmission
+ ENDHLSL
+ }
+ Pass {Cull Off ZWrite Off ZTest Always Blend One One ColorMask RGB
  HLSLPROGRAM
  #pragma target 5.0
  #pragma vertex Full

@@ -1,3 +1,7 @@
+#pragma kernel PickPerson
+#pragma kernel TrackPerson
+#pragma kernel FindNearbyPerson
+#pragma kernel BiologicalExposure
 #pragma kernel ResetDraw
 #pragma kernel ClearFlows
 #pragma kernel BuildFlows
@@ -12,9 +16,17 @@ struct DeathEvent {uint slot,generation,cause,tick;float4 body;};
 RWStructuredBuffer<DeathEvent> _DeathEvents;StructuredBuffer<uint2> _Acknowledgements;uint _AcknowledgementCount;
 struct Node {float4 position;int4 neighbours;};
 struct Goal {int node,team,active,pad;};
+float4 _PubStations[128],_PubStationLow[128],_PubStationForward[128];
 struct Order {uint home,target,team,model;float4 parameters;};
-struct Walker {float4 position;uint node,next,initialised,pad;};
+struct Walker {float4 position;uint node,next,initialised,pad;float4 low;};
+StructuredBuffer<float4> _NodeLow;float3 _CameraBodyLow,_CivicCenterHigh,_CivicCenterLow;
+void WalkAdd(inout Walker w,float3 delta){precise float3 offset=w.low.xyz+delta;precise float3 sum=w.position.xyz+offset;precise float3 remainder=(w.position.xyz-sum)+offset;w.low.xyz=remainder;w.position.xyz=sum;}
+float3 WalkDelta(Walker w,float3 high,float3 low){precise float3 highDelta=high-w.position.xyz;precise float3 lowDelta=low-w.low.xyz;precise float3 delta=highDelta+lowDelta;return delta;}
+
+
 struct Pose {float4 position,right,up,forward,properties;};
+void PosePoint(inout Pose pose,float3 high,float3 low){precise float3 sum=high+low;pose.position.xyz=sum;precise float3 residual=(high-sum)+low;pose.right.w=residual.x;pose.up.w=residual.y;pose.forward.w=residual.z;}
+struct LeisureArea {float4 centre,right,up,low;};StructuredBuffer<LeisureArea> _LeisureAreas;
 StructuredBuffer<Node> _Nodes;StructuredBuffer<Goal> _Goals;StructuredBuffer<Order> _Orders;
 RWStructuredBuffer<uint> _Parents,_Queue;RWStructuredBuffer<uint4> _Search;
 RWStructuredBuffer<Walker> _Walkers;StructuredBuffer<Walker> _PreviousWalkers;RWStructuredBuffer<Pose> _CargoPoses;
@@ -36,33 +48,57 @@ uint _NodeCount,_NodeStride,_GoalCount,_WalkerCount,_PreviousCount,_StorageWidth
  if(civic.generation!=(uint)order.parameters.x){civic=(CivicAgent)0;civic.health=100;civic.generation=(uint)order.parameters.x;w=(Walker)0;}
  uint supply=(uint)order.parameters.z;civic.flags=(civic.flags&65535u)|((supply>>2)<<16);civic.pad=(civic.pad&~1u)|((supply>>1)&1u);
  if(order.parameters.y==5){civic.pad=(supply>>2)<<1;civic.flags&=~6144u;}else civic.flags&=~1024u;
- if(civic.health==0&&(civic.flags&512u)!=0){float3 up=normalize(civic.body.xyz),right=normalize(cross(up,abs(up.y)>.95?float3(1,0,0):float3(0,1,0))),front=cross(right,up);pose.position=float4(civic.body.xyz+up*.12,1);pose.up=float4(front*.9,0);pose.right=float4(right,0);pose.forward=float4(up,0);pose.properties=float4(order.model,order.team,0,distance(_CameraBody,civic.body.xyz)<_DrawRange?1:0);_CargoPoses[i]=pose;_CivicStates[i]=civic;uint slot;if(pose.properties.w>0){InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
+ if(civic.health==0&&(civic.flags&512u)!=0){float3 up=normalize(w.position.xyz),right=normalize(cross(up,abs(up.y)>.95?float3(1,0,0):float3(0,1,0))),front=cross(right,up);pose.position.w=1;pose.up=float4(front*.9,0);pose.right=float4(right,0);pose.forward=float4(up,0);PosePoint(pose,w.position.xyz,w.low.xyz+up*.12);pose.properties=float4(order.model,order.team,0,distance(_CameraBody,civic.body.xyz)<_DrawRange?1:0);_CargoPoses[i]=pose;_CivicStates[i]=civic;uint slot;if(pose.properties.w>0){InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
  if(order.parameters.y==5&&(civic.flags&1024u)!=0){pose=_CargoPoses[i];_CivicStates[i]=civic;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
  if((supply&1u)==0||civic.health==0){civic.flags&=~1u;_CivicStates[i]=civic;_CargoPoses[i]=pose;return;}
  bool patrol=order.parameters.y==1;uint stopCount=_PatrolGoals[order.team*9];if(patrol&&stopCount>0)order.target=_PatrolGoals[order.team*9+1+civic.patrolIndex%stopCount];
  civic.flags=(civic.flags&~2u)|(patrol?2u:0u);
  if(order.parameters.w<0||order.home>=_NodeCount||order.target>=_GoalCount){_CivicStates[i]=civic;_CargoPoses[i]=pose;return;}
- if(w.initialised==0){w.position=_Nodes[order.home].position;w.node=w.next=order.home;w.initialised=1;}
- if(!patrol&&distance(_CameraBody,w.position.xyz)>_DrawRange*1.5){_CargoPoses[i]=pose;_Walkers[i]=w;_CivicStates[i]=civic;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}return;}
- if(w.node>=_NodeCount){_CivicStates[i]=civic;_CargoPoses[i]=pose;return;}float remaining=(civic.flags&(8u|1024u))!=0?0:min(_Delta,.25)*_Speed*((civic.flags&2048u)!=0?1.8:1);float3 forward=0;bool moving=false;uint goal=_Goals[order.target].node;bool entered=false;
+ if(w.initialised==0){w.position=_Nodes[order.home].position;w.low=_NodeLow[order.home];w.node=w.next=order.home;w.initialised=1;}
+ float walkDelta=_Delta;bool distant=length((_CameraBody-w.position.xyz)+(_CameraBodyLow-w.low.xyz))>_DrawRange*1.5;
+ if(distant&&((uint)(_Clock*30)&31u)!=(i&31u)){_CargoPoses[i]=pose;_Walkers[i]=w;_CivicStates[i]=civic;return;}
+ if(w.pad!=0)walkDelta=min(distant?2:.25,max(_Delta,_Clock-asfloat(w.pad)));w.pad=asuint(_Clock);
+
+ if(w.node>=_NodeCount){_CivicStates[i]=civic;_CargoPoses[i]=pose;return;}float remaining=(civic.flags&(8u|1024u))!=0?0:min(walkDelta,distant?2:.25)*_Speed*((civic.flags&2048u)!=0?1.8:1);float3 forward=0;bool moving=false;uint goal=_Goals[order.target].node;bool entered=false;
+ // Leave the park through its road entrance before following the next schedule leg.
+ if(w.initialised==2&&(_Goals[order.target].pad==0||w.node!=goal)){float3 exit=_Nodes[w.node].position.xyz;float3 delta=WalkDelta(w,exit,_NodeLow[w.node].xyz);float d=length(delta);if(d>remaining&&d>.001){WalkAdd(w,delta*(remaining/d));remaining=0;}else {w.position.xyz=exit;w.low=_NodeLow[w.node];remaining=max(0,remaining-d);w.initialised=1;}}
  // Retarget at road junctions, preserving GPU position mid-edge. Never teleport on a changed job or time of day.
- for(uint hop=0;hop<8;hop++){
+ for(uint hop=0;hop<8&&w.initialised!=2;hop++){
   if(w.next==w.node){uint next=_Parents[order.target*_NodeStride+w.node];if(next==INVALID||next==w.node)break;w.next=next;}
   if(w.next>=_NodeCount||!any(_Nodes[w.node].neighbours==(int)w.next))break;
-  float3 target=_Nodes[w.next].position.xyz;float3 delta=target-w.position.xyz;float distance=length(delta);forward=distance>.001?delta/distance:forward;
-  if(distance>remaining){w.position.xyz+=forward*remaining;moving=remaining>0;remaining=0;break;}
-  w.position.xyz=target;w.node=w.next;remaining=max(0,remaining-distance);moving=distance>0;entered=true;if(w.node==goal||remaining<=0)break;
+  float3 target=_Nodes[w.next].position.xyz;float3 delta=WalkDelta(w,target,_NodeLow[w.next].xyz);float distance=length(delta);forward=distance>.001?delta/distance:forward;
+  if(distance>remaining){WalkAdd(w,forward*remaining);moving=remaining>0;remaining=0;break;}
+  w.position.xyz=target;w.low=_NodeLow[w.next];w.node=w.next;remaining=max(0,remaining-distance);moving=distance>0;entered=true;if(w.node==goal||remaining<=0)break;
+ }
+ bool inPark=_Goals[order.target].pad!=0&&w.node==goal&&w.next==w.node;bool resting=false;
+ if(inPark){LeisureArea area=_LeisureAreas[order.target];float3 parkUp=normalize(area.up.xyz),parkRight=area.right.xyz,parkForward=cross(parkRight,parkUp)+parkUp*area.low.w;uint seed=i*747796405u+2891336453u;
+  uint segment=order.parameters.y>=8?0:(uint)(_Clock/10);seed^=segment*277803737u;seed=(seed^(seed>>16))*2246822519u;
+  float2 offset=float2(seed&65535u,(seed>>16)&65535u)/65535.0*2-1;float3 target=area.centre.xyz,targetLow=area.low.xyz+(parkRight*offset.x+parkForward*offset.y)*area.centre.w;
+  float3 delta=WalkDelta(w,target,targetLow);float d=length(delta);float travel=min(d,max(0,remaining));if(d>.01){WalkAdd(w,delta*(travel/d));forward=delta/d;moving=travel>0;}resting=order.parameters.y>=8&&d<.3;w.initialised=2;
  }
  float3 up=normalize(w.position.xyz);float3 f=forward-up*dot(forward,up);if(dot(f,f)<.001){f=cross(up,abs(up.y)>.95?float3(1,0,0):float3(0,1,0));}f=normalize(f);float3 right=normalize(cross(up,f));
  // Deterministic lane offset separates pedestrians from the cargo lane without CPU transforms.
  float lane=_SidewalkOffset+(((i*1664525u+1013904223u)&255)/255.0-.5)*.6;
- pose.position=float4(w.position.xyz+right*lane-up*.8,1);float scale=order.parameters.w;pose.up=float4(up*scale,0);pose.forward=float4(f*scale,0);pose.right=float4(right*scale,0);
- float visible=(supply&1u)!=0&&distance(_CameraBody,w.position.xyz)<_DrawRange&&dot(normalize(_CameraBody),up)>.0?1:0;
- for(uint plane=0;plane<6;plane++)if(dot(_Frustum[plane].xyz,pose.position.xyz)+_Frustum[plane].w < -2)visible=0;
+ pose.position.w=1;float scale=order.parameters.w;pose.up=float4(up*scale,0);pose.forward=float4(f*scale,0);pose.right=float4(right*scale,0);PosePoint(pose,w.position.xyz,w.low.xyz+right*lane-up*.8);
+ float visible=(supply&1u)!=0&&length((_CameraBody-w.position.xyz)+(_CameraBodyLow-w.low.xyz))<_DrawRange&&dot(normalize(_CameraBody),up)>.0?1:0;
+ bool serving=order.parameters.y==6&&w.node==goal&&w.next==w.node&&order.target<128&&_PubStations[order.target].w>0;
+ if(serving){float3 pubUp=normalize(_PubStations[order.target].xyz),pubForward=normalize(_PubStationForward[order.target].xyz),pubRight=normalize(cross(pubUp,pubForward));pose.position=float4(_PubStations[order.target].xyz,1);pose.right=float4(pubRight*scale,_PubStationLow[order.target].x);pose.up=float4(pubUp*scale,_PubStationLow[order.target].y);pose.forward=float4(pubForward*scale,_PubStationLow[order.target].z);moving=false;visible=distance(_CameraBody,pose.position.xyz)<_DrawRange?1:0;}
+ precise float3 rendered=(pose.position.xyz+_CivicCenterHigh)+(float3(pose.right.w,pose.up.w,pose.forward.w)+_CivicCenterLow);for(uint pubPlane=0;pubPlane<6;pubPlane++)if(dot(_Frustum[pubPlane].xyz,rendered)+_Frustum[pubPlane].w < -2)visible=0;
  // Residents disappear inside their home/workplace at arrival; walking meshes stay visible on the road.
- bool outside=patrol||order.parameters.y==3||order.parameters.y==4||w.node!=goal||w.next!=w.node;civic.body=float4(pose.position.xyz,0);civic.flags=(civic.flags&~1u)|(outside?1u:0u);if(patrol&&stopCount>1&&w.node==goal&&w.next==w.node)civic.patrolIndex=(civic.patrolIndex+1)%stopCount;
- pose.properties=float4(order.model,order.team,moving?_Clock*8+i:0,visible*(outside?1:0));_CargoPoses[i]=pose;_Walkers[i]=w;_CivicStates[i]=civic;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}
+ if(inPark){PosePoint(pose,w.position.xyz,w.low.xyz);if(resting&&order.parameters.y==9){PosePoint(pose,w.position.xyz,w.low.xyz+up*.15);pose.up.xyz=f*scale;pose.forward.xyz=-up*scale;}moving=moving&&!resting;}
+ bool outside=inPark||serving||patrol||order.parameters.y==3||order.parameters.y==4||w.node!=goal||w.next!=w.node;civic.body=float4(pose.position.xyz,0);civic.flags=(civic.flags&~1u)|(outside?1u:0u);if(patrol&&stopCount>1&&w.node==goal&&w.next==w.node)civic.patrolIndex=(civic.patrolIndex+1)%stopCount;
+ pose.properties=float4(order.model,order.team,resting&&order.parameters.y==8?-1:moving?_Clock*8+i:0,visible*(outside?1:0));_CargoPoses[i]=pose;_Walkers[i]=w;_CivicStates[i]=civic;if(pose.properties.w>0){uint slot;InterlockedAdd(_DrawArgs[1],1,slot);_CitizenVisible[slot]=i;}
 }
 
-[numthreads(128,1,1)]void DrainDeaths(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount)return;CivicAgent c=_CivicStates[i];if(c.generation==0||c.health!=0||(c.flags&4u)!=0)return;uint slot;InterlockedAdd(_DeathEvents[0].slot,1,slot);if(slot>=256)return;DeathEvent e;e.slot=i;e.generation=c.generation;e.cause=0;e.tick=c.lastHitTick;e.body=c.body;_DeathEvents[slot+1]=e;}
+[numthreads(128,1,1)]void DrainDeaths(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount)return;CivicAgent c=_CivicStates[i];if(c.generation==0||c.health!=0||(c.flags&4u)!=0)return;uint slot;InterlockedAdd(_DeathEvents[0].slot,1,slot);if(slot>=256)return;DeathEvent e;e.slot=i;e.generation=c.generation;e.cause=(c.lastHitTick&0x80000000u)!=0?7:(c.flags&16384u)!=0?5:(c.flags&32768u)!=0?6:0;e.tick=c.lastHitTick;e.body=c.body;_DeathEvents[slot+1]=e;}
 [numthreads(128,1,1)]void AcknowledgeDeaths(uint3 id:SV_DispatchThreadID){if(id.x>=_AcknowledgementCount)return;uint2 a=_Acknowledgements[id.x];CivicAgent c=_CivicStates[a.x];if(c.generation==a.y&&c.health==0){c.flags|=4u;_CivicStates[a.x]=c;}}
+
+float3 _BioBlast;float _BioRadius,_BioPlanetRadius;
+[numthreads(128,1,1)]void BiologicalExposure(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount)return;CivicAgent c=_CivicStates[i];if(c.health==0||dot(c.body.xyz,c.body.xyz)<1||length(normalize(c.body.xyz)-_BioBlast)*_BioPlanetRadius>_BioRadius)return;c.flags|=16384u;c.health=0;c.body.w=_Clock;_CivicStates[i]=c;}
+
+RWStructuredBuffer<uint> _NearbyPerson;float3 _PersonQueryPoint;uint _PersonQueryOfficers;
+[numthreads(128,1,1)]void FindNearbyPerson(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount||i>65535)return;CivicAgent c=_CivicStates[i];if(c.health==0||(c.flags&1u)==0||(_PersonQueryOfficers!=0&&(c.flags&2u)==0))return;float distance=length(c.body.xyz-_PersonQueryPoint);if(distance>4.5)return;uint key=((uint)(distance*100)<<16)|i;InterlockedMin(_NearbyPerson[0],key);}
+
+float3 _PersonRayHigh,_PersonRayLow,_PersonRayDirection;float _PersonRayCone,_PersonRayLimit;RWStructuredBuffer<float4> _PersonPose;uint _PersonSlot;
+[numthreads(128,1,1)]void PickPerson(uint3 id:SV_DispatchThreadID){uint i=id.x;if(i>=_WalkerCount||i>65535)return;CivicAgent c=_CivicStates[i];if((c.flags&1u)==0&&!(c.health==0&&(c.flags&512u)!=0))return;Pose pose=_CargoPoses[i];if(pose.properties.w<=0)return;float3 p=(pose.position.xyz-_PersonRayHigh)+(float3(pose.right.w,pose.up.w,pose.forward.w)-_PersonRayLow)+pose.up.xyz*.8;float along=dot(p,_PersonRayDirection);float radius=max(.9,along*_PersonRayCone);if(along<0||along>_PersonRayLimit||dot(p-_PersonRayDirection*along,p-_PersonRayDirection*along)>radius*radius)return;float miss=length(p-_PersonRayDirection*along)/radius;uint rank=(uint)(saturate(miss)*4094)*16+(uint)(saturate(along/max(1,_PersonRayLimit))*15);uint key=(rank<<16)|i;InterlockedMin(_NearbyPerson[0],key);}
+[numthreads(1,1,1)]void TrackPerson(uint3 id:SV_DispatchThreadID){CivicAgent c=_CivicStates[_PersonSlot];_PersonPose[0]=float4(c.body.xyz,c.health>0?1:0);}

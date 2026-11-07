@@ -1,3 +1,4 @@
+#pragma multi_compile _ PLANET_VEHICLES
 #pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
 #define PLANET_SPECIALIZE_TERRAIN 1
 #pragma kernel Cull
@@ -23,7 +24,7 @@ bool CoarseVisible(float3 up,float radius,float altitude){
  return true;
 }
 [numthreads(128,1,1)]void Cull(uint3 id:SV_DispatchThreadID){
- if(id.x>=_Count)return;UnitState u=_PlanetUnits[id.x];if((u.flags&ALIVE)==0)return;
+ if(id.x>=_Count)return;UnitState u=_PlanetUnits[id.x];if((u.flags&ALIVE)==0||(u.flags&VEHICLE_PROXY)!=0)return;
  UnitTraits traits=_Traits[Type(u)];float3 up=PlanetDecode(u.position);float r=max(4,max(traits.scale.x,traits.scale.z)*5);
  [branch]if(_ConservativeCull!=0&&!CoarseVisible(up,r,traits.altitude))return;
  float h=PlanetHeight(up);if(traits.scale.w==4)h=max(h,_PlanetOcean);h+=traits.altitude;

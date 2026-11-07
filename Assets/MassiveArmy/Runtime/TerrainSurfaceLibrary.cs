@@ -20,12 +20,19 @@ namespace MassiveArmy
         [Range(0, 1)] public float heightBlendStrength = .8f;
         [Range(0, 2)] public float normalStrength = .85f;
         [Range(0, .3f)] public float macroVariation = .12f;
+        [Header("Distance texture bands and altitude")]
+        [InspectorName("Distance-based Texture Scaling")][Tooltip("Blend larger terrain texture repeats into the distance. Disable to use a fixed texture repeat size at every distance.")]
+        public bool distanceTextureBlending=true;
+        [Tooltip("Multiplier for all terrain texture repeat sizes. Larger values make texture features bigger, including distant bands.")][Min(.01f)]public float textureScale=1;
+        [Tooltip("Repeat-size multiplier between successive distance bands.")][Range(1.5f,16)]public float textureBandScale=8;
+        [Min(1)]public float textureBandStartDistance=48,biomeAltitudeCooling=1;
+        [Range(0,80)]public float cliffStartDegrees=11,cliffFullDegrees=47;
         [Header("Natural biome transitions")]
         [Tooltip("Width of the filtered biome masks in world metres. Zero restores the original masks.")]
         [Range(0, 160)] public float biomeBlendWidth = 48;
         [Tooltip("Displacement amplitude of biome boundaries, in metres.")]
         [Range(0, 80)] public float boundaryWarp = 24;
-        [Range(8, 256)] public float boundaryNoiseScale = 96;
+        [Range(8, 4096)] public float boundaryNoiseScale = 192;
         [Tooltip("Competition between locally present materials. Zero disables patchiness.")]
         [Range(0, 1)] public float patchStrength = .65f;
         [Range(1, 64)] public float patchScale = 12;
@@ -84,6 +91,8 @@ namespace MassiveArmy
             material.SetFloat("_MacroVariation", macroVariation);
             material.SetVector("_BiomeBlend", new Vector4(biomeBlendWidth,boundaryWarp,boundaryNoiseScale,patchStrength));
             material.SetVector("_BiomeDetail", new Vector4(patchScale,roadEdgeNoise,0,0));
+            material.SetVector("_TerrainDistanceTuning",new Vector4(distanceTextureBlending?1:0,textureBandStartDistance,1-Mathf.Cos(cliffStartDegrees*Mathf.Deg2Rad),1-Mathf.Cos(cliffFullDegrees*Mathf.Deg2Rad)));
+            material.SetFloat("_BiomeAltitudeCooling",biomeAltitudeCooling);material.SetVector("_TerrainTextureScale",new Vector4(Mathf.Max(.01f,textureScale),Mathf.Max(1.5f,textureBandScale),0,0));
         }
     }
 }

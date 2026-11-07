@@ -17,10 +17,10 @@ namespace MassiveArmy.Planetary
         public int ActiveRockets{get{int count=0;foreach(var r in rockets)if(r.alive)count++;return count;}}
         void InitializeWeapons(){rocketTrailBuffer=new GraphicsBuffer(GraphicsBuffer.Target.Structured,RocketCapacity*2,16);rocketTrailMaterial=new Material(Resources.Load<Shader>("MassiveArmy/PlanetShipRocketTrail"));rocketMesh=Resources.Load<Mesh>("MassiveArmy/CombatArt/Rocket");rocketMaterial=new Material(steel){name="Ship rocket casing",enableInstancing=true};if(world.StrategyEnabled)for(int i=0;i<rocketBursts.Length;i++)PrepareRocketBurst(i);}
         void PrepareRocketBurst(int slot){if(rocketBursts[slot]!=null)return;var go=new GameObject("Pooled ship rocket burst");go.transform.SetParent(world.transform);var effect=rocketBursts[slot]=go.AddComponent<VisualEffect>();effect.initialEventName="Dormant";effect.visualEffectAsset=Resources.Load<VisualEffectAsset>("MassiveArmy/CombatArt/CombatBurst");rocketAttributes[slot]=effect.CreateVFXEventAttribute();burstPositions[slot]=pose.position;}
-        public bool TryFireRocket(){if(!active||world.Paused||fireDelay>0)return false;int slot=Array.FindIndex(rockets,r=>!r.alive);if(slot<0)return false;
+        public bool TryFireRocket(){if(!active||world.Paused||fireDelay>0)return false;int slot=Array.FindIndex(rockets,r=>!r.alive);if(slot<0)return false;if(world.MilitaryPolicyError!=null){world.SurvivalNotice=world.MilitaryPolicyError;return false;}if(world.IsSurvival&&!world.ConsumeSurvivalMissile())return false;
             var muzzle=new Vector3((barrel++%2==0?-1:1)*14,-2,44);Double3 start=LocalToBodyPrecise(muzzle);Vector3 heading=pose.rotation*Vector3.forward;
             // Aim both launch tubes at the cockpit sight's terrain intersection when one exists.
-            var eye=LocalToBodyPrecise(PilotEye);if(surface.Raycast(new Ray(eye.Float,heading),out var hit))heading=(new Double3(hit)-start).Float.normalized;
+            var eye=LocalToBodyPrecise(PilotLocalEye);if(surface.Raycast(new Ray(eye.Float,heading),out var hit))heading=(new Double3(hit)-start).Float.normalized;
             rockets[slot]=new Rocket{alive=true,position=start,thrustDirection=heading,velocity=new Double3(VelocityAt(muzzle))+new Double3(heading)*320};fireDelay=RocketCooldown;RocketsFired++;return true;
         }
         double RocketClearance(Double3 p){double radius=p.Magnitude;if(radius<1)return -world.definition.radius;var d=p.Float.normalized;return radius-world.definition.radius-Math.Max(surface.SampleHeight(d),world.definition.oceanHeight);}

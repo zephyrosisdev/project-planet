@@ -1,3 +1,5 @@
+#pragma kernel OrderCompanion
+#pragma multi_compile _ PLANET_VEHICLES
 #pragma multi_compile _ PLANET_TERRAIN_EDITS PLANET_SINGLE_CRATER
 #define PLANET_SPECIALIZE_TERRAIN 1
 #pragma kernel Pick
@@ -5,6 +7,7 @@
 #pragma kernel CountGroups
 #pragma kernel Order
 #pragma kernel RespondToSite
+#pragma kernel OrderSingleVehicle
 #pragma multi_compile _ PLANET_RTS_CONTENT
 #include "ArmyCommon.hlsl"
 #include "PlanetTopology.hlsl"
@@ -70,12 +73,20 @@ bool ProjectUnit(UnitState u,out float2 screen) {
     InterlockedAdd(_CommandCounts[u.group],1);
     if((u.flags&SELECTED)!=0)InterlockedAdd(_CommandCounts[GROUP_COUNT+u.group],1);
 }
-uint _AttackMove;
+uint _AttackMove,_FormationEnabled,_FormationCount;float3 _FormationRight;float _FormationWidth,_FormationSpacing,_FormationDepth;
+uint _SingleVehicle;
+[numthreads(1,1,1)]void OrderSingleVehicle(uint3 id:SV_DispatchThreadID){
+ if(_SingleVehicle>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[_SingleVehicle];
+ if((u.flags&(ALIVE|VEHICLE_PROXY))!=(ALIVE|VEHICLE_PROXY)||(u.flags&VEHICLE_DRIVEN)!=0)return;
+ if(_Stop!=0){u.flags|=STOPPED;u.velocity=0;}
+ else {u.flags&=~(STOPPED|ARRIVED|FORMATION|ATTACK_MOVE);u.group=_CommandGroup;u.destination=_CommandGoal;}
+ _PlanetUnits[_SingleVehicle]=u;
+}
 [numthreads(128,1,1)]void Order(uint3 id:SV_DispatchThreadID) {
     if(id.x>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[id.x];
     if((u.flags&(ALIVE|SELECTED))!=(ALIVE|SELECTED)||Team(u)!=0)return;
-    if(_Stop!=0){u.flags=(u.flags&~ATTACK_MOVE)|STOPPED;u.velocity=0;u.previous=u.position;}
-    else{if(Movement(u)!=_CommandMovement)return;u.flags&=~(STOPPED|ARRIVED|ATTACK_MOVE);if(_AttackMove!=0)u.flags|=ATTACK_MOVE;u.group=_CommandGroup;u.destination=_CommandGoal;}
+    if(_Stop!=0){u.flags=(u.flags&~(ATTACK_MOVE|FORMATION))|STOPPED;u.velocity=0;if((u.flags&PLANET_POSITION_RESIDUAL)==0)u.previous=u.position;}
+    else{if(Movement(u)!=_CommandMovement)return;u.flags&=~(STOPPED|ARRIVED|ATTACK_MOVE|FORMATION|PASS_RIGHT|PASS_LEFT);if(_AttackMove!=0)u.flags|=ATTACK_MOVE;u.group=_CommandGroup;u.destination=_CommandGoal;if(_FormationEnabled!=0){uint rank;InterlockedAdd(_Pick[0],1,rank);float spacing=max(1,_FormationSpacing);uint columns=max(1u,min(_FormationCount,(uint)floor(_FormationWidth/spacing)+1));uint row=rank/columns,column=rank%columns;uint rowCount=min(columns,_FormationCount-row*columns);float3 up=PlanetDecode(_CommandGoal),forward=cross(_FormationRight,up);float across=(column-(rowCount-1)*.5)*spacing;u.destination=PlanetEncode(normalize(up+(_FormationRight*across-forward*(row*spacing+_FormationDepth))/_PlanetRadius));u.flags|=FORMATION;}}
     _PlanetUnits[id.x]=u;
 }
 
@@ -85,5 +96,8 @@ uint _DefenceTeam;float3 _DefenceSite;float _DefenceChord;
  if((u.flags&ALIVE)==0||Team(u)!=_DefenceTeam||Movement(u)!=0)return;
  if(_DefenceTeam==0&&(u.flags&(STOPPED|ARRIVED))==0&&u.group!=15)return;
  if(length(PlanetDecode(u.position)-_DefenceSite)>_DefenceChord)return;
- u.flags=(u.flags&~(STOPPED|ARRIVED))|ATTACK_MOVE;u.group=_DefenceTeam==0?15:16;u.destination=PlanetEncode(_DefenceSite);_PlanetUnits[id.x]=u;
+ u.flags=(u.flags&~(STOPPED|ARRIVED|FORMATION))|ATTACK_MOVE;u.group=_DefenceTeam==0?15:16;u.destination=PlanetEncode(_DefenceSite);_PlanetUnits[id.x]=u;
 }
+
+uint _RegisterCompanion;
+[numthreads(1,1,1)]void OrderCompanion(uint3 id:SV_DispatchThreadID){if(_SingleVehicle>=_PlanetUnitCount)return;UnitState u=_PlanetUnits[_SingleVehicle];if((u.flags&ALIVE)==0||Team(u)!=0||(_RegisterCompanion==0&&(u.flags&COMPANION_UNIT)==0))return;u.flags|=COMPANION_UNIT|ATTACK_MOVE;u.flags&=~(STOPPED|ARRIVED|FORMATION);u.destination=_CommandGoal;_PlanetUnits[_SingleVehicle]=u;}

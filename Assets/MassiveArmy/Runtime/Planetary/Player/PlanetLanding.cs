@@ -27,20 +27,29 @@ namespace MassiveArmy.Planetary
             var next=AutoPoint(t);float r=Mathf.Clamp01(t/.7f);r=r*r*(3-2*r);var rotation=Quaternion.Slerp(autoRotation,autoEndRotation,r);
             // Check both orientations while the hull turns, and the terrain footprint at the next pose.
             Physics.SyncTransforms();bool safe=HullSweep(pose.position,next,pose.rotation)&&HullSweep(pose.position,next,rotation);
-            for(int z=-1;z<=1&&safe;z++)for(int x=-1;x<=1;x++){var foot=next+Double3.Rotate(rotation,new Double3(x*26,-8,z*50));var direction=foot.Float.normalized;if(foot.Magnitude<world.definition.radius+Math.Max(surface.SampleHeight(direction),world.definition.oceanHeight)-.35){safe=false;break;}}
-            if(!safe){AutoFlightActive=false;pose.linearVelocity=new Double3();pose.angularVelocity=Vector3.zero;shipFrame.Pose=pose;SetFlightAssistance(true);LandingStatus="AUTO ASSIST STOPPED · PATH BLOCKED";nextLandingRefresh=Time.unscaledTime+2;return;}
+            for(int z=-1;z<=1&&safe;z++)for(int x=-1;x<=1;x++){
+                var local=new Double3(x*26,-8,z*50);var foot=next+Double3.Rotate(rotation,local);
+                double clearance=FootClearance(foot);
+                // A parked hull can touch uneven ground or a subsequently graded plot.
+                // Let it lift out of that contact, but never deepen it or ignore a new obstacle.
+                double minimum=autoTakeoff?Math.Min(-.35,FootClearance(pose.position+Double3.Rotate(pose.rotation,local))-.001):-.35;
+                if(clearance<minimum){safe=false;break;}
+            }
+            if(!safe){AutoFlightActive=false;if(autoTakeoff&&autoElapsed==0)Landed=true;pose.linearVelocity=new Double3();pose.angularVelocity=Vector3.zero;shipFrame.Pose=pose;SetFlightAssistance(true);LandingStatus="AUTO ASSIST STOPPED · PATH BLOCKED";nextLandingRefresh=Time.unscaledTime+2;return;}
             pose.linearVelocity=(next-pose.position)*(1.0/dt);var turn=rotation*Quaternion.Inverse(pose.rotation);turn.ToAngleAxis(out float angle,out Vector3 axis);if(angle>180)angle-=360;pose.angularVelocity=angle==0?Vector3.zero:axis*(angle*Mathf.Deg2Rad/dt);
             pose.position=next;pose.rotation=rotation;autoElapsed=elapsed;
             if(elapsed>=autoDuration){AutoFlightActive=false;Landed=!autoTakeoff;pose.position=autoEnd;pose.rotation=autoEndRotation;pose.linearVelocity=new Double3();pose.angularVelocity=Vector3.zero;angularVelocity=Vector3.zero;SetFlightAssistance(true);LandingStatus=Landed?"LANDED · SPACE TO TAKE OFF":"TAKEOFF COMPLETE";nextLandingRefresh=0;}
             else LandingStatus=(autoTakeoff?"TAKING OFF":"LANDING")+$" · {t*100:0}%";
             shipFrame.Pose=pose;
         }
+        double FootClearance(Double3 foot){var direction=foot.Float.normalized;return foot.Magnitude-world.definition.radius-Math.Max(surface.SampleHeight(direction),world.definition.oceanHeight);}
         int landingRevision;float nextLandingRefresh;readonly Collider[] landingOverlaps=new Collider[128];readonly RaycastHit[] landingHits=new RaycastHit[128];
         readonly Vector4[] landingLines=new Vector4[160];GraphicsBuffer landingBuffer;Material landingMaterial;int landingLineCount;
         static readonly Vector3 HullCentre=new Vector3(0,-2,-7),HullHalf=new Vector3(27,5.5f,48);
         void InitializeLanding(){landingBuffer=new GraphicsBuffer(GraphicsBuffer.Target.Structured,landingLines.Length,16);landingMaterial=new Material(Resources.Load<Shader>("MassiveArmy/PlanetLanding"));}
-        bool OverlapsHull(Double3 at,Quaternion rotation){int count=Physics.OverlapBoxNonAlloc(world.RenderBodyPosition(at+Double3.Rotate(rotation,new Double3(HullCentre))),HullHalf,landingOverlaps,rotation,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);if(count==landingOverlaps.Length)return true;for(int i=0;i<count;i++)if(!Owns(landingOverlaps[i]))return true;return false;}
-        bool HullSweep(Double3 from,Double3 to,Quaternion rotation){var delta=to-from;float distance=(float)delta.Magnitude;if(distance<.001f)return !OverlapsHull(to,rotation);var centre=world.RenderBodyPosition(from+Double3.Rotate(rotation,new Double3(HullCentre)));int count=Physics.BoxCastNonAlloc(centre,HullHalf,delta.Float/distance,landingHits,rotation,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);if(count==landingHits.Length)return false;for(int i=0;i<count;i++)if(!Owns(landingHits[i].collider))return false;return !OverlapsHull(to,rotation);}
+        bool FlightOwns(Collider collider)=>Owns(collider)||world.GroundVehicles?.IsCargoCollider(collider,this)==true;
+        bool OverlapsHull(Double3 at,Quaternion rotation){int count=Physics.OverlapBoxNonAlloc(world.RenderBodyPosition(at+Double3.Rotate(rotation,new Double3(HullCentre))),HullHalf,landingOverlaps,rotation,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);if(count==landingOverlaps.Length)return true;for(int i=0;i<count;i++)if(!FlightOwns(landingOverlaps[i]))return true;return false;}
+        bool HullSweep(Double3 from,Double3 to,Quaternion rotation){var delta=to-from;float distance=(float)delta.Magnitude;if(distance<.001f)return !OverlapsHull(to,rotation);var centre=world.RenderBodyPosition(from+Double3.Rotate(rotation,new Double3(HullCentre)));int count=Physics.BoxCastNonAlloc(centre,HullHalf,delta.Float/distance,landingHits,rotation,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);if(count==landingHits.Length)return false;for(int i=0;i<count;i++)if(!FlightOwns(landingHits[i].collider))return false;return !OverlapsHull(to,rotation);}
         public bool TakeOff(){if(!Landed||AutoFlightActive)return false;Physics.SyncTransforms();var up=Direction;var target=pose.position+new Double3(up)*TakeoffRise;var levelRotation=Quaternion.FromToRotation(pose.rotation*Vector3.up,up)*pose.rotation;if(!HullSweep(pose.position,target,pose.rotation)||OverlapsHull(target,levelRotation)){LandingStatus="TAKEOFF BLOCKED · OVERHEAD OBSTACLE";return false;}
             BeginAutoFlight(target,levelRotation,true);Rebase();return true;
         }

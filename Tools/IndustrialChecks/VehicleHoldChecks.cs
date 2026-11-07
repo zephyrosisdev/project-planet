@@ -1,0 +1,7 @@
+using System;
+using MassiveArmy.Planetary;
+static class VehicleHoldChecks {
+ static int count;static void Check(bool pass,string text){if(!pass)throw new Exception(text);count++;Console.WriteLine("PASS "+text);}
+ static void Main(){var hold=new InteractionHold();Check(!hold.Update(0,true,true,1)&&!hold.Update(.2,true,true,1),"A tap does not open vehicle details");Check(hold.Update(.46,true,true,1),"Continuous hold opens details at the threshold");Check(!hold.Update(1,true,true,1)&&!hold.Update(2,true,false,1)&&!hold.Update(3,true,true,2),"Holding E fires once even if the menu closes or the target changes");hold.Update(4,false,true,2);Check(!hold.Update(5,true,true,2)&&hold.Update(5.5,true,true,2),"Releasing E allows another deliberate hold");
+  hold=default;hold.Update(0,true,true,1);Check(!hold.Update(.4,true,true,2)&&!hold.Update(.6,true,true,2)&&hold.Update(.9,true,true,2),"Changing aim restarts the continuous hold time");hold=default;hold.Update(0,true,true,1);hold.Update(.4,true,false,1);Check(!hold.Update(.5,true,true,1)&&!hold.Update(.7,true,true,1)&&hold.Update(1,true,true,1),"Losing focus or opening another menu cannot complete an earlier hold");hold=default;Check(!hold.Update(0,true,true,0)&&!hold.Update(1,true,true,0),"An empty target cannot open a menu");hold=default;hold.Update(10,true,true,-5);Check(!hold.Update(1,true,true,-5)&&hold.Update(1.5,true,true,-5),"Industrial vehicle targets work and clock resets restart the timer");Console.WriteLine(count+" vehicle hold checks passed");}
+}

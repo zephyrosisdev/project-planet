@@ -14,6 +14,7 @@ Shader "MassiveArmy/Planet catalogue units" {
  #include "ArtLighting.hlsl"
  #include "PlanetTopology.hlsl"
  #include "PlanetSurface.hlsl"
+ #include "PlanetPrecision.hlsl"
  struct ArtVertex{float4 position,normal,tangent,uv;};
  StructuredBuffer<ArtVertex> _ArtVertices;StructuredBuffer<float4> _ArtBounds;
  StructuredBuffer<UnitState> _PlanetUnits;StructuredBuffer<UnitTraits> _Traits;StructuredBuffer<uint> _Visible;
@@ -26,7 +27,7 @@ Shader "MassiveArmy/Planet catalogue units" {
   InitIndirectDrawArgs(0);UnitState u=_PlanetUnits[_Visible[_Mode*_Capacity+GetIndirectInstanceID(instance)]];uint type=Type(u);UnitTraits traits=_Traits[type];
   float3 up=PlanetDecode(u.position);uint face=min((uint)floor(u.position.x),5u);float3 right=normalize(PlanetU[face]-up*dot(PlanetU[face],up)),forward=cross(right,up);
   float height=PlanetHeight(up);if(traits.scale.w==4)height=max(height,_PlanetOcean);height+=traits.altitude;
-  float3 centre=_PlanetCenter+up*(_PlanetRadius+height+.12);
+  float3 centre=StableCubeBase(face,float2((u.position.x-face)*2-1,u.position.y*2-1),PlanetPositionLow(u.previous,u.flags)*2)+up*(height+.12);
   V o;o.zombie=0;o.team=Team(u)==0?float3(.02,.72,1):Team(u)==2?float3(.34,.55,.10):float3(1,.035,.12);if((u.flags&SELECTED)!=0)o.team=lerp(o.team,float3(.25,1,.55),.75);
   o.n=up;o.t=right;o.b=forward;
   if(_Mode==2){float3 delta=_CameraPosition-centre;float angle=atan2(dot(delta,right),dot(delta,forward));uint direction=(uint)floor(frac((angle-u.facing)/6.2831853+1)*8+.5)%8;
