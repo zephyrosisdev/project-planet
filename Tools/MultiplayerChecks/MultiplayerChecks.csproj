@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources></PropertyGroup>
+  <ItemGroup><Compile Include="../../Assets/MassiveArmy/Runtime/Industrial/Industrial*.cs" Exclude="../../Assets/MassiveArmy/Runtime/Industrial/IndustrialGpuProbe.cs"/><Compile Include="../../Assets/MassiveArmy/Runtime/Networking/SurvivalChatInput.cs"/><Compile Include="Program.cs"/><Compile Include="FactoryChecks.cs"/></ItemGroup>
+  <ItemGroup><Compile Include="ChunkChecks.cs"/><Compile Include="ShipRespawnChecks.cs"/></ItemGroup>
+</Project>

@@ -12,32 +12,42 @@ namespace MassiveArmy.Planetary
         public Transform IgnoredRoot;public IVehicleCarrier MovingCarrier;public SpacePose PreviousCarrierPose;
         public Collider IgnoredCollider;public Collider LastObstacle {get;private set;}
         public IVehicleDeck CarrierDeck;
+        // Network worlds query canonical terrain plus their own authoritative obstacle
+        // set. Client render colliders must not change predicted vehicle contacts.
+        public bool UsePhysicsContacts=true,CanonicalOnlyGround;public Vector3? FixedUp;public float? FixedGravity;
+        public delegate bool ContactProbe(Double3 point,Vector3 up,float above,float depth,out VehicleGroundContact contact);
+        public delegate Vector3 ContactSweep(Double3 position,Quaternion rotation,VehicleDefinition definition,Vector3 delta,out Vector3 normal);
+        public ContactProbe CanonicalProbe;public ContactSweep CanonicalSweep;
         public VehicleTerrainContact(PlanetDevelopment world,PlanetSurface surface):this(surface,world.RenderBodyPosition,world.RenderToBody){this.world=world;}
         public VehicleTerrainContact(PlanetSurface surface,System.Func<Double3,Vector3> toRender,System.Func<Vector3,Double3> toBody){this.surface=surface;this.toRender=toRender;this.toBody=toBody;}
         bool Own(Collider other)=>other!=null&&IgnoredCollider!=null&&(other==IgnoredCollider||other.transform.IsChildOf(IgnoredRoot!=null?IgnoredRoot:IgnoredCollider.transform));
-        public Vector3 Up(Double3 position)=>PlanetPrecisionPolicy.Direction(position);
+        public Vector3 Up(Double3 position)=>FixedUp??PlanetPrecisionPolicy.Direction(position);
         public Double3 Acceleration(Double3 position){
             var galaxy=world?.SystemRuntime?.Galaxy;
             if(galaxy!=null){int reference=galaxy.NodeFor(world.definition);return galaxy.Acceleration(galaxy.Current[reference].position+position,galaxy.Current)-galaxy.Current[reference].acceleration;}
             return new Double3(Up(position))*(-Gravity(position));
         }
-        public float Gravity(Double3 position)=>(float)(surface.Definition.gravitationalParameter/System.Math.Max(1,position.Magnitude*position.Magnitude));
+        public float Gravity(Double3 position)=>FixedGravity??(float)(surface.Definition.gravitationalParameter/System.Math.Max(1,position.Magnitude*position.Magnitude));
         public Double3 Surface(Double3 position,float clearance=0)=>surface.ProjectToSurface(position,clearance);
         Vector3 Normal(Double3 position){var d=position*(1/position.Magnitude);var up=d.Float;var tangent=Vector3.Cross(Mathf.Abs(up.y)>.9f?Vector3.right:Vector3.up,up).normalized;var bitangent=Vector3.Cross(up,tangent);double e=surface.Definition.experimentalGpuDoublePrecision?2.0/surface.Definition.radius:PlanetPrecisionPolicy.NormalSampleAngle(surface.Definition.radius);var t=new Double3(tangent)*e;var b=new Double3(bitangent)*e;float x=(float)((surface.SampleHeight(d+t)-surface.SampleHeight(d-t))/(2*e*surface.Definition.radius)),z=(float)((surface.SampleHeight(d+b)-surface.SampleHeight(d-b))/(2*e*surface.Definition.radius));return (up-tangent*x-bitangent*z).normalized;}
         public bool Probe(Double3 point,Vector3 up,float above,float depth,out VehicleGroundContact contact){
-            var top=point+new Double3(up)*above;var ground=Surface(point);double distance=Vector3.Dot((top-ground).Float,up);
-            bool found=distance>=-.01&&distance<=above+depth;contact=new VehicleGroundContact{position=ground,normal=Normal(point)};
+            var top=point+new Double3(up)*above;var ground=CanonicalOnlyGround?default:Surface(point);double distance=Vector3.Dot((top-ground).Float,up);
+            bool found=!CanonicalOnlyGround&&distance>=-.01&&distance<=above+depth;contact=CanonicalOnlyGround?default:new VehicleGroundContact{position=ground,normal=Normal(point)};
             float best=found?(float)distance:above+depth;
+            if(CanonicalProbe!=null&&CanonicalProbe(point,up,above,depth,out var canonical)){
+                float d=Vector3.Dot((top-canonical.position).Float,up);if(d>=0&&d<=best){best=d;found=true;contact=canonical;}
+            }
             if(CarrierDeck!=null&&CarrierDeck.SampleVehicleDeck(point,out var deck)){
                 float d=Vector3.Dot((top-deck.position).Float,up);if(d>=0&&d<=best){best=d;found=true;contact=deck;}
             }
-            int count=Physics.RaycastNonAlloc(toRender(top),-up,hits,above+depth,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);
+            int count=UsePhysicsContacts?Physics.RaycastNonAlloc(toRender(top),-up,hits,above+depth,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore):0;
             for(int i=0;i<count;i++)if(!Own(hits[i].collider)&&hits[i].distance<best&&Vector3.Dot(hits[i].normal,up)>.15f){best=hits[i].distance;found=true;contact=new VehicleGroundContact{position=toBody(hits[i].point),normal=hits[i].normal,collider=hits[i].collider};}
             return found;
         }
         public Vector3 Sweep(Double3 position,Quaternion rotation,VehicleDefinition definition,Vector3 delta)=>Sweep(position,rotation,definition,delta,out _);
         public Vector3 Sweep(Double3 position,Quaternion rotation,VehicleDefinition definition,Vector3 delta,out Vector3 hitNormal,bool includeFloor=false){
             hitNormal=Vector3.zero;LastObstacle=null;
+            if(!UsePhysicsContacts)return CanonicalSweep!=null?CanonicalSweep(position,rotation,definition,delta,out hitNormal):delta;
             float length=delta.magnitude;if(length<.00001f)return delta;
             Vector3 Cast(Double3 start,Vector3 motion,bool carrierOnly,out Vector3 normal,out Collider obstacle){
                 normal=Vector3.zero;obstacle=null;float length=motion.magnitude;if(length<.00001f)return motion;

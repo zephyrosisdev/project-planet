@@ -21,6 +21,6 @@ namespace MassiveArmy.Planetary {
             if(!Docked){Physics.SyncTransforms();if(!HullSweep(pose.position,next,rotation)){dockStation=0;pose.linearVelocity=station.Pose.linearVelocity;shipFrame.Pose=pose;return true;}}
             pose.position=next;pose.rotation=rotation;pose.linearVelocity=new Double3(station.VelocityAt(local));pose.angularVelocity=station.Pose.angularVelocity;shipFrame.Pose=pose;return true;
         }
-        void StationCollision(Double3 from,ref Double3 next,ref Double3 velocity){if(world.Orbitals==null||!world.Orbitals.NearSegment(from,next,450))return;Physics.SyncTransforms();if(!HullSweep(from,next,pose.rotation)){next=from;var station=world.Orbitals.Nearest(from,out _);velocity=station==null?new Double3():station.Pose.linearVelocity;}}
+        void StationCollision(Double3 from,ref Double3 next,ref Double3 velocity){if(world?.Orbitals==null||!world.Orbitals.NearSegment(from,next,450))return;Physics.SyncTransforms();if(!HullSweep(from,next,pose.rotation)){next=from;var station=world.Orbitals.Nearest(from,out _);velocity=station==null?new Double3():station.Pose.linearVelocity;}}
     }
 }

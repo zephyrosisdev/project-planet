@@ -42,8 +42,8 @@ namespace MassiveArmy.Planetary {
             radial=relativeVelocity=new Double3();radius=mu=0;name="";
             if(Landed||Docked||Docking||AutoFlightActive){OrbitalVelocityAssistStatus="Unavailable while landed, docking or in automatic flight";return false;}
             FlightReference(out radial,out relativeVelocity,out radius,out name);
-            var body=world.definition;mu=body.gravitationalParameter;var model=world.SystemRuntime?.Galaxy;
-            if(model!=null&&instrumentPlanet>=0){var node=model.Nodes[instrumentPlanet];mu=node.mu;if(node.planet>=0&&node.planet<world.SystemRuntime.Bodies.Length)body=world.SystemRuntime.Bodies[node.planet];}
+            var body=SimulationDefinition;mu=body.gravitationalParameter;var model=FlightGalaxy;var bodies=simulationOnly?simulationBodies:world?.SystemRuntime?.Bodies;
+            if(model!=null&&instrumentPlanet>=0){var node=model.Nodes[instrumentPlanet];mu=node.mu;if(node.planet>=0&&bodies!=null&&node.planet<bodies.Length)body=bodies[node.planet];}
             double altitude=radial.Magnitude-radius;
             double minimum=Math.Max(body.ReliefBound+20,body.hasAtmosphere?body.atmosphereHeight:0);
             if(altitude<=minimum||radial.Magnitude>radius*21||mu<=0){OrbitalVelocityAssistStatus=altitude<=minimum?$"Climb above {Distance(minimum)} around {name}":"Move into planetary orbital range";return false;}return true;
@@ -55,7 +55,7 @@ namespace MassiveArmy.Planetary {
             var error=target-relativeVelocity;double remaining=error.Magnitude;
             if(FlightAssistEnabled)SetFlightAssistance(false);
             // Ordinary bounded thruster impulse; no teleport or instantaneous speed set.
-            double acceleration=(boost?OrbitalVelocityAssistBoostAcceleration:OrbitalVelocityAssistAcceleration)*ShipThrustScale;
+            double acceleration=(simulationOnly?(boost?simulationLimits.boostAcceleration:simulationLimits.acceleration):(boost?OrbitalVelocityAssistBoostAcceleration:OrbitalVelocityAssistAcceleration))*ShipThrustScale;
             pose.linearVelocity+=OrbitVelocityImpulse(target,relativeVelocity,acceleration,dt);orbitHoldBoost=boost;
             thrust=Vector3.zero;OrbitalVelocityAssistActive=true;OrbitalVelocityTargetSpeed=target.Magnitude;
             OrbitalVelocityAssistStatus=$"{name} · {(boost?"BOOST · ":"")}target {FormatFlightSpeed(OrbitalVelocityTargetSpeed)} · Δv {FormatFlightSpeed(remaining)}"+(OrbitalVelocityHoldEnabled?$"\nHOLD ALT {Distance(OrbitalVelocityHoldRadius-orbitHoldBodyRadius)}":"");

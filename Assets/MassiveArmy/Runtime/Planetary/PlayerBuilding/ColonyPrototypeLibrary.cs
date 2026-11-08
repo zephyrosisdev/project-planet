@@ -27,6 +27,25 @@ namespace MassiveArmy.Planetary {
     }
     [Serializable] public sealed class ColonyPrototypeCatalogue {public int version;public ColonyPrototypeAsset[] assets;}
     public static class ColonyPrototypeLibrary {
+        [Serializable] sealed class CollisionAsset {public string id;public Vector3 dimensions;public ColonyPrototypeSolid[] solids;public ColonyPrototypeSocket[] sockets;[NonSerialized] public ColonyPrototypeAsset profile;}
+        [Serializable] sealed class CollisionCatalogue {public int version;public CollisionAsset[] assets;}
+        static Dictionary<string,CollisionAsset> collisionData;
+        // A collision-only DTO deliberately ignores render vertex, normal, colour and triangle arrays.
+        public static ColonyPrototypeSolid[] StoredCollision(string id){
+            if(collisionData==null){
+                var source=Resources.Load<TextAsset>("MassiveArmy/ColonyPrototypes/Catalogue");if(source==null)return null;CollisionCatalogue data;
+                try{data=JsonUtility.FromJson<CollisionCatalogue>(source.text);}finally{Resources.UnloadAsset(source);}
+                if(data.version!=1)throw new InvalidOperationException("Unsupported colony collision catalogue");collisionData=new Dictionary<string,CollisionAsset>();foreach(var asset in data.assets)collisionData.Add(asset.id,asset);
+            }
+            return collisionData.TryGetValue(id,out var value)?value.solids:null;
+        }
+        // CPU metadata only. Render arrays and generated render fallbacks are never read.
+        internal static ColonyPrototypeAsset StoredProfile(string id){
+            if(StoredCollision(id)==null||!collisionData.TryGetValue(id,out var data))return null;if(data.profile!=null)return data.profile;
+            var sockets=new List<ColonyPrototypeSocket>(data.sockets??Array.Empty<ColonyPrototypeSocket>());
+            if(id=="room-WorkshopRoom"||id=="room-WarehouseRoom"){sockets.Add(new ColonyPrototypeSocket{name="Logistics input",kind="ConveyorInput",position=new Vector3(0,1,data.dimensions.z*.5f)});sockets.Add(new ColonyPrototypeSocket{name="Logistics output",kind="ConveyorOutput",position=new Vector3(0,1,-data.dimensions.z*.5f),yaw=180});}
+            return data.profile=new ColonyPrototypeAsset{id=id,dimensions=data.dimensions,solids=data.solids,sockets=sockets.ToArray()};
+        }
         static Dictionary<string,ColonyPrototypeAsset> assets;
         public static ColonyPrototypeAsset Find(string id){if(assets==null){var source=Resources.Load<TextAsset>("MassiveArmy/ColonyPrototypes/Catalogue");if(source==null)return null;var data=JsonUtility.FromJson<ColonyPrototypeCatalogue>(source.text);Resources.UnloadAsset(source);if(data.version!=1)throw new InvalidOperationException("Unsupported colony prototype catalogue");assets=new Dictionary<string,ColonyPrototypeAsset>();foreach(var asset in data.assets){if(asset.id=="room-WorkshopRoom"||asset.id=="room-WarehouseRoom"){var sockets=new List<ColonyPrototypeSocket>(asset.sockets);sockets.Add(new ColonyPrototypeSocket{name="Logistics input",kind="ConveyorInput",position=new Vector3(0,1,asset.dimensions.z*.5f)});sockets.Add(new ColonyPrototypeSocket{name="Logistics output",kind="ConveyorOutput",position=new Vector3(0,1,-asset.dimensions.z*.5f),yaw=180});asset.sockets=sockets.ToArray();}assets.Add(asset.id,asset);}}if(assets.TryGetValue(id,out var value))return value;value=RenewablePrototypes.Create(id)??IndustrialVehiclePrototypes.Create(id)??UtilityPrototypes.Create(id);if(value!=null)assets.Add(id,value);return value;}
         public static Material Material(string name)=>new Material(Resources.Load<Shader>("MassiveArmy/ColonyPrototypes/ColonyPrototype")){name=name,enableInstancing=true};

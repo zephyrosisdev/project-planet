@@ -1,0 +1,32 @@
+using System;
+using MassiveArmy.Industrial;
+using MassiveArmy.Planetary;
+using UnityEngine;
+namespace MassiveArmy.Networking {
+    // Only an authoritative frame handoff initializes this velocity. Clients send
+    // controls, never a velocity or position. Prediction replays the same step.
+    internal static class SurvivalBallistic {
+        static double Dot(Double3 a,Double3 b)=>a.x*b.x+a.y*b.y+a.z*b.z;
+        static bool Solid(PlanetSurface surface,Double3 point)=>point.Magnitude<=surface.Definition.radius+surface.SampleHeight(point)+.05;
+        internal static bool TerrainSweep(PlanetSurface surface,Double3 start,Double3 end,out Double3 safe){
+            safe=end;var delta=end-start;double length2=Dot(delta,delta),t=length2>1e-12?Math.Max(0,Math.Min(1,-Dot(start,delta)/length2)):0;
+            if((start+delta*t).Magnitude>surface.Definition.radius+surface.Definition.ReliefBound+.1)return false;
+            if(Solid(surface,start)){safe=surface.ProjectToSurface(start,.05);return true;}
+            int count=Math.Max(1,(int)Math.Ceiling(delta.Magnitude/.5));double previous=0;
+            for(int i=1;i<=count;i++){double next=i/(double)count;if(!Solid(surface,start+delta*next)){previous=next;continue;}
+                for(int step=0;step<12;step++){double middle=(previous+next)*.5;if(Solid(surface,start+delta*middle))next=middle;else previous=middle;}
+                safe=start+delta*previous;return true;
+            }return false;
+        }
+        internal static void Step(SurvivalMotion motion,SurvivalInput input,PlanetSurface surface,float dt,double speed){
+            var position=SurvivalVehicleSimulation.Position(motion.pose);var up=PlanetPrecisionPolicy.Direction(position);var forward=Vector3.ProjectOnPlane(SurvivalMovement.Forward(motion),up).normalized;if(forward.sqrMagnitude<.1f)forward=Vector3.ProjectOnPlane(Vector3.forward,up).normalized;
+            forward=Quaternion.AngleAxis(input.lookX,up)*forward;motion.pitch=Mathf.Clamp(motion.pitch-input.lookY,-85,85);var right=Vector3.Cross(up,forward).normalized;var movement=Vector2.ClampMagnitude(new Vector2(input.x,input.y),1);
+            var velocity=new Double3(motion.driftX,motion.driftY,motion.driftZ);double r=Math.Max(1,position.Magnitude);velocity-=position*(surface.Definition.gravitationalParameter/(r*r*r)*dt);
+            var proposed=position+velocity*dt+new Double3(forward*movement.y+right*movement.x)*(speed*dt);
+            motion.grounded=TerrainSweep(surface,position,proposed,out var next);
+            if(motion.grounded){motion.ballistic=false;velocity=default;motion.verticalSpeed=0;}else motion.verticalSpeed=Dot(velocity,new Double3(up));
+            motion.driftX=velocity.x;motion.driftY=velocity.y;motion.driftZ=velocity.z;motion.pose.x=next.x;motion.pose.y=next.y;motion.pose.z=next.z;
+            forward=Quaternion.FromToRotation(up,PlanetPrecisionPolicy.Direction(next))*forward;motion.forwardX=forward.x;motion.forwardY=forward.y;motion.forwardZ=forward.z;motion.sequence=input.sequence;
+        }
+    }
+}

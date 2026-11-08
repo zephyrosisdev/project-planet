@@ -85,9 +85,10 @@ namespace MassiveArmy
             L(main,"SYNTHETIC\nFRONT","title");L(main,"Explore. Survive. Build your future among the stars.","heading");
             L(main,"First person space survival · offline prototype","body");
             var start=Box(main,"row");B(start,"START SURVIVAL",StartSurvivalGame,"confirm","primary grow");
+            B(start,"MULTIPLAYER",ShowMultiplayer,"units");
             B(start,"SETTINGS",()=>SetSettingsOpen(true),"settings");
             L(main,"WASD walk · mouse look · Space jump · F interact\nI inventory · number keys equip · hold LMB to use · H pilot ship","muted");
-            L(main,"Multiplayer planned: Unity Lobby + Relay. Online play is not connected yet.","muted");
+            L(main,"Multiplayer development preview � gameplay integration in progress","muted");
             L(main,"DEVELOPMENT BENCHMARK","subheading");
             var scales=Box(main,"row");for(int i=0;i<Scales.Length;i++){int index=i;var b=B(scales,new[]{"10K","50K","100K","250K","500K","1M"}[i],()=>{chosenScale=index;foreach(var child in scales.Children())child.EnableInClassList("active",scales.IndexOf(child)==index);},null,"scale-choice");b.EnableInClassList("active",i==chosenScale);}
             B(main,"DEPLOY STRESS ARMIES",()=>{settings.capacity=Scales[chosenScale];StartBattle(Scales[chosenScale]);},"units");

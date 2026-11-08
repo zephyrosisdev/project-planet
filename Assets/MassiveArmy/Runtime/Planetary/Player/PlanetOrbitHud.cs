@@ -32,7 +32,7 @@ namespace MassiveArmy.Planetary
                 for(int i=0;i<OrbitSamples;i++){double theta=-limit+2*limit*i/(OrbitSamples-1);double r=orbit.Parameter/(1+orbit.Eccentricity*Math.Cos(theta));orbitMap[i]=new Vector2((float)(r*Math.Cos(theta)/mapExtent),(float)(-r*Math.Sin(theta)/mapExtent));}}
         }
         PlanetNavigationCompass pilotCompass;RtsUiController pilotUi;VisualElement flightPanel,landingPanel;Label orbitalDockLabel,statusLabel,readoutLabel,progradeLabel,peLabel,apLabel,weaponLabel,landingLabel,landingInfo;
-        RtsUiDrawing mapDrawing,progradeDrawing,landingDrawing;bool pilotVisible;
+        RtsUiDrawing mapDrawing,progradeDrawing,landingDrawing;bool pilotVisible;Label controlsHelpLabel;UnityEngine.InputSystem.Key controlsHelpKey;
         internal void SetPilotRenderTarget(RenderTexture target)=>pilotUi.SetRenderTarget(target);
         internal VisualElement PilotRootForValidation=>pilotUi.Root;
         void InitializePilotHud(){pilotUi=new RtsUiController(hull.transform,BuildPilotHud,UpdatePilotHud,()=>active);pilotUi.Attach();}
@@ -46,7 +46,7 @@ namespace MassiveArmy.Planetary
             peLabel=PilotLabel(mapDrawing,"Pe",12);apLabel=PilotLabel(mapDrawing,"Ap",12);peLabel.style.position=apLabel.style.position=UnityEngine.UIElements.Position.Absolute;
             PilotLabel(flightPanel,"Orbit-plane map · white = ship · clipped at edge",12);
             orbitalDockLabel=PilotLabel(flightPanel,"",12);orbitalDockLabel.style.color=new Color(.2f,1,.7f);readoutLabel=PilotLabel(flightPanel,"");readoutLabel.style.marginTop=12;readoutLabel.style.whiteSpace=WhiteSpace.NoWrap;
-            var note=PilotLabel(flightPanel,$"Left mouse: rockets (45 s fail-safe).\nSpace: land / take off · R/C: climb.\nHold K: {CruiseSpeedReadout} in space · J: dock.\nV: flight assist · L: orbital coast.\nGreen outline: valid assisted landing site.\nBlue: local two-body orbit reference.\nGreen: gravity forecast (coast only).",12);note.style.marginTop=14;
+            controlsHelpLabel=PilotLabel(flightPanel,"",12);controlsHelpLabel.style.marginTop=14;controlsHelpKey=UnityEngine.InputSystem.Key.None;RefreshPilotHelp();
             landingPanel=new VisualElement{pickingMode=PickingMode.Ignore};landingPanel.style.position=UnityEngine.UIElements.Position.Absolute;landingPanel.style.left=16;landingPanel.style.bottom=90;landingPanel.style.width=340;landingPanel.style.paddingLeft=14;landingPanel.style.paddingRight=14;landingPanel.style.paddingTop=12;landingPanel.style.paddingBottom=12;landingPanel.style.backgroundColor=new Color(.025f,.06f,.08f,.9f);root.Add(landingPanel);
             landingLabel=PilotLabel(landingPanel,"",15);landingInfo=PilotLabel(landingPanel,"",12);landingDrawing=new RtsUiDrawing();landingDrawing.style.height=90;landingDrawing.style.width=300;landingPanel.Add(landingDrawing);PilotLabel(landingPanel,"Landing approach · side view",11);
             progradeDrawing=new RtsUiDrawing();progradeDrawing.style.position=UnityEngine.UIElements.Position.Absolute;progradeDrawing.StretchToParentSize();root.Add(progradeDrawing);progradeLabel=PilotLabel(root,"PROGRADE",12);progradeLabel.style.position=UnityEngine.UIElements.Position.Absolute;
@@ -68,13 +68,17 @@ namespace MassiveArmy.Planetary
             else MapDot(center+Vector2.right*(float)(pose.position.Magnitude/mapExtent)*size,Color.white);
             mapDrawing.MarkDirtyRepaint();
         }
+        void RefreshPilotHelp(){
+            var key=Networking.SurvivalNetworkSession.Bindings.pilotAssist;if(controlsHelpLabel==null||controlsHelpKey==key)return;controlsHelpKey=key;
+            controlsHelpLabel.text=$"Left mouse: rockets (45 s fail-safe).\nSpace: land / take off · R/C: climb.\nHold K: {CruiseSpeedReadout} in space · J: dock.\n{key}: flight assist · L: orbital coast.\nGreen outline: valid assisted landing site.\nBlue: local two-body orbit reference.\nGreen: gravity forecast (coast only).";
+        }
         void UpdatePilotHud()
         {
             if(flightPanel==null)return;
             if(pilotVisible!=active){pilotVisible=active;pilotUi.Root.style.display=active?DisplayStyle.Flex:DisplayStyle.None;nextOrbitRefresh=0;}
-            if(!active)return;pilotCompass?.Refresh();
+            if(!active)return;pilotCompass?.Refresh();RefreshPilotHelp();
             Prediction();
-            if(FlightAssistEnabled)RefreshLandingPreview();landingPanel.style.display=(Landed||AutoFlightActive||LandingPreviewVisible||LandingStatus.Contains("BLOCKED"))?DisplayStyle.Flex:DisplayStyle.None;var landingColor=(LandingAvailable||AutoFlightActive)?Color.green:Landed&&!LandingStatus.StartsWith("TAKEOFF BLOCKED")?new Color(.65f,.85f,1):new Color(1,.25f,.15f);landingLabel.text=LandingStatus;landingLabel.style.color=landingColor;landingInfo.text=$"CLEARANCE {GroundClearance:0} m · SPEED {SpeedReadout}\nV · FLIGHT ASSIST {(FlightAssistEnabled?"ON":"OFF")}";
+            if(FlightAssistEnabled)RefreshLandingPreview();landingPanel.style.display=(Landed||AutoFlightActive||LandingPreviewVisible||LandingStatus.Contains("BLOCKED"))?DisplayStyle.Flex:DisplayStyle.None;var landingColor=(LandingAvailable||AutoFlightActive)?Color.green:Landed&&!LandingStatus.StartsWith("TAKEOFF BLOCKED")?new Color(.65f,.85f,1):new Color(1,.25f,.15f);landingLabel.text=LandingStatus;landingLabel.style.color=landingColor;landingInfo.text=$"CLEARANCE {GroundClearance:0} m · SPEED {SpeedReadout}\n{Networking.SurvivalNetworkSession.Bindings.pilotAssist} · FLIGHT ASSIST {(FlightAssistEnabled?"ON":"OFF")}";
             landingDrawing.Lines.Clear();if(LandingPreviewVisible){var from=pose.position;var delta=LandingPosition-from;var up=LandingPosition.Float.normalized;var flat=Vector3.ProjectOnPlane(delta.Float,up);float run=Mathf.Max(100,flat.magnitude),drop=Mathf.Max(10,-Vector3.Dot(delta.Float,up));var forward=flat.sqrMagnitude>.01f?flat.normalized:Vector3.ProjectOnPlane(pose.rotation*Vector3.forward,up).normalized;Vector2 previous=Vector2.zero;
                 for(int i=0;i<=16;i++){var d=((AutoFlightActive?AutoPoint(Mathf.Lerp(AutoFlightProgress,1,i/16f)):LandingCurve(from,LandingPosition,i/16f))-from).Float;var point=new Vector2(30+Vector3.Dot(d,forward)/run*220,10-Vector3.Dot(d,up)/drop*60);if(i>0)landingDrawing.Lines.Add((previous,point,landingColor));previous=point;}landingDrawing.Lines.Add((previous+new Vector2(-18,5),previous+new Vector2(18,5),landingColor));}landingDrawing.MarkDirtyRepaint();
             orbitalDockLabel.text=DockingStatus;weaponLabel.text=$"ROCKETS {ActiveRockets}/{RocketCapacity} AIRBORNE · {(ActiveRockets>=RocketCapacity?"WAIT FOR DETONATION":fireDelay>0?"RELOADING":"READY")}"+ReentryReadout+ShipPowerReadout;

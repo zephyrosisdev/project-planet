@@ -225,7 +225,7 @@ namespace MassiveArmy.Planetary
         static readonly string[] simulationSpeedLabels={"0.25x","0.5x","1x","2x","4x","8x","16x","32x","64x"};
         public string SimulationSpeedLabel=>simulationSpeedLabels[simulationSpeedIndex];
         static readonly float[] simulationSpeeds={.25f,.5f,1,2,4,8,16,32,64};int simulationSpeedIndex=2;
-        public float SimulationSpeed=>simulationSpeeds[simulationSpeedIndex];
+        public float SimulationSpeed=>NetworkPresentation?1:simulationSpeeds[simulationSpeedIndex];
         public float SimulationDelta=>Time.deltaTime*SimulationSpeed;
         public void ChangeSimulationSpeed(int step){simulationSpeedIndex=Mathf.Clamp(simulationSpeedIndex+System.Math.Sign(step),0,simulationSpeeds.Length-1);if(Base!=null)Base.Notice=$"Simulation {SimulationSpeed:0.##}x (numpad +/-)";}
         public uint SimulationTicks {get;private set;}
@@ -279,7 +279,7 @@ namespace MassiveArmy.Planetary
 
             if(configuredRadius>0){if(!ownsDefinition){definition=Instantiate(definition);ownsDefinition=true;}definition.radius=configuredRadius;definition.gravitationalParameter=9.81*definition.radius*definition.radius;navigationResolution=Mathf.Clamp(Mathf.CeilToInt(definition.radius/15.625f),32,128);}
 
-            if(SystemRuntime==null){
+            if(SystemRuntime==null&&!NetworkPresentation){
                 systemDefinition=systemDefinition!=null?systemDefinition:Resources.Load<PlanetSystemDefinition>("MassiveArmy/Planets/DefaultSystem");
                 if(systemSizeMultiplier==1&&systemDefinition!=null)systemSizeMultiplier=systemDefinition.sizeMultiplier;
                 int scaleArg=System.Array.IndexOf(launchArgs,"-planet-size-multiplier");
@@ -289,7 +289,7 @@ namespace MassiveArmy.Planetary
                 Debug.Log($"Planet system size: {systemSizeMultiplier:0.##}x; home radius {definition.radius/1000:0.##} km; diameter {definition.radius/500:0.##} km. Army capacity {requestedCapacity} unchanged.");
             }
             var startingHome=new Vector3(1,.12f,1.3f).normalized;
-            if(configuredRadius>=PlanetDefinition.RegionalNavigationRadius&&System.Array.IndexOf(launchArgs,"-planet-interest-validation")<0&&System.Array.IndexOf(launchArgs,"-planet-crowd-validation")<0){if(SystemRuntime==null){definition.terrainHeight=definition.radius>=20000?1800:240;definition.oceanHeight=-35;}if(definition.radius>=20000&&SystemRuntime==null)definition.atmosphereHeight=Mathf.Max(10000,definition.atmosphereHeight);var home=startingHome;
+            if(configuredRadius>=PlanetDefinition.RegionalNavigationRadius&&System.Array.IndexOf(launchArgs,"-planet-interest-validation")<0&&System.Array.IndexOf(launchArgs,"-planet-crowd-validation")<0){if(SystemRuntime==null&&!NetworkPresentation){definition.terrainHeight=definition.radius>=20000?1800:240;definition.oceanHeight=-35;}if(definition.radius>=20000&&SystemRuntime==null&&!NetworkPresentation)definition.atmosphereHeight=Mathf.Max(10000,definition.atmosphereHeight);var home=startingHome;
                 if(definition.radius>=20000){
                     if(AlliedStart)home=PlanetStartingRegion.SelectCoastal(definition,startingHome);
                     else if(DeferredInitialization){bool found=false;foreach(var candidate in PlanetStartingRegion.Candidates(definition,startingHome)){if(PlanetStartingRegion.ConnectedPlain(definition,candidate)){home=candidate;found=true;break;}yield return null;}if(!found)throw new System.InvalidOperationException("No connected dry starting region found");}
@@ -372,7 +372,7 @@ namespace MassiveArmy.Planetary
             terrainRenderer=new PlanetTerrainRenderer(this);flightHudRenderer=new PlanetFlightHudRenderer(this);terrainMaterial.SetColor("_TintOverride",Color.clear);scaledRenderer=new ScaledSpaceRenderer(biomeColours);if(System.Array.IndexOf(System.Environment.GetCommandLineArgs(),"-planet-weather-control")<0)weatherRenderer=new PlanetWeatherRenderer(this);
 
             if(System.Array.IndexOf(args,"-planet-system-baseline")>=0){validationDistantBody=ScriptableObject.CreateInstance<PlanetDefinition>();validationDistantBody.bodyId=2;validationDistantBody.radius=10000000;validationDistantBody.position=definition.position.Add(new Double3(-40000000,10000000,-20000000));distantBodies=new[]{validationDistantBody};}
-            if(SystemRuntime==null&&(distantBodies==null||distantBodies.Length==0)&&System.Array.IndexOf(args,"-planet-single-body")<0){
+            if(!NetworkPresentation&&SystemRuntime==null&&(distantBodies==null||distantBodies.Length==0)&&System.Array.IndexOf(args,"-planet-single-body")<0){
                 systemDefinition=systemDefinition!=null?systemDefinition:Resources.Load<PlanetSystemDefinition>("MassiveArmy/Planets/DefaultSystem");
                 if(systemDefinition!=null){SystemRuntime=gameObject.AddComponent<PlanetSystemRuntime>();SystemRuntime.Initialize(this,systemDefinition);}
             }
@@ -416,7 +416,8 @@ namespace MassiveArmy.Planetary
 
             var prebuild=PrebuildSettlement();while(prebuild.MoveNext())yield return null;
             initialized=true;
-            if(IsSurvival){spacecraft=new PlanetSpacecraft(this,surface,origin,view,transform);modes.Bind(PlayerControlMode.Spacecraft,enabled=>spacecraft.SetActive(enabled));player.BindShip(spacecraft);if(ResidentActive)SetFirstPerson(true);if(SystemRuntime?.ActiveWorld==null||SystemRuntime.ActiveWorld==this)DeployPersonalTestVehicles();}
+            if(IsSurvival&&NetworkPresentation)SetFirstPerson(true);
+            if(IsSurvival&&!NetworkPresentation){spacecraft=new PlanetSpacecraft(this,surface,origin,view,transform);modes.Bind(PlayerControlMode.Spacecraft,enabled=>spacecraft.SetActive(enabled));player.BindShip(spacecraft);if(ResidentActive)SetFirstPerson(true);if(SystemRuntime?.ActiveWorld==null||SystemRuntime.ActiveWorld==this)DeployPersonalTestVehicles();}
             else DeployStartingTank();
         }
 
@@ -508,7 +509,7 @@ namespace MassiveArmy.Planetary
             if(!Ready)return;if(!ResidentActive){
                 if(!dormantResourcesReleased&&Time.realtimeSinceStartupAsDouble-dormantSince>=System.Math.Max(1,SystemRuntime?.Civilisation?.Settings.dormantResourceReleaseSeconds??15)){settlementRenderer?.ReleaseDormantResources();playerConstruction?.ReleaseViewResources();dormantResourcesReleased=true;}
                 return;
-            }UpdateIndustry();PreparePlayerBuilding();UpdatePersonalGameplay();UpdateOrbitals();UpdateDaylightPreview();lighting?.Update();var keyboard=LocalPlayerDead?null:Keyboard.current;
+            }if(!NetworkPresentation){UpdateIndustry();PreparePlayerBuilding();UpdatePersonalGameplay();UpdateOrbitals();UpdateDaylightPreview();}lighting?.Update();var keyboard=LocalPlayerDead||Networking.SurvivalNetworkSession.ChatInputCaptured||NetworkPresentation?null:Keyboard.current;
 
             if(keyboard!=null&&Application.isFocused&&!PersonalMenuOpen&&!(hud?.TextFocused??false)){if(keyboard.numpadPlusKey.wasPressedThisFrame)ChangeSimulationSpeed(1);if(keyboard.numpadMinusKey.wasPressedThisFrame)ChangeSimulationSpeed(-1);}
             if(keyboard!=null&&keyboard.f2Key.wasPressedThisFrame)showTerrainDebug=!showTerrainDebug;
@@ -524,9 +525,10 @@ namespace MassiveArmy.Planetary
 
             bool interact=!PersonalMenuOpen&&keyboard!=null&&keyboard.fKey.wasPressedThisFrame;bool rts=keyboard!=null&&keyboard.tabKey.wasPressedThisFrame;
 
-            UpdateCitizenFollow();if(modes.Mode==PlayerControlMode.RTS){bool input=rig.InputEnabled;rig.InputEnabled=input&&!(hud?.ModalOpen??false)&&!(hud?.TextFocused??false);rig.Step(Mouse.current!=null&&(hud?.Blocks(Mouse.current.position.ReadValue())??false));rig.InputEnabled=input;}Orbitals?.Tick();spacecraft?.StepUnpiloted(Time.deltaTime);if(IsPiloting&&!LocalPlayerDead)spacecraft.Step(Time.deltaTime);else if(IsFirstPerson){spacecraft?.Rebase();respawnView?.RebaseShipContacts();Base?.Rebase();playerConstruction?.RebaseColliders();Physics.SyncTransforms();if(AutomaticPlayerStep&&!LocalPlayerDead)player.Step(Time.deltaTime,PersonalMenuOpen||PlayerBlueprintRadialOpen?(Vector2?)Vector2.zero:null,PersonalMenuOpen||PlayerBlueprintRadialOpen?(Vector2?)Vector2.zero:null);Orbitals?.Tick();}if(groundVehicles!=null)spacecraft?.Rebase();groundVehicles?.Step(VehicleMotor.LocalStepDuration(Time.deltaTime));SyncVehicleInteractionState();spacecraft?.Rebase();Base?.Rebase();Orbitals?.Tick();if(IsFirstPerson&&spacecraft!=null){Physics.SyncTransforms();shipInteraction=spacecraft.FindInteraction(view.transform.position,view.transform.forward);}if(rts)SetFirstPerson(false);else if(interact)Interact();encounter?.UpdatePresentation();if(!LocalPlayerDead)spacecraft?.StepWeapons(SimulationDelta);var mouse=Mouse.current;
+            if(!NetworkPresentation){UpdateCitizenFollow();if(modes.Mode==PlayerControlMode.RTS){bool input=rig.InputEnabled;rig.InputEnabled=input&&!(hud?.ModalOpen??false)&&!(hud?.TextFocused??false);rig.Step(Mouse.current!=null&&(hud?.Blocks(Mouse.current.position.ReadValue())??false));rig.InputEnabled=input;}Orbitals?.Tick();spacecraft?.StepUnpiloted(Time.deltaTime);if(IsPiloting&&!LocalPlayerDead)spacecraft.Step(Time.deltaTime);else if(IsFirstPerson){spacecraft?.Rebase();respawnView?.RebaseShipContacts();Base?.Rebase();playerConstruction?.RebaseColliders();Physics.SyncTransforms();if(AutomaticPlayerStep&&!LocalPlayerDead)player.Step(Time.deltaTime,PersonalMenuOpen||PlayerBlueprintRadialOpen?(Vector2?)Vector2.zero:null,PersonalMenuOpen||PlayerBlueprintRadialOpen?(Vector2?)Vector2.zero:null);Orbitals?.Tick();}if(groundVehicles!=null)spacecraft?.Rebase();groundVehicles?.Step(VehicleMotor.LocalStepDuration(Time.deltaTime));SyncVehicleInteractionState();spacecraft?.Rebase();Base?.Rebase();Orbitals?.Tick();if(IsFirstPerson&&spacecraft!=null){Physics.SyncTransforms();shipInteraction=spacecraft.FindInteraction(view.transform.position,view.transform.forward);}if(rts)SetFirstPerson(false);else if(interact)Interact();encounter?.UpdatePresentation();if(!LocalPlayerDead)spacecraft?.StepWeapons(SimulationDelta);
 
-            respawnView?.Tick();RenderGroundLoot();UpdatePlayerBuilding();
+            respawnView?.Tick();RenderGroundLoot();UpdatePlayerBuilding();}
+            var mouse=NetworkPresentation?null:Mouse.current;
             bool placing=Base!=null&&(Base.Placing!=null||Base.RoadPlacing);
 
             if(modes.Mode==PlayerControlMode.RTS)SelectionInput(mouse,keyboard);
@@ -600,14 +602,14 @@ namespace MassiveArmy.Planetary
 
         void OnGUI()
 
-        {if(!ResidentActive)return;
+        {if(!ResidentActive||NetworkPresentation)return;
 
             if(Prebuilding){DrawPrebuildProgress();return;}DrawFormationPreview();
             if(!Ready)return;
 
             playerConstruction?.DrawHud();
             if(IsDriving){groundVehicles?.DrawHud();}
-            else if(IsPiloting){GUI.Label(new Rect(12,12,1100,80),$"CAPITAL SHIP · {spacecraft.SpeedReadout}\nW/S thrust · A/D strafe · Space land/take off · R/C climb/descend · V flight assist · mouse pitch/yaw · Q/E roll · Shift boost · Hold K {PlanetSpacecraft.CruiseSpeedReadout} (space) · J dock/undock · G landing gear · B brake · L orbit attitude lock · Left mouse fire rocket · F leave pilot seat");}
+            else if(IsPiloting){GUI.Label(new Rect(12,12,1100,80),$"CAPITAL SHIP · {spacecraft.SpeedReadout}\nW/S thrust · A/D strafe · Space land/take off · R/C climb/descend · {Networking.SurvivalNetworkSession.Bindings.pilotAssist} flight assist · mouse pitch/yaw · Q/E roll · Shift boost · Hold K {PlanetSpacecraft.CruiseSpeedReadout} (space) · J dock/undock · G landing gear · B brake · L orbit attitude lock · Left mouse fire rocket · F leave pilot seat");}
 
             else if(modes.Mode==PlayerControlMode.FirstPerson){GUI.Label(new Rect(Screen.width*.5f-4,Screen.height*.5f-10,20,20),"+");GUI.Label(new Rect(12,12,900,60),$"Health {player.Environment.Health:F0}   Oxygen {player.Environment.Oxygen:F0}%   Inventory: repair tool, suit oxygen\nWASD walk • mouse look • Space jump • F interact • I inventory");}
 

@@ -42,19 +42,19 @@ namespace MassiveArmy.Planetary
             else LandingStatus=(autoTakeoff?"TAKING OFF":"LANDING")+$" · {t*100:0}%";
             shipFrame.Pose=pose;
         }
-        double FootClearance(Double3 foot){var direction=foot.Float.normalized;return foot.Magnitude-world.definition.radius-Math.Max(surface.SampleHeight(direction),world.definition.oceanHeight);}
+        double FootClearance(Double3 foot){var direction=foot.Float.normalized;return foot.Magnitude-SimulationDefinition.radius-Math.Max(surface.SampleHeight(direction),SimulationDefinition.oceanHeight);}
         int landingRevision;float nextLandingRefresh;readonly Collider[] landingOverlaps=new Collider[128];readonly RaycastHit[] landingHits=new RaycastHit[128];
         readonly Vector4[] landingLines=new Vector4[160];GraphicsBuffer landingBuffer;Material landingMaterial;int landingLineCount;
         static readonly Vector3 HullCentre=new Vector3(0,-2,-7),HullHalf=new Vector3(27,5.5f,48);
         void InitializeLanding(){landingBuffer=new GraphicsBuffer(GraphicsBuffer.Target.Structured,landingLines.Length,16);landingMaterial=new Material(Resources.Load<Shader>("MassiveArmy/PlanetLanding"));}
         bool FlightOwns(Collider collider)=>Owns(collider)||world.GroundVehicles?.IsCargoCollider(collider,this)==true;
-        bool OverlapsHull(Double3 at,Quaternion rotation){int count=Physics.OverlapBoxNonAlloc(world.RenderBodyPosition(at+Double3.Rotate(rotation,new Double3(HullCentre))),HullHalf,landingOverlaps,rotation,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);if(count==landingOverlaps.Length)return true;for(int i=0;i<count;i++)if(!FlightOwns(landingOverlaps[i]))return true;return false;}
-        bool HullSweep(Double3 from,Double3 to,Quaternion rotation){var delta=to-from;float distance=(float)delta.Magnitude;if(distance<.001f)return !OverlapsHull(to,rotation);var centre=world.RenderBodyPosition(from+Double3.Rotate(rotation,new Double3(HullCentre)));int count=Physics.BoxCastNonAlloc(centre,HullHalf,delta.Float/distance,landingHits,rotation,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);if(count==landingHits.Length)return false;for(int i=0;i<count;i++)if(!FlightOwns(landingHits[i].collider))return false;return !OverlapsHull(to,rotation);}
+        bool OverlapsHull(Double3 at,Quaternion rotation){if(simulationHullSweep!=null)return !simulationHullSweep(at,at,rotation);int count=Physics.OverlapBoxNonAlloc(world.RenderBodyPosition(at+Double3.Rotate(rotation,new Double3(HullCentre))),HullHalf,landingOverlaps,rotation,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);if(count==landingOverlaps.Length)return true;for(int i=0;i<count;i++)if(!FlightOwns(landingOverlaps[i]))return true;return false;}
+        bool HullSweep(Double3 from,Double3 to,Quaternion rotation){if(simulationHullSweep!=null)return simulationHullSweep(from,to,rotation);var delta=to-from;float distance=(float)delta.Magnitude;if(distance<.001f)return !OverlapsHull(to,rotation);var centre=world.RenderBodyPosition(from+Double3.Rotate(rotation,new Double3(HullCentre)));int count=Physics.BoxCastNonAlloc(centre,HullHalf,delta.Float/distance,landingHits,rotation,distance,Physics.DefaultRaycastLayers,QueryTriggerInteraction.Ignore);if(count==landingHits.Length)return false;for(int i=0;i<count;i++)if(!FlightOwns(landingHits[i].collider))return false;return !OverlapsHull(to,rotation);}
         public bool TakeOff(){if(!Landed||AutoFlightActive)return false;Physics.SyncTransforms();var up=Direction;var target=pose.position+new Double3(up)*TakeoffRise;var levelRotation=Quaternion.FromToRotation(pose.rotation*Vector3.up,up)*pose.rotation;if(!HullSweep(pose.position,target,pose.rotation)||OverlapsHull(target,levelRotation)){LandingStatus="TAKEOFF BLOCKED · OVERHEAD OBSTACLE";return false;}
             BeginAutoFlight(target,levelRotation,true);Rebase();return true;
         }
-        public bool TryLandingOrTakeoff(){if(!active||world.Paused||AutoFlightActive)return false;if(Landed)return TakeOff();RefreshLandingPreview();if(!LandingAvailable)return false;
-            if(landingRevision!=world.definition.Edits.Revision){LandingAvailable=false;LandingStatus="LANDING RED · TERRAIN CHANGED";nextLandingRefresh=0;return false;}
+        public bool TryLandingOrTakeoff(){if(!active||world?.Paused==true||AutoFlightActive)return false;if(Landed)return TakeOff();RefreshLandingPreview();if(!LandingAvailable)return false;
+            if(landingRevision!=SimulationDefinition.Edits.Revision){LandingAvailable=false;LandingStatus="LANDING RED · TERRAIN CHANGED";nextLandingRefresh=0;return false;}
             // Use exactly the displayed destination; recheck its safety without choosing another site.
             Physics.SyncTransforms();if(!CheckApproach(LandingPosition,LandingRotation)){LandingAvailable=false;LandingStatus="LANDING BLOCKED · APPROACH OBSTACLE";return false;}
             if(Speed>LandingMaxSpeed||GroundClearance>LandingMaxAltitude){LandingAvailable=false;LandingStatus="LANDING UNAVAILABLE · SLOW / DESCEND";return false;}
@@ -62,17 +62,17 @@ namespace MassiveArmy.Planetary
         }
         Double3 LandingCurve(Double3 start,Double3 end,float t){var up=end.Float.normalized;var horizontal=end-start;horizontal-=new Double3(up)*Vector3.Dot(horizontal.Float,up);var a=start+horizontal*.35;var b=end+new Double3(up)*Math.Min(180,Math.Max(20,(start-end).Magnitude*.3));double q=1-t;return start*(q*q*q)+a*(3*q*q*t)+b*(3*q*t*t)+end*(t*t*t);}
         bool CheckApproach(Double3 end,Quaternion rotation){var previous=pose.position;for(int i=1;i<=16;i++){var p=LandingCurve(pose.position,end,i/16f);if(!HullSweep(previous,p,rotation))return false;
-                for(int z=-1;z<=1;z++)for(int x=-1;x<=1;x++){if(x!=0&&z==0||x==0&&z!=0)continue;var foot=p+Double3.Rotate(rotation,new Double3(x*26,-8,z*50));var direction=foot.Float.normalized;if(foot.Magnitude<world.definition.radius+surface.SampleHeight(direction)-.35)return false;}
+                for(int z=-1;z<=1;z++)for(int x=-1;x<=1;x++){if(x!=0&&z==0||x==0&&z!=0)continue;var foot=p+Double3.Rotate(rotation,new Double3(x*26,-8,z*50));var direction=foot.Float.normalized;if(foot.Magnitude<SimulationDefinition.radius+surface.SampleHeight(direction)-.35)return false;}
                 previous=p;}return true;}
         public void RefreshLandingPreview(bool force=false){if(AutoFlightActive)return;if(!force&&Time.unscaledTime<nextLandingRefresh)return;nextLandingRefresh=Time.unscaledTime+.2f;LandingAvailable=false;
             if(Landed){if(!LandingStatus.StartsWith("TAKEOFF BLOCKED"))LandingStatus="LANDED · SPACE TO TAKE OFF";LandingPosition=pose.position;LandingRotation=pose.rotation;return;}
-            landingRevision=world.definition.Edits.Revision;var up=Direction;var heading=Vector3.ProjectOnPlane(pose.rotation*Vector3.forward,up).normalized;if(heading.sqrMagnitude<.1f)heading=Vector3.ProjectOnPlane(pose.rotation*Vector3.up,up).normalized;
+            landingRevision=SimulationDefinition.Edits.Revision;var up=Direction;var heading=Vector3.ProjectOnPlane(pose.rotation*Vector3.forward,up).normalized;if(heading.sqrMagnitude<.1f)heading=Vector3.ProjectOnPlane(pose.rotation*Vector3.up,up).normalized;
             var drift=Vector3.ProjectOnPlane(pose.linearVelocity.Float,up);var target=pose.position+new Double3(Vector3.ClampMagnitude(drift*.65f,140));var direction=target.Float.normalized;
             float h=surface.SampleHeight(direction);var right=Vector3.Cross(up,heading).normalized;
-            float Height(float x,float z){var d=(new Double3(direction)*world.definition.radius+new Double3(right*x+heading*z)).Float.normalized;return surface.SampleHeight(d);}
+            float Height(float x,float z){var d=(new Double3(direction)*SimulationDefinition.radius+new Double3(right*x+heading*z)).Float.normalized;return surface.SampleHeight(d);}
             float sx=(Height(26,0)-Height(-26,0))/52,sz=(Height(0,50)-Height(0,-50))/100;var normal=(direction-right*sx-heading*sz).normalized;
-            LandingRotation=Quaternion.LookRotation(Vector3.ProjectOnPlane(heading,normal).normalized,normal);float high=0,low=0;bool water=h<=world.definition.oceanHeight;
-            for(int z=-4;z<=4;z++)for(int x=-2;x<=2;x++){float px=x*13,pz=z*12.5f;float sample=Height(px,pz);water|=sample<=world.definition.oceanHeight;float residual=sample-h-sx*px-sz*pz;high=Mathf.Max(high,residual);low=Mathf.Min(low,residual);}
+            LandingRotation=Quaternion.LookRotation(Vector3.ProjectOnPlane(heading,normal).normalized,normal);float high=0,low=0;bool water=h<=SimulationDefinition.oceanHeight;
+            for(int z=-4;z<=4;z++)for(int x=-2;x<=2;x++){float px=x*13,pz=z*12.5f;float sample=Height(px,pz);water|=sample<=SimulationDefinition.oceanHeight;float residual=sample-h-sx*px-sz*pz;high=Mathf.Max(high,residual);low=Mathf.Min(low,residual);}
             LandingPosition=surface.GetSurfacePositionPrecise(direction)+new Double3(normal)*(8.3+high);
             if(GroundClearance>LandingMaxAltitude){LandingStatus="LANDING RED · DESCEND BELOW 600 m";return;}if(Speed>LandingMaxSpeed){LandingStatus="LANDING RED · SLOW BELOW 180 m/s";return;}if(water){LandingStatus="LANDING RED · WATER";return;}
             if(Vector3.Dot(normal,direction)<Mathf.Cos(8*Mathf.Deg2Rad)||high-low>2.5f){LandingStatus="LANDING RED · STEEP / UNEVEN GROUND";return;}

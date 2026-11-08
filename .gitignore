@@ -175,3 +175,16 @@ ProfilerCaptures
 Assets/_Recovery
 
 /ArtSource/MartianColony/*.blend1
+
+# Multiplayer local configuration, saves and generated build scene.
+/Server/server.json
+/Server/Saves/
+/Assets/MassiveArmy/Generated/
+/Assets/MassiveArmy/Generated.meta
+!Tools/MultiplayerChecks/MultiplayerChecks.csproj
+
+/Tools/MultiplayerChecks/bin/
+/Tools/MultiplayerChecks/obj/
+/.mpb/
+
+/.mpbaseline/

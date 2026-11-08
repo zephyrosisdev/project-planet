@@ -1,5 +1,11 @@
 # Space survival multiplayer plan
 
+The accepted delivery now targets dedicated Windows servers plus offline single
+player, with proximity voice, global text and a measured 100-client goal before
+shared-world sharding. The hosted-prototype sequence below is historical design
+context. See the [implementation checkpoint](SURVIVAL_NETWORK_IMPLEMENTATION.md)
+for implemented source, setup instructions and explicitly unfinished work.
+
 ## Current scope
 
 Survival is the main menu's normal start action and the PlanetDevelopment scene's
@@ -12,8 +18,8 @@ implementation, legacy RTS launch APIs and 10K–1M stress fixture are retained.
 Starting tanks and prototype deployment require the legacy base and cannot spawn
 in survival. Other planets inherit the session mode.
 
-This is an offline foundation. No multiplayer packages or cloud credentials have
-been added. Survival construction now uses independent storage, and an industrial
+The original foundation was offline. Networking packages and an incomplete
+dedicated-server adapter have now been added; no cloud credentials are embedded. Survival construction now uses independent storage, and an industrial
 prototype is integrated. See [implementation status and remaining gates](INDUSTRIAL_IMPLEMENTATION.md)
 for current controls, verified domain behavior, the standalone GPU checkpoint
 probe, and the substantial work still required for the full design.

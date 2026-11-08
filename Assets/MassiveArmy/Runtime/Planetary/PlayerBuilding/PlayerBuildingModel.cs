@@ -12,7 +12,7 @@ namespace MassiveArmy.Planetary {
 
     [Serializable]public sealed class PlayerModuleRecord {public long id,parent;public int parentSocket=-1;public PlayerModuleKind kind;public Vector3 position;public float yaw;public bool open;public string constructionItem;public int constructionCount;public double constructionActivity;public bool resourceConstruction;public List<MassiveArmy.Industrial.ItemStack> constructionPaid=new List<MassiveArmy.Industrial.ItemStack>();}
 
-    [Serializable]public sealed class PlayerBuildSite {public long id;public Double3 anchor;public Quaternion rotation=Quaternion.identity;public List<PlayerModuleRecord> modules=new List<PlayerModuleRecord>();}
+    [Serializable]public sealed class PlayerBuildSite {public long id,owner;public Double3 anchor;public Quaternion rotation=Quaternion.identity;public List<PlayerModuleRecord> modules=new List<PlayerModuleRecord>();}
 
     internal readonly struct BuildSocket {internal readonly Vector3 point;internal readonly float yaw;internal readonly BuildSocketKind kind;internal readonly float width,depth;internal BuildSocket(BuildSocketKind kind,Vector3 point,float yaw=0,float width=3,float depth=3){this.kind=kind;this.point=point;this.yaw=yaw;this.width=width;this.depth=depth;}}
 
@@ -53,13 +53,13 @@ namespace MassiveArmy.Planetary {
 
         internal static readonly Vector2[] Triangle={new Vector2(-1.5f,-.8660254f),new Vector2(1.5f,-.8660254f),new Vector2(0,1.7320508f)};
 
-        internal static PlayerModuleProfile[] Create(){var result=new PlayerModuleProfile[Names.Length];for(int n=0;n<result.Length;n++){
+        internal static PlayerModuleProfile[] Create(bool collisionOnly=false){var result=new PlayerModuleProfile[Names.Length];for(int n=0;n<result.Length;n++){
 
             var kind=(PlayerModuleKind)n;var solids=new List<BuildSolid>();var inputs=new List<BuildSocket>();var outputs=new List<BuildSocket>();var clear=new List<BuildSolid>();var p=new PlayerModuleProfile{kind=kind,name=Names[n]};result[n]=p;
 
             bool floor=kind==PlayerModuleKind.CeilingSquare||kind==PlayerModuleKind.CeilingTriangle;bool tri=kind==PlayerModuleKind.FoundationTriangle||kind==PlayerModuleKind.CeilingTriangle;
 
-            if(p.Room){var asset=ColonyPrototypeLibrary.Find("room-"+kind);if(asset==null)throw new InvalidOperationException("Import the Blender colony prototype catalogue before using colony rooms");foreach(var shape in asset.solids)solids.Add(shape.Shape());foreach(var socket in asset.sockets){if(!Enum.TryParse(socket.kind,out BuildSocketKind socketKind))continue;var value=new BuildSocket(socketKind,socket.position,socket.yaw,socket.width,socket.depth);if(socketKind==BuildSocketKind.FloorCenter)inputs.Add(value);else if(socketKind==BuildSocketKind.HabitatPort){inputs.Add(value);outputs.Add(value);}else if(socketKind==BuildSocketKind.MachineMount)outputs.Add(value);}}
+            if(p.Room){var asset=collisionOnly?ColonyPrototypeLibrary.StoredProfile("room-"+kind):ColonyPrototypeLibrary.Find("room-"+kind);if(asset==null)throw new InvalidOperationException("Import the Blender colony prototype catalogue before using colony rooms");foreach(var shape in asset.solids)solids.Add(shape.Shape());foreach(var socket in asset.sockets){if(!Enum.TryParse(socket.kind,out BuildSocketKind socketKind))continue;var value=new BuildSocket(socketKind,socket.position,socket.yaw,socket.width,socket.depth);if(socketKind==BuildSocketKind.FloorCenter)inputs.Add(value);else if(socketKind==BuildSocketKind.HabitatPort){inputs.Add(value);outputs.Add(value);}else if(socketKind==BuildSocketKind.MachineMount)outputs.Add(value);}}
             else if(p.Foundation||floor){float height=p.Foundation?3:.1f;var poly=tri?Triangle:Square;solids.Add(new BuildSolid(poly,0,height));
 
                 for(int i=0;i<poly.Length;i++){var a=poly[i];var b=poly[(i+1)%poly.Length];var mid=(a+b)*.5f;var outward=new Vector2(b.y-a.y,a.x-b.x);float yaw=Mathf.Atan2(outward.x,outward.y)*Mathf.Rad2Deg;var at=new Vector3(mid.x,0,mid.y);

@@ -12,8 +12,12 @@ paid survival construction, finite materials, growing piles, processing, belts,
 manufactured industrial vehicles and radiation. Use **F4** for its console.
 The complete shipbuilding/fleet plan and performance acceptance remain pending.
 
-Online play is planned, not implemented. See the [multiplayer architecture and
-implementation plan](Documentation/SPACE_SURVIVAL_MULTIPLAYER.md). Navigation and
+An incomplete multiplayer foundation adds dedicated-server build scripts,
+Lobby/Relay discovery, authoritative walking and vehicle/ship control, invited
+passenger berths, basic survival actions, and Vivox chat. Full survival replication
+and live capacity validation remain unfinished;
+see the [implementation checkpoint](Documentation/SURVIVAL_NETWORK_IMPLEMENTATION.md)
+and [multiplayer design](Documentation/SPACE_SURVIVAL_MULTIPLAYER.md). Navigation and
 legacy army fixtures remain available, including the 1M stress option; survival
 allocates no army or navigation buffers. The 60 FPS / 1440p / RTX 3070 acceptance
 target remains unchanged and has not been remeasured for this change.

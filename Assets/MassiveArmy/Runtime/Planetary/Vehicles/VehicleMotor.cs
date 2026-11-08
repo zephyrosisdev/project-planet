@@ -3,6 +3,10 @@ using UnityEngine;
 namespace MassiveArmy.Planetary
 {
     public struct VehicleInput {public Vector2 movement;public Vector3 aim;public bool brake,fire,boost,recover;}
+    public struct VehicleMotorSnapshot {
+        public SpacePose pose;public float yawVelocity,verticalVelocity,steering;
+        public VehicleMotionState state;public bool grounded;
+    }
     public abstract class VehicleMotor
     {
         internal static float LocalStepDuration(float elapsed)=>Mathf.Clamp(elapsed,0,.05f);
@@ -13,6 +17,8 @@ namespace MassiveArmy.Planetary
         public bool Grounded {get;protected set;}
         public float Steering {get;protected set;}
         public float ForwardSpeed=>Vector3.Dot(Pose.linearVelocity.Float,Pose.rotation*Vector3.forward);
+        public VehicleMotorSnapshot Capture()=>new VehicleMotorSnapshot{pose=Pose,yawVelocity=yawVelocity,verticalVelocity=verticalVelocity,steering=Steering,state=State,grounded=Grounded};
+        public void Restore(VehicleMotorSnapshot snapshot){Pose=snapshot.pose;yawVelocity=snapshot.yawVelocity;verticalVelocity=snapshot.verticalVelocity;Steering=snapshot.steering;State=snapshot.state;Grounded=snapshot.grounded;}
         protected VehicleMotor(VehicleDefinition definition){this.definition=definition;}
         public void Follow(SpacePose pose){Pose=pose;verticalVelocity=0;Grounded=true;State=pose.linearVelocity.Magnitude>.1?VehicleMotionState.Walking:VehicleMotionState.Idle;}
         public void Release(SpacePose pose){Pose=pose;Grounded=false;verticalVelocity=0;State=VehicleMotionState.Falling;}
@@ -31,8 +37,8 @@ namespace MassiveArmy.Planetary
                     next=contact.position+new Double3(contact.normal)*.025;
                     velocity=new Double3(Vector3.ProjectOnPlane(velocity.Float,contact.normal));Grounded=true;State=VehicleMotionState.Landing;
                 }
-                var floor=terrain.Surface(next,.025f);
-                if(next.Magnitude<floor.Magnitude){next=floor;velocity=new Double3(Vector3.ProjectOnPlane(velocity.Float,up));Grounded=true;State=VehicleMotionState.Landing;}
+                if(!terrain.CanonicalOnlyGround){var floor=terrain.Surface(next,.025f);
+                if(next.Magnitude<floor.Magnitude){next=floor;velocity=new Double3(Vector3.ProjectOnPlane(velocity.Float,up));Grounded=true;State=VehicleMotionState.Landing;}}
                 if(hitNormal.sqrMagnitude>.5f){
                     var obstacleVelocity=terrain.ObstacleVelocity(next);var relativeVelocity=velocity-obstacleVelocity;if(Vector3.Dot(relativeVelocity.Float,hitNormal)<0)velocity=relativeVelocity-new Double3(hitNormal)*Vector3.Dot(relativeVelocity.Float,hitNormal)+obstacleVelocity;
                     if(Vector3.Dot(hitNormal,up)>.55f&&Vector3.Dot(acceleration.Float,hitNormal)<0){Grounded=true;State=VehicleMotionState.Landing;verticalVelocity=0;}
@@ -80,8 +86,8 @@ namespace MassiveArmy.Planetary
                     verticalVelocity=wasGrounded?Mathf.Lerp(verticalVelocity,climb,1-Mathf.Exp(-Mathf.Max(1,definition.suspensionDamping)*h)):climb;
                     if(velocity.sqrMagnitude<.01f&&climb==0)verticalVelocity=0;State=!wasGrounded?VehicleMotionState.Landing:Mathf.Abs(speed)>.2f?(Mathf.Abs(speed)>definition.maximumSpeed*.55f?VehicleMotionState.Running:VehicleMotionState.Walking):Mathf.Abs(yawVelocity)>1?VehicleMotionState.Turning:VehicleMotionState.Idle;}
                 else {State=VehicleMotionState.Falling;}
-                // Independent analytic recovery is unconditional, including missed probes and large frame hitches.
-                var floor=terrain.Surface(proposed,.025f);if(proposed.Magnitude<floor.Magnitude){proposed=floor;verticalVelocity=0;Grounded=true;}
+                // Planet vehicles retain analytic recovery. Ship-local decks use their CPU contact set.
+                if(!terrain.CanonicalOnlyGround){var floor=terrain.Surface(proposed,.025f);if(proposed.Magnitude<floor.Magnitude){proposed=floor;verticalVelocity=0;Grounded=true;}}
                 // Carrier support is a persistent local constraint, not a one-frame ray hit.
                 // Recheck after slope handling and terrain recovery so neither can push us through a deck.
                 if(deck is IVehicleDeck carrierDeck&&carrierDeck.SampleVehicleDeck(proposed,out var support)){

@@ -48,6 +48,10 @@
     "com.unity.modules.vehicles": "1.0.0",
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0"
+    "com.unity.modules.xr": "1.0.0",
+    "com.unity.netcode.gameobjects": "2.13.2",
+    "com.unity.services.multiplayer": "2.3.1",
+    "com.unity.services.vivox": "16.11.0",
+    "com.unity.transport": "6.6.0"
   }
 }

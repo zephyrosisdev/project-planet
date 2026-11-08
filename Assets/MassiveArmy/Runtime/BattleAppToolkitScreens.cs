@@ -32,6 +32,7 @@ namespace MassiveArmy
             var scale=new Slider("UI scale",.85f,1.25f){value=ui.Scale,showInputField=true};scale.AddToClassList("setting-row");scale.RegisterValueChangedCallback(e=>ui.SetScale(e.newValue));scroll.Add(scale);
             var render=new Slider("Graphics render scale",.5f,1){value=renderQuality.Scale,showInputField=true};render.AddToClassList("setting-row");render.RegisterValueChangedCallback(e=>renderQuality.Scale=e.newValue);scroll.Add(render);
             var camera=new Slider("Camera sensitivity",.25f,2){value=rig.Sensitivity,showInputField=true};camera.AddToClassList("setting-row");camera.RegisterValueChangedCallback(e=>rig.Sensitivity=e.newValue);scroll.Add(camera);
+            MakeSurvivalBindingSettings(scroll);
             var vsync=new Toggle("VSync"){value=QualitySettings.vSyncCount>0};vsync.AddToClassList("setting-row");vsync.RegisterValueChangedCallback(e=>QualitySettings.vSyncCount=e.newValue?1:0);scroll.Add(vsync);
             var shadows=new Toggle("Realtime shadows"){value=settings.shadows};shadows.AddToClassList("setting-row");shadows.RegisterValueChangedCallback(e=>settings.shadows=e.newValue);scroll.Add(shadows);
             L(scroll,"SIMULATION & STRESS ISOLATION","subheading");
@@ -49,6 +50,16 @@ namespace MassiveArmy
             map.RegisterCallback<PointerMoveEvent>(e=>{Vector2 uv=(Vector2)e.localPosition/map.contentRect.size;int index=field.Map.Index(new Vector2((uv.x-.5f)*field.Size,(.5f-uv.y)*field.Size));atlasDetails.text=$"{Biomes.Names[(int)field.Map.Biome[index]]} · elevation {field.Map.Height[index]:F0} m\nTemperature {field.Map.Temperature[index]:P0} · moisture {field.Map.Moisture[index]:P0}\nWater depth {field.Map.WaterData(index).g:F1} m";});
             map.RegisterCallback<PointerDownEvent>(e=>{if(e.button!=0)return;NavigateUiMap(map,e.localPosition,true);e.StopPropagation();});
             var buttons=Box(parent,"row");B(buttons,"TERRAIN / BIOMES",()=>{mapTerrain=!mapTerrain;atlasImage.image=mapTerrain?field.Minimap:field.BiomeMap;},"map");B(buttons,"EXPORT MAPS",()=>{try{string folder=Path.Combine(Application.persistentDataPath,"BiomeMaps");settings.preview.Export(folder);atlasDetails.text="Saved in "+folder;}catch(Exception e){atlasDetails.text=e.Message;}},"save");
+        }
+        void MakeSurvivalBindingSettings(VisualElement parent){
+            L(parent,"SURVIVAL KEYS","subheading");
+            var keys=Networking.SurvivalNetworkSession.Bindings;var choices=Networking.SurvivalNetworkSession.KeyBindings.Choices;
+            var labels=new System.Collections.Generic.List<string>(Networking.SurvivalNetworkSession.KeyBindings.Labels);
+            var talk=new DropdownField("Push-to-talk",labels,Array.IndexOf(choices,keys.pushToTalk)){name="survival-talk-key"};talk.AddToClassList("setting-row");parent.Add(talk);
+            var assist=new DropdownField("Pilot assist",labels,Array.IndexOf(choices,keys.pilotAssist)){name="survival-assist-key"};assist.AddToClassList("setting-row");parent.Add(assist);
+            var status=L(parent,"Defaults: V voice, U pilot assist. Applies to survival only.","muted");
+            var row=Box(parent,"row");B(row,"APPLY KEYS",()=>{if(keys.TrySet(choices[talk.index],choices[assist.index],out string error)){keys.Save();status.text="Saved survival keys.";}else status.text=error;},null);
+            B(row,"RESET V / U",()=>{keys.TrySet(UnityEngine.InputSystem.Key.V,UnityEngine.InputSystem.Key.U,out _);keys.Save();talk.SetValueWithoutNotify(keys.pushToTalk.ToString());assist.SetValueWithoutNotify(keys.pilotAssist.ToString());status.text="Restored V voice / U pilot assist.";},null);
         }
         void MakeTechGraph(VisualElement parent)
         {

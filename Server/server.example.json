@@ -1,0 +1,21 @@
+{
+  "worldId": "survival",
+  "instanceId": "region-1",
+  "displayName": "Synthetic Front",
+  "region": "",
+  "environment": "production",
+  "savePath": "",
+  "maxPlayers": 100,
+  "tickRate": 30,
+  "snapshotRate": 10,
+  "seed": 73129,
+  "packetBytesPerSecond": 65536,
+  "surfaceRadius": 500,
+  "shipRadius": 5000,
+  "proxyRadius": 100000,
+  "hysteresis": 100,
+  "walkSnap": 3,
+  "vehicleSnap": 10,
+  "shipSnap": 50,
+  "walkSpeed": 7
+}

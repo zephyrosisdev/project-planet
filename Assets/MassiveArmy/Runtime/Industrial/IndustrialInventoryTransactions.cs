@@ -38,6 +38,7 @@ namespace MassiveArmy.Industrial {
             change=new InventoryTransaction{kind=swap?"swap":"move",actor=actorId,from=from,to=to,count=count};return null;
         }
         internal void ApplyInventory(InventoryTransaction c){
+            if(c.kind=="survival-death"){ApplySurvivalDeathDrop(c);return;}
             var actor=Actor(c.actor)??throw new InvalidOperationException("Inventory actor missing");
             Inventory Resolve(InventoryAddress address){if(address.section=="player")return actor.inventory;if(address.section=="ground")return Dropped(address.entity).inventory;var machine=Machine(address.entity);var result=address.section=="input"?machine.input:machine.Export;if(result.slotLimit==0)result.EnableSlots(-1);return result;}
             if(c.kind=="vehicle-store"){if(nextId!=c.id)throw new InvalidOperationException("Vehicle inventory identity mismatch");machines.Add(new IndustrialMachine{id=AllocateId(),owner=c.actor,externalVehicle=c.externalVehicle,displayName=c.name,definition="store",pose=c.pose,integratedLogistics=true,resourceConstruction=true,input=new Inventory{capacity=2000,slotLimit=-1},output=new Inventory{capacity=2000,slotLimit=-1}});return;}

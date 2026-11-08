@@ -10,7 +10,7 @@ namespace MassiveArmy.Planetary {
         PersonalItemCatalogue personalItems;PersonalGameplayHud personalHud;RtsUiController survivalUi;
         RtsBuilding personalVenue;ResidentState personalSpeaker;ColonyState personalColony;
         double nextVenue,nextCompanion,nextSearch,nextUse;float usingItem;string usingKey,heldKey;GameObject heldItem;Material heldMaterial;bool heldOwnMaterial;
-        internal bool PersonalMenuOpen=>ShipyardOpen||LocalPlayerDead||GroundLootOpen||RespawnPointMenuOpen||personalHud?.Open==true||IndustrialMenuOpen;
+        internal bool PersonalMenuOpen=>Networking.SurvivalNetworkSession.ChatInputCaptured||ShipyardOpen||LocalPlayerDead||GroundLootOpen||RespawnPointMenuOpen||personalHud?.Open==true||IndustrialMenuOpen;
         internal PlayerInventory PersonalInventory=>player.Inventory;
         internal PlayerEnvironmentState PersonalVitals=>player.Environment;
         internal PersonalItemCatalogue PersonalItems=>personalItems??=PersonalItemCatalogue.Load();
@@ -27,7 +27,7 @@ namespace MassiveArmy.Planetary {
             if(!IsSurvival&&Time.unscaledTime>=nextVenue){nextVenue=Time.unscaledTime+.3;personalVenue=null;personalColony=null;float best=float.MaxValue;
                 foreach(var building in Base.Buildings)if(!building.removed&&building.Complete&&Venue(building)!=null){float gap=CubeSphere.ArcDistance(player.Direction,CubeSphere.Decode(building.position),definition.radius);if(gap<best&&gap<Mathf.Max(12,Base.FootprintRadius(building.definition)+8)){best=gap;personalVenue=building;personalColony=Base.Settlements[building.team];}}
             }
-            if(keyboard!=null&&Application.isFocused){if(!personalHud.TextFocused&&keyboard.iKey.wasPressedThisFrame){if(IndustrialMenuOpen||GroundLootOpen)personalHud.ShowInventory();else if(PersonalMenuOpen)personalHud.Close();else personalHud.ShowInventory();}if(!personalHud.TextFocused&&keyboard.oKey.wasPressedThisFrame){if(personalHud.OrganizationOpen)personalHud.Close();else personalHud.ShowOrganization();}if(keyboard.escapeKey.wasPressedThisFrame&&PersonalMenuOpen)personalHud.Close();
+            if(keyboard!=null&&Application.isFocused&&!Networking.SurvivalNetworkSession.ChatInputCaptured){if(!personalHud.TextFocused&&keyboard.iKey.wasPressedThisFrame){if(IndustrialMenuOpen||GroundLootOpen)personalHud.ShowInventory();else if(PersonalMenuOpen)personalHud.Close();else personalHud.ShowInventory();}if(!personalHud.TextFocused&&keyboard.oKey.wasPressedThisFrame){if(personalHud.OrganizationOpen)personalHud.Close();else personalHud.ShowOrganization();}if(keyboard.escapeKey.wasPressedThisFrame&&PersonalMenuOpen)personalHud.Close();
                 if(!IsSurvival&&!personalHud.TextFocused&&keyboard.eKey.wasPressedThisFrame){if(personalVenue!=null)personalHud.ShowVenue(personalVenue,personalColony,Venue(personalVenue));else Base.Citizens?.QueryNearbyPerson(player.BodyPosition,false,(colony,person)=>{personalColony=colony;personalSpeaker=person;personalHud.ShowPerson(colony,person);});}
                 if(!PersonalMenuOpen)for(int slot=0;slot<10;slot++)if((slot==0?keyboard.digit1Key:slot==1?keyboard.digit2Key:slot==2?keyboard.digit3Key:slot==3?keyboard.digit4Key:slot==4?keyboard.digit5Key:slot==5?keyboard.digit6Key:slot==6?keyboard.digit7Key:slot==7?keyboard.digit8Key:slot==8?keyboard.digit9Key:keyboard.digit0Key).wasPressedThisFrame){inventory.EquippedSlot=slot;usingItem=0;}
             }

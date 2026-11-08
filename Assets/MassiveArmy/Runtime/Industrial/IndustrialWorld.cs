@@ -4,6 +4,7 @@ using System.Xml.Serialization;
 
 namespace MassiveArmy.Industrial {
     [Serializable] public sealed partial class IndustrialActor {
+        [NonSerialized,XmlIgnore] public bool networkAbsent;
         public long id,lastSequence; public FramePose pose; public Inventory inventory=new Inventory{capacity=2000};
         public FramePose vehicleObstacle;public double vehicleObstacleRadius;public double collisionRadius=.35;public double dose,exposure,health=100,protection;public bool wearingProtection; public string lastCommand;
     }
@@ -74,7 +75,8 @@ namespace MassiveArmy.Industrial {
         public IndustrialActor Register(long id,FramePose pose){var a=Actor(id);if(a!=null){if(a.craft!=null&&a.craft.id==0)a.craft.id=-1;return a;}a=new IndustrialActor{id=id,pose=pose};a.inventory.Add("stone",64);a.inventory.Add("fuel",8);if(inventoryWorkflow)a.inventory.EnableSlots(40);actors.Add(a);return a;}
         static bool Finite(double v)=>!double.IsNaN(v)&&!double.IsInfinity(v);
         static bool Valid(FramePose p)=>Finite(p.x)&&Finite(p.y)&&Finite(p.z)&&Finite(p.yaw);
-        bool Reach(IndustrialActor a,FramePose p)=>Valid(p)&&a.pose.Distance(p)<=12;
+        public double InteractionDistance(FramePose a,FramePose b){if(a.frame==b.frame)return a.Distance(b);var from=a.frame==0?(FramePose?)a:InventoryPoseResolver?.Invoke(a);var to=b.frame==0?(FramePose?)b:InventoryPoseResolver?.Invoke(b);return from.HasValue&&to.HasValue?from.Value.Distance(to.Value):double.PositiveInfinity;}
+        bool Reach(IndustrialActor a,FramePose p)=>Valid(p)&&InteractionDistance(a.pose,p)<=12;
         bool Own(IndustrialActor a,IndustrialMachine m)=>m!=null&&m.owner==a.id&&Reach(a,m.pose);
         bool Own(IndustrialActor a,DirtPile p)=>p!=null&&p.owner==a.id&&Reach(a,p.pose);
         public CommandResult Execute(long actorId,IndustrialCommand c,Action beforeApply=null,bool legacyEconomy=false){
@@ -152,7 +154,7 @@ namespace MassiveArmy.Industrial {
                     if(from?.haul?.active==true||to?.haul?.active==true)return Fail("Stop autonomous collection before manually moving truck cargo");
                     if(c.source==c.target)return Fail("Choose distinct endpoints");
                     var sourcePose=c.source==0?a.pose:from!=null?from.pose:sourcePile.pose;var targetPose=c.target==0?a.pose:to!=null?to.pose:targetPile.pose;
-                    if(sourcePose.Distance(targetPose)>8)return Fail("Move the bucket within 8m of both endpoints");
+                    if(InteractionDistance(sourcePose,targetPose)>8)return Fail("Move the bucket within 8m of both endpoints");
                     if(to!=null&&to.definition!="sluice"&&!to.Definition.storage)return Fail("Machine does not accept bulk dirt");
                     var sourceInv=c.source==0?a.inventory:from?.input;var targetInv=c.target==0?a.inventory:to?.input;
                     long stock=sourcePile!=null?sourcePile.material.litres:sourceInv.bulk.litres;long free=targetPile!=null?100000-targetPile.material.litres-PileHaulReserved(targetPile.id):targetInv.Free;
@@ -192,7 +194,7 @@ namespace MassiveArmy.Industrial {
                 case "shield":
                     if(!Own(a,to))return Fail("Storage unavailable");apply=()=>to.closed=!to.closed;break;
                 case "remove-belt":
-                    var lane=belts.Find(x=>x.id==c.target);var laneSource=lane==null?null:Machine(lane.source);var laneTarget=lane==null?null:Machine(lane.target);if(lane==null||lane.owner!=a.id||a.health<=0||laneSource==null||laneTarget==null||laneSource.owner!=a.id||laneTarget.owner!=a.id||Math.Min(a.pose.Distance(laneSource.pose),a.pose.Distance(laneTarget.pose))>12)return Fail("Move within 12 m of either owned belt endpoint");
+                    var lane=belts.Find(x=>x.id==c.target);var laneSource=lane==null?null:Machine(lane.source);var laneTarget=lane==null?null:Machine(lane.target);if(lane==null||lane.owner!=a.id||a.health<=0||laneSource==null||laneTarget==null||laneSource.owner!=a.id||laneTarget.owner!=a.id||Math.Min(InteractionDistance(a.pose,laneSource.pose),InteractionDistance(a.pose,laneTarget.pose))>12)return Fail("Move within 12 m of either owned belt endpoint");
                     var beltRefund=lane.resourceConstruction?lane.constructionPaid:IndustrialConstruction.WithActivity(new[]{IndustrialCatalog.S("belt-kit",1)},0);var beltRecovery=new List<ItemStack>(beltRefund);foreach(var item in lane.items)beltRecovery.Add(new ItemStack(item.item,1){activity=item.activity});if(!a.inventory.CanAddBatch(beltRecovery))return Fail("Make room to recover belt contents");
                     apply=()=>{foreach(var item in lane.items)a.inventory.Add(item.item,1,item.activity);IndustrialConstruction.Return(a.inventory,beltRefund);belts.Remove(lane);connectionRevision++;};break;
                 case "ship-initialize":case "ship-place":case "ship-remove":case "ship-wire":case "ship-unwire":
@@ -236,12 +238,12 @@ namespace MassiveArmy.Industrial {
                 if(belt.items.Count>0&&belt.items[0].distance>=belt.length&&target.input.CanAdd(belt.items[0].item,1)){target.input.Add(belt.items[0].item,1,belt.items[0].activity);belt.items.RemoveAt(0);}
                 if(belt.items.Count==0||belt.items[belt.items.Count-1].distance>=belt.spacing){var inv=source.Export;for(int i=0;i<inv.items.Count;i++){var stack=inv.items[i];if(!string.IsNullOrEmpty(belt.filter)&&belt.filter!=stack.item)continue;string item=stack.item;double activity=inv.Extract(item,1);belt.items.Add(new BeltItem{item=item,activity=activity});break;}}
             }
-            foreach(var a in actors){a.protection=a.wearingProtection&&a.inventory.Count("radiation-suit")>0?.75:0;double exposure=0;foreach(var m in machines){double range=a.pose.Distance(m.pose);if(range>56)continue;if(m.frontTailings!=null&&m.frontTailings.items.Count>0&&range<=56){double frontRange=a.pose.Distance(TailingsPose(m));if(frontRange<=50)exposure+=TailingsActivity(m.frontTailings)/(1+frontRange*frontRange);}if(range>50)continue;double shielding=m.closed?1-(1-m.Definition.shielding)*m.integrity:1;double raw=m.constructionActivity+Activity(m.input,m.reserved)+Activity(m.output,null);exposure+=raw*shielding/(1+range*range);}
-                foreach(var deposit in deposits){double r=a.pose.Distance(deposit.pose);if(r<=50)exposure+=deposit.remaining.activity*.001/(1+r*r);}
-                foreach(var p in piles){double r=a.pose.Distance(p.pose);if(r<=50)exposure+=p.Activity/(1+r*r);}
-                foreach(var b in belts){var src=Machine(b.source);var dst=Machine(b.target);if(src==null||dst==null)continue;if(b.constructionActivity>0){var midpoint=src.pose;midpoint.x=(src.pose.x+dst.pose.x)*.5;midpoint.y=(src.pose.y+dst.pose.y)*.5;midpoint.z=(src.pose.z+dst.pose.z)*.5;double distance=a.pose.Distance(midpoint);if(distance<=50)exposure+=b.constructionActivity/(1+distance*distance);}foreach(var item in b.items){double t=item.distance/b.length;var p=src.pose;p.x+=(dst.pose.x-p.x)*t;p.y+=(dst.pose.y-p.y)*t;p.z+=(dst.pose.z-p.z)*t;double r=a.pose.Distance(p);if(r<=50)exposure+=item.activity/(1+r*r);}}
-                foreach(var drop in droppedItems){var pose=drop.pose.frame==0?drop.pose:drop.resolvedPose;double distance=a.pose.Distance(pose);if(distance<=50)exposure+=Activity(drop.inventory,null)/(1+distance*distance);}
-                foreach(var source in constructionSources){double distance=a.pose.Distance(source.pose);if(distance<=50)exposure+=source.activity/(1+distance*distance);}
+            foreach(var a in actors){if(a.networkAbsent){a.exposure=0;continue;}a.protection=a.wearingProtection&&a.inventory.Count("radiation-suit")>0?.75:0;double exposure=0;foreach(var m in machines){double range=InteractionDistance(a.pose,m.pose);if(range>56)continue;if(m.frontTailings!=null&&m.frontTailings.items.Count>0&&range<=56){double frontRange=InteractionDistance(a.pose,TailingsPose(m));if(frontRange<=50)exposure+=TailingsActivity(m.frontTailings)/(1+frontRange*frontRange);}if(range>50)continue;double shielding=m.closed?1-(1-m.Definition.shielding)*m.integrity:1;double raw=m.constructionActivity+Activity(m.input,m.reserved)+Activity(m.output,null);exposure+=raw*shielding/(1+range*range);}
+                foreach(var deposit in deposits){double r=InteractionDistance(a.pose,deposit.pose);if(r<=50)exposure+=deposit.remaining.activity*.001/(1+r*r);}
+                foreach(var p in piles){double r=InteractionDistance(a.pose,p.pose);if(r<=50)exposure+=p.Activity/(1+r*r);}
+                foreach(var b in belts){var src=Machine(b.source);var dst=Machine(b.target);if(src==null||dst==null)continue;if(b.constructionActivity>0){var midpoint=src.pose;midpoint.x=(src.pose.x+dst.pose.x)*.5;midpoint.y=(src.pose.y+dst.pose.y)*.5;midpoint.z=(src.pose.z+dst.pose.z)*.5;double distance=InteractionDistance(a.pose,midpoint);if(distance<=50)exposure+=b.constructionActivity/(1+distance*distance);}foreach(var item in b.items){double t=item.distance/b.length;var p=src.pose;p.x+=(dst.pose.x-p.x)*t;p.y+=(dst.pose.y-p.y)*t;p.z+=(dst.pose.z-p.z)*t;double r=InteractionDistance(a.pose,p);if(r<=50)exposure+=item.activity/(1+r*r);}}
+                foreach(var drop in droppedItems){var pose=drop.pose.frame==0?drop.pose:drop.resolvedPose;double distance=InteractionDistance(a.pose,pose);if(distance<=50)exposure+=Activity(drop.inventory,null)/(1+distance*distance);}
+                foreach(var source in constructionSources){double distance=InteractionDistance(a.pose,source.pose);if(distance<=50)exposure+=source.activity/(1+distance*distance);}
                 foreach(var job in a.craftQueue)foreach(var output in job.outputs)exposure+=output.activity;exposure+=Activity(a.inventory,a.craft?.outputs);a.exposure=exposure*(1-Math.Max(0,Math.Min(1,a.protection)));a.dose=Math.Max(0,Math.Min(100,a.dose+(a.exposure>0?a.exposure*.01:-.02)));if(a.dose>=75)a.health=Math.Max(0,a.health-(a.dose-70)*.01);if(a.dose>=100)a.health=0;
             }
         }
