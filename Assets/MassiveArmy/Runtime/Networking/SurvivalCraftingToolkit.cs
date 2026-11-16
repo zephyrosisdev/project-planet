@@ -15,7 +15,7 @@ namespace MassiveArmy.Networking {
         static VisualElement CraftBox(VisualElement parent,string css){var box=new VisualElement();box.AddToClassList(css);parent.Add(box);return box;}
         static Button CraftButton(VisualElement parent,string value,Action action,string name=null){var button=new Button(action){text=value,name=name};button.AddToClassList("industry-button");parent.Add(button);return button;}
         IndustrialMachine CraftingMachine(){if(craftingMachine==0||!clientMachines.TryGetValue(craftingMachine,out var machine)||machine.owner!=ActorId||ClientDistance(machine.pose)>12)return null;return machine;}
-        internal bool CraftingTextCaptured {get {if(!industryOpen||industryTools||craftingPanel==null)return false;for(var focused=craftingPanel.focusController?.focusedElement as VisualElement;focused!=null;focused=focused.parent)if(focused is TextField||focused is IntegerField)return true;return false;}}
+        internal bool CraftingTextCaptured {get {if((!industryOpen||industryTools)&&!campMenuOpen||inventoryRoot==null)return false;for(var focused=inventoryRoot.focusController?.focusedElement as VisualElement;focused!=null;focused=focused.parent)if(focused is TextField||focused is IntegerField)return true;return false;}}
         void BuildOnlineCrafting(VisualElement root){
             var sheet=Resources.Load<StyleSheet>("MassiveArmy/UI/Industry");if(sheet!=null)root.styleSheets.Add(sheet);
             craftingPanel=CraftBox(root,"industry-menu");craftingPanel.name="online-crafting";craftingPanel.style.display=DisplayStyle.None;
@@ -23,6 +23,7 @@ namespace MassiveArmy.Networking {
             var heading=CraftBox(craftingPanel,"industry-heading");CraftText(heading,"CRAFTING & PRODUCTION","industry-title");CraftButton(heading,"CLOSE [F4 / ESC]",()=>{industryOpen=false;UpdateNetworkCursor();});
             var tabs=CraftBox(craftingPanel,"industry-tabs");CraftButton(tabs,"INVENTORY [I]",()=>{industryOpen=false;inventoryOpen=true;UpdateNetworkCursor();});CraftButton(tabs,"CONSTRUCTION / MACHINES / SHIPS",()=>{industryTools=true;craftingPanel.style.display=DisplayStyle.None;});
             craftingFeedback=CraftText(craftingPanel,"","industry-muted");craftingFeedback.name="online-craft-feedback";
+            CraftButton(tabs,"CAMPS / PADS / BARTER [F7]",OpenCampMenu);
             var toolbar=CraftBox(craftingPanel,"industry-toolbar");craftingSearch=new TextField("SEARCH"){name="online-craft-search"};craftingSearch.style.flexGrow=1;toolbar.Add(craftingSearch);craftingAvailable=new Toggle("Have ingredients"){name="online-craft-available"};toolbar.Add(craftingAvailable);
             craftingSearch.RegisterValueChangedCallback(_=>RebuildCraftingGrid());craftingAvailable.RegisterValueChangedCallback(_=>RebuildCraftingGrid());
             craftingStation=new DropdownField("CRAFT AT",new List<string>{"By hand"},0){name="online-craft-station"};craftingPanel.Add(craftingStation);craftingStation.RegisterValueChangedCallback(_=>{int index=craftingStation.index;craftingMachine=index>=0&&index<craftingStationIds.Count?craftingStationIds[index]:0;RebuildCraftingGrid();BuildCraftingDetails();});
@@ -38,7 +39,7 @@ namespace MassiveArmy.Networking {
                 var tile=CraftButton(craftingGrid,"",()=>{craftingSelection=id;BuildCraftingDetails();},"online-recipe-"+id);tile.AddToClassList("industry-recipe-tile");tile.EnableInClassList("station-recipe",!IndustrialCatalog.Handcraft.Contains(id));tile.EnableInClassList("selected",id==craftingSelection);CraftText(tile,CraftingRecipePresentation.Name(id),"industry-item-name");CraftText(tile,CraftingRecipePresentation.Station(id),"industry-item-requirement");craftingTiles.Add(id,tile);}
             if(craftingTiles.Count==0)CraftText(craftingGrid,"No recipes match these filters.");
         }
-        void CraftCommand(string kind,long target=0,string item=null,long count=0){if(PrivateStateReady&&!ChatInputCaptured)Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind=kind,target=target,item=item,count=count}});}
+        void CraftCommand(string kind,long target=0,string item=null,long count=0,long source=0){if(PrivateStateReady&&!ChatInputCaptured)Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind=kind,target=target,item=item,count=count,source=source}});}
         void BuildCraftingDetails(){
             if(craftingDetails==null)return;craftingDetails.Clear();craftingAmount=null;updateCraftingDetails=null;foreach(var tile in craftingTiles)tile.Value.EnableInClassList("selected",tile.Key==craftingSelection);
             if(!IndustrialCatalog.Recipes.TryGetValue(craftingSelection,out var recipe)||!CraftingRecipeVisible(recipe)){CraftText(craftingDetails,"Select a recipe to inspect its ingredients and requirements.");return;}
@@ -75,3 +76,5 @@ namespace MassiveArmy.Networking {
         }
     }
 }
+
+

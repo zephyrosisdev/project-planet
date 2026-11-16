@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace MassiveArmy.Networking {
     public sealed partial class SurvivalNetworkSession {
         bool inventoryOpen,industryOpen,networkMenu;Vector2 inventoryScroll,craftScroll;double nextGather;
-        internal bool ClientMenuOpen=>inventoryOpen||industryOpen||networkMenu||latest?.self!=null&&latest.self.health<=0;
+        internal bool ClientMenuOpen=>inventoryOpen||industryOpen||networkMenu||campMenuOpen||latest?.self!=null&&latest.self.health<=0;
         internal bool NetworkMenuOpen=>networkMenu;
         PersonalItemCatalogue serverItems;
         FramePose? spawnPose;
@@ -36,12 +36,13 @@ namespace MassiveArmy.Networking {
             if(!Online||latest?.self==null||ChatInputCaptured||!Application.isFocused)return;
             var keys=Keyboard.current;if(keys==null)return;
             if(latest.self.health<=0)return;
-            if(CraftingTextCaptured){if(keys.escapeKey.wasPressedThisFrame){industryOpen=false;UpdateNetworkCursor();}return;}
+            if(CraftingTextCaptured){if(keys.escapeKey.wasPressedThisFrame){industryOpen=campMenuOpen=false;UpdateNetworkCursor();}return;}
             if(!ClientMenuOpen&&Config.allowTestTimeControls){if(keys.numpadPlusKey.wasPressedThisFrame)Submit(new SurvivalAction{kind="test-time-scale",count=SurvivalServerConfig.AdjacentTestTimeScale(Config.testTimeScale,1)});else if(keys.numpadMinusKey.wasPressedThisFrame)Submit(new SurvivalAction{kind="test-time-scale",count=SurvivalServerConfig.AdjacentTestTimeScale(Config.testTimeScale,-1)});}
             WeaponInput();
-            if(keys.iKey.wasPressedThisFrame){inventoryOpen=!inventoryOpen;industryOpen=networkMenu=false;UpdateNetworkCursor();}
-            if(keys.f4Key.wasPressedThisFrame){industryOpen=!industryOpen;industryTools=false;inventoryOpen=networkMenu=false;UpdateNetworkCursor();}
-            if(keys.escapeKey.wasPressedThisFrame){if(placingMachine!=null){placingMachine=null;placementPose=null;return;}if(inventoryOpen||industryOpen){inventoryOpen=industryOpen=false;}else networkMenu=!networkMenu;UpdateNetworkCursor();}
+            if(keys.f7Key.wasPressedThisFrame&&Bindings.pushToTalk!=Key.F7&&Bindings.pilotAssist!=Key.F7){campMenuOpen=!campMenuOpen;inventoryOpen=industryOpen=networkMenu=false;UpdateNetworkCursor();}
+            if(keys.iKey.wasPressedThisFrame){campMenuOpen=false;inventoryOpen=!inventoryOpen;industryOpen=networkMenu=false;UpdateNetworkCursor();}
+            if(keys.f4Key.wasPressedThisFrame){campMenuOpen=false;industryOpen=!industryOpen;industryTools=false;inventoryOpen=networkMenu=false;UpdateNetworkCursor();}
+            if(keys.escapeKey.wasPressedThisFrame){if(placingMachine!=null){placingMachine=null;placementPose=null;return;}if(inventoryOpen||industryOpen||campMenuOpen){inventoryOpen=industryOpen=campMenuOpen=false;}else networkMenu=!networkMenu;UpdateNetworkCursor();}
             if(!ClientMenuOpen&&keys.fKey.wasPressedThisFrame){
                 if(predicted?.vehicle!=null)Submit(new SurvivalAction{kind="exit-driver"});
                 else if(predicted?.ship!=null){if(latest.vitals.controlledShip!=0)Submit(new SurvivalAction{kind="leave-pilot"});else {var interaction=InteriorInteraction();if(interaction!=null)Submit(interaction);}}
@@ -69,3 +70,5 @@ namespace MassiveArmy.Networking {
         }
     }
 }
+
+

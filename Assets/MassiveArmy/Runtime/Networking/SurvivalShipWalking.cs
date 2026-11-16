@@ -30,6 +30,7 @@ namespace MassiveArmy.Networking {
             }return false;
         }
         void BeginInterior(Peer peer,SurvivalShipState ship,FramePose feet){
+            ClearEva(peer.motion);peer.record.eva=false;
             feet.body=ship.pose.body;feet.frame=ship.entity;peer.record.attachedShip=ship.entity;peer.record.interiorWalking=true;peer.record.interiorPose=feet;
             peer.motion.ship=ship;peer.motion.vehicle=null;peer.motion.interior=true;peer.motion.pose=feet;peer.motion.verticalSpeed=0;peer.motion.grounded=true;peer.motion.pitch=peer.motion.viewYaw=0;
             var heading=Quaternion.Euler(0,feet.yaw,0)*Vector3.forward;peer.motion.forwardX=heading.x;peer.motion.forwardY=0;peer.motion.forwardZ=heading.z;
@@ -53,9 +54,9 @@ namespace MassiveArmy.Networking {
         void TryWalkAboard(Peer peer){
             if(peer.record.attachedShip!=0||peer.motion.vehicle!=null)return;
             var actor=authority.World.Actor(peer.record.actor);
-            foreach(var ship in authority.World.multiplayer.ships){if(ship.pose.body!=actor.pose.body||!ship.landed||actor.pose.Distance(ship.pose)>96)continue;
+            foreach(var ship in authority.World.multiplayer.ships){if(ship.pose.body!=actor.pose.body||actor.pose.Distance(ship.pose)>96)continue;
                 var model=Interior(ship,authority.World.Ship(ship.owner));var local=SurvivalShipInteriorModel.Local(ship,actor.pose);
-                if(model.AtRampFoot(local)){peer.motion.notice=BoardPassenger(peer,ship.entity);return;}
+                if(ship.landed?model.AtRampFoot(local):SpaceBoarding(peer,ship,local)){peer.motion.notice=BoardPassenger(peer,ship.entity);return;}
             }
         }
         void LeaveRamp(Peer peer,SurvivalShipState ship){
@@ -80,13 +81,14 @@ namespace MassiveArmy.Networking {
         void StepInterior(Peer peer,SurvivalShipState ship,SurvivalInput input,float dt){
             var model=Interior(ship,authority.World.Ship(ship.owner));peer.motion.ship=ship;peer.motion.pose.body=ship.pose.body;peer.motion.pose.frame=ship.entity;
             var previous=peer.motion.pose;SurvivalShipInteriorModel.Step(peer.motion,input,dt,Config.walkSpeed,model,Config.walkAcceleration,Config.walkBraking);
+            if(ExitingSpaceDoor(ship,previous,peer.motion.pose)){pendingEvaExits[peer.record.actor]=peer;peer.record.interiorPose=peer.motion.pose;return;}
             if(!model.ContainsWalking(peer.motion.pose)){if(model.rampActive&&peer.motion.pose.z<-50&&Math.Abs(peer.motion.pose.x)<6.5){LeaveRamp(peer,ship);return;}peer.motion.pose=previous;peer.motion.verticalSpeed=0;peer.motion.grounded=true;peer.motion.notice="Use the boarding ramp when landed";}else peer.motion.notice=null;
             peer.record.interiorPose=peer.motion.pose;
         }
         void PredictInterior(SurvivalMotion motion,SurvivalInput input,float dt){
             var layout=latest?.pilotedShip;if(layout==null&&motion.ship!=null)clientShipAssemblies.TryGetValue(motion.ship.entity,out layout);
             var model=Interior(motion.ship,layout);if(model==null){motion.sequence=input.sequence;return;}
-            motion.pose.body=motion.ship.pose.body;motion.pose.frame=motion.ship.entity;SurvivalShipInteriorModel.Step(motion,input,dt,Config.walkSpeed,model,Config.walkAcceleration,Config.walkBraking);
+            motion.pose.body=motion.ship.pose.body;motion.pose.frame=motion.ship.entity;var previous=motion.pose;var ship=motion.ship;SurvivalShipInteriorModel.Step(motion,input,dt,Config.walkSpeed,model,Config.walkAcceleration,Config.walkBraking);if(ExitingSpaceDoor(ship,previous,motion.pose))DetachEva(motion,ship);
         }
         bool ShipPressurized(Peer peer){
             if(peer.motion.ship==null)return false;var ship=peer.motion.ship;var layout=authority.World.Ship(ship.owner);var model=Interior(ship,layout);if(model==null)return false;
@@ -100,7 +102,6 @@ namespace MassiveArmy.Networking {
             foreach(var control in new[]{ShipModules.P(-6.55,-2.55,z-(door==0?1.2:.4)),ShipModules.P(-6.55,-2.55,z+.4),ShipModules.P(0,.5,z)}){var point=local;point.frame=0;point.body=0;var button=control;button.frame=0;button.body=0;best=Math.Min(best,point.Distance(button));}
             if(best>3.5)return "Move within 3.5 m of the hatch control";
             bool open=door==0?ship.rearOpen:ship.innerOpen;
-            if(door==0&&!open&&!ship.landed)return "Land or dock before opening the exterior hatch";
             if(open){
                 foreach(var other in peers.Values)if(other.record.attachedShip==ship.entity&&authority.World.Actor(other.record.actor).health>0){var at=SurvivalShipInteriorModel.Local(ship,authority.World.Actor(other.record.actor).pose);if(Math.Abs(at.x)<6.4&&Math.Abs(at.z-z)<.7&&at.y>-5.8&&at.y<5.4)return "Clear the hatch before closing it";}
                 foreach(var machine in authority.World.machines)if(machine.pose.frame==ship.entity&&Math.Abs(machine.pose.z-z)<machine.Definition.Radius+.5&&Math.Abs(machine.pose.x)<6+machine.Definition.Radius)return "Move the vehicle or machinery clear of the hatch";
@@ -128,3 +129,4 @@ namespace MassiveArmy.Networking {
         double CorrectionDistance(SurvivalMotion motion)=>motion.vehicle!=null?Config.vehicleSnap:motion.interior?Config.walkSnap:motion.ship!=null?Config.shipSnap:Config.walkSnap;
     }
 }
+

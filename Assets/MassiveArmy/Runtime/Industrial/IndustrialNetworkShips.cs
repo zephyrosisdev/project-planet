@@ -4,7 +4,9 @@ using System.Collections.Generic;
 namespace MassiveArmy.Industrial {
     [Serializable] public sealed class SurvivalShipState {
         public long entity,owner,pilot,dockedStation;public FramePose pose;
+        public long landingCamp;public int landingPad=-1;
         public double velocityX,velocityY,velocityZ;
+        public float spinX,spinY,spinZ;
         public float rotationX,rotationY,rotationZ,rotationW=1;
         public bool landed=true,autoFlight,rearOpen,innerOpen;public string physics;
         public bool recalling;public string recallStatus="";public long recallReadyTick;

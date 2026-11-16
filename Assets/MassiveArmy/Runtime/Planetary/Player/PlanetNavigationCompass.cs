@@ -69,6 +69,7 @@ namespace MassiveArmy.Planetary {
                     int count=0;foreach(var nearby in session.NearbyNavigationShips){if(nearby.entity==owned||nearby.entity==session.OccupiedNavigationShip||!session.TryNearbyShipNavigation(nearby,out var target))continue;var delta=target.RelativeTo(observer);if(delta.Magnitude<=3)continue;AddMarker(-1000-nearby.entity,delta,right,flat,up,pitch,"SHIP #"+nearby.entity,delta.Magnitude,Icon.Ship,new Color(.6f,.9f,.95f));if(++count>=5)break;}
                 }
             }else if(!flight&&ship!=null&&carrierWorld.HasRespawnCarrier){var delta=ship.Position.RelativeTo(observer);if(delta.Magnitude>3)AddMarker(-1,delta,right,flat,up,pitch,"YOUR SHIP",delta.Magnitude,Icon.Ship,new Color(.45f,1,.9f));}
+            if(world.NetworkPresentation){var campSession=Networking.SurvivalNetworkSession.Active;if(campSession?.NavigationCamps!=null)foreach(var camp in campSession.NavigationCamps){if(camp.pose.body!=world.definition.bodyId)continue;var delta=world.definition.position.Add(new Double3(camp.pose.x,camp.pose.y,camp.pose.z)).RelativeTo(observer);AddMarker(-1000000-camp.id,delta,right,flat,up,pitch,camp.name+" · PADS / BARTER",delta.Magnitude,Icon.Order,new Color(1,.6f,.2f));}}else if(world.IndustrialAuthority!=null)foreach(var camp in world.IndustrialAuthority.World.camps){if(camp.pose.body!=world.definition.bodyId)continue;var delta=world.definition.position.Add(new Double3(camp.pose.x,camp.pose.y,camp.pose.z)).RelativeTo(observer);AddMarker(-1000000-camp.id,delta,right,flat,up,pitch,camp.name+" · PADS / BARTER",delta.Magnitude,Icon.Order,new Color(1,.6f,.2f));}
             if(world.CompassOrder(out var orderPosition,out string orderName)){var delta=orderPosition.RelativeTo(observer);AddMarker(-2,delta,right,flat,up,pitch,orderName,delta.Magnitude,Icon.Order,new Color(1,.75f,.3f));}
             SelectPlanets(observer);var model=world.SystemRuntime?.Galaxy;
             for(int i=0;i<planetCount;i++){var body=planets[i];if(body==null)continue;var delta=body.position.RelativeTo(observer);bool selected=model!=null&&model.NodeFor(body)==selectedNode;AddMarker((long)body.bodyId+1,delta,right,flat,up,pitch,body.displayName,Math.Max(0,delta.Magnitude-body.radius),Icon.Planet,selected?new Color(1,.85f,.4f):new Color(.6f,.8f,1));}
@@ -81,3 +82,4 @@ namespace MassiveArmy.Planetary {
         }
     }
 }
+

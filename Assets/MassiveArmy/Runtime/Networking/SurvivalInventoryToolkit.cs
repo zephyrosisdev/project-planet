@@ -5,13 +5,14 @@ using UnityEngine;
 using UnityEngine.UIElements;
 namespace MassiveArmy.Networking {
     public sealed partial class SurvivalNetworkSession {
-        RtsUiController inventoryToolkit;InventorySlotUi onlineSlots;VisualElement inventoryRoot,inventoryPanel,lootSlots;Label inventoryNotice,onlineCrosshair;readonly Button[] actionSlots=new Button[10];double nextInventoryRefresh;string lootSignature="";ProgressBar onlineHealth,onlineHunger,onlineThirst;PlanetNavigationCompass onlineCompass;
+        RtsUiController inventoryToolkit;InventorySlotUi onlineSlots;VisualElement inventoryRoot,inventoryPanel,lootSlots;Label inventoryNotice,onlineCrosshair;readonly Button[] actionSlots=new Button[10];double nextInventoryRefresh;string lootSignature="";ProgressBar onlineHealth,onlineHunger,onlineThirst,onlineOxygen;Label evaHelp;PlanetNavigationCompass onlineCompass;
         void BuildOnlineInventory(VisualElement root){
             root.Clear();root.pickingMode=PickingMode.Ignore;inventoryRoot=root;
             onlineCompass=new PlanetNavigationCompass(clientWorld);root.Add(onlineCompass);
             onlineCrosshair=new Label("+"){name="online-crosshair",pickingMode=PickingMode.Ignore};onlineCrosshair.style.position=Position.Absolute;onlineCrosshair.style.left=Length.Percent(50);onlineCrosshair.style.top=Length.Percent(50);onlineCrosshair.style.width=20;onlineCrosshair.style.height=20;onlineCrosshair.style.marginLeft=-10;onlineCrosshair.style.marginTop=-10;onlineCrosshair.style.fontSize=20;onlineCrosshair.style.color=Color.white;onlineCrosshair.style.unityTextAlign=TextAnchor.MiddleCenter;root.Add(onlineCrosshair);
             var meters=new VisualElement{pickingMode=PickingMode.Ignore};meters.style.position=Position.Absolute;meters.style.left=18;meters.style.bottom=100;meters.style.width=380;root.Add(meters);
-            onlineHealth=new ProgressBar{title="Health",lowValue=0,highValue=100};onlineHunger=new ProgressBar{title="Hunger",lowValue=0,highValue=100};onlineThirst=new ProgressBar{title="Thirst",lowValue=0,highValue=100};foreach(var meter in new[]{onlineHealth,onlineHunger,onlineThirst}){meter.style.height=18;meters.Add(meter);}
+            onlineHealth=new ProgressBar{title="Health",lowValue=0,highValue=100};onlineHunger=new ProgressBar{title="Hunger",lowValue=0,highValue=100};onlineThirst=new ProgressBar{title="Thirst",lowValue=0,highValue=100};onlineOxygen=new ProgressBar{title="Suit oxygen",lowValue=0,highValue=100};foreach(var meter in new[]{onlineHealth,onlineHunger,onlineThirst,onlineOxygen}){meter.style.height=18;meters.Add(meter);}
+            evaHelp=new Label("EVA · WASD thrust · R/C up/down · Shift boost · F7 camps"){pickingMode=PickingMode.Ignore};evaHelp.style.position=Position.Absolute;evaHelp.style.left=Length.Percent(30);evaHelp.style.bottom=100;evaHelp.style.color=Color.white;root.Add(evaHelp);
             var bar=new VisualElement{name="online-action-bar"};bar.style.position=Position.Absolute;bar.style.left=Length.Percent(15);bar.style.width=Length.Percent(70);bar.style.bottom=18;bar.style.flexDirection=FlexDirection.Row;bar.style.justifyContent=Justify.Center;root.Add(bar);
             inventoryPanel=new VisualElement{name="online-inventory"};inventoryPanel.style.position=Position.Absolute;inventoryPanel.style.left=Length.Percent(8);inventoryPanel.style.top=Length.Percent(9);inventoryPanel.style.width=Length.Percent(84);inventoryPanel.style.height=Length.Percent(76);inventoryPanel.style.backgroundColor=new Color(.02f,.035f,.055f,.98f);inventoryPanel.style.paddingLeft=inventoryPanel.style.paddingRight=16;inventoryPanel.style.paddingTop=inventoryPanel.style.paddingBottom=16;root.Add(inventoryPanel);
             var heading=new Label("INVENTORY");heading.style.color=Color.white;heading.style.fontSize=24;inventoryPanel.Add(heading);
@@ -26,7 +27,7 @@ namespace MassiveArmy.Networking {
             lootSlots=new VisualElement();scroll.Add(lootSlots);
             for(int i=0;i<10;i++){int slot=i;var button=new Button(()=>Submit(new SurvivalAction{kind="slot",slot=slot})){name="online-action-slot-"+i,focusable=false};button.style.width=95;button.style.height=60;button.style.whiteSpace=WhiteSpace.Normal;button.style.color=Color.white;button.style.backgroundColor=new Color(.15f,.2f,.23f);button.style.borderBottomWidth=3;bar.Add(button);actionSlots[i]=button;onlineSlots.Bind(button,new InventoryAddress{slot=i},inventoryPanel);}
             nextInventoryRefresh=0;lootSignature="";
-            BuildOnlineCrafting(root);
+            BuildOnlineCrafting(root);BuildOnlineCampMenu(root);
         }
         readonly System.Collections.Generic.Dictionary<long,(string json,Inventory inventory)> lootInventoryCache=new System.Collections.Generic.Dictionary<long,(string,Inventory)>();
         int lastEquippedSlot=-2;string lastEquippedItem;
@@ -45,9 +46,9 @@ namespace MassiveArmy.Networking {
             inventoryPanel.style.display=inventoryOpen?DisplayStyle.Flex:DisplayStyle.None;inventoryPanel.SetEnabled(PrivateStateReady&&!ChatInputCaptured);inventoryRoot.SetEnabled(!ChatInputCaptured);
             if(!inventoryOpen)onlineSlots.Cancel();
             onlineCompass.Refresh();onlineCrosshair.style.display=!ClientMenuOpen&&!ChatInputCaptured&&latest.self.health>0?DisplayStyle.Flex:DisplayStyle.None;
-            RefreshOnlineCrafting();
+            RefreshOnlineCrafting();RefreshOnlineCampMenu();evaHelp.style.display=predicted?.eva==true&&!ClientMenuOpen?DisplayStyle.Flex:DisplayStyle.None;
             if(Time.unscaledTimeAsDouble<nextInventoryRefresh)return;nextInventoryRefresh=Time.unscaledTimeAsDouble+.1;
-            onlineHealth.value=(float)latest.self.health;onlineHunger.value=(float)latest.vitals.hunger;onlineThirst.value=(float)latest.vitals.thirst;
+            onlineHealth.value=(float)latest.self.health;onlineHunger.value=(float)latest.vitals.hunger;onlineThirst.value=(float)latest.vitals.thirst;onlineOxygen.value=(float)latest.vitals.oxygen;
             var inventory=latest.self.inventory;
             for(int i=0;i<10;i++){var stack=inventory.AtSlot(i);var button=actionSlots[i];button.text=(i==9?"0":(i+1).ToString())+" · "+(stack==null?"Empty":InventorySlotUi.Name(stack.item))+(stack?.count>1?" ×"+stack.count:"");button.style.borderBottomColor=inventory.activeSlot==i?Color.cyan:Color.gray;button.SetEnabled(PrivateStateReady&&!ChatInputCaptured);button.tooltip=stack==null?"Empty":InventorySlotUi.Name(stack.item)+" ×"+stack.count;}
             var equipped=inventory.AtSlot(inventory.activeSlot);
@@ -62,7 +63,7 @@ namespace MassiveArmy.Networking {
             }
         }
         void TickOnlineInventory(){if(HeadlessProbeClient)return;if(inventoryToolkit==null){inventoryToolkit=new RtsUiController(transform,BuildOnlineInventory,RefreshOnlineInventory,()=>Online);inventoryToolkit.Attach();}inventoryToolkit.Tick();}
-        void DisposeOnlineInventory(){lootInventoryCache.Clear();lastEquippedSlot=-2;lastEquippedItem=null;onlineSlots?.Dispose();onlineSlots=null;inventoryToolkit?.Dispose();inventoryToolkit=null;inventoryRoot=inventoryPanel=lootSlots=null;craftingPanel=craftingGrid=craftingDetails=craftingQueue=null;updateCraftingDetails=null;craftingTiles.Clear();craftingStationIds.Clear();craftingMachine=0;industryTools=false;}
+        void DisposeOnlineInventory(){lootInventoryCache.Clear();lastEquippedSlot=-2;lastEquippedItem=null;onlineSlots?.Dispose();onlineSlots=null;inventoryToolkit?.Dispose();inventoryToolkit=null;inventoryRoot=inventoryPanel=lootSlots=null;campMenu=null;campPanel=null;campMenuOpen=false;craftingPanel=craftingGrid=craftingDetails=craftingQueue=null;updateCraftingDetails=null;craftingTiles.Clear();craftingStationIds.Clear();craftingMachine=0;industryTools=false;}
         string DropNetworkInventory(Peer peer,SurvivalAction action){
             if(action.from==null||action.from.section!="player"||action.from.entity!=0)return "Only carried items can be dropped";
             var actor=authority.World.Actor(peer.record.actor);var canonical=peer.motion.interior?peer.motion.pose:actor.pose;
@@ -70,3 +71,6 @@ namespace MassiveArmy.Networking {
         }
     }
 }
+
+
+

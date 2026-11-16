@@ -29,6 +29,7 @@ param(
     [ValidateRange(0,15)][int]$LossPercent=0,
     [string]$DockSpec,
     [string]$InteriorSpec,
+    [string]$CampSpec,
     [string]$CombatSpec,
     [string]$FactorySpec,
     [ValidateSet('create','recover')][string]$FactoryPhase='create'
@@ -41,7 +42,8 @@ if($TestClockControls -and !$Performance){throw 'TestClockControls requires the 
 if($ClientBaseline -and !$Performance){throw 'ClientBaseline is a performance-comparison switch only'}
 if($SeparatedRegions -and !$ResumeFrom){throw 'SeparatedRegions requires a prepared multi-planet resume fixture; use RunPlanetProbe.ps1.'}
 $taskRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
-$extraWait=if($DockSpec){180}elseif($InteriorSpec){300}elseif($FactorySpec -and ((Get-Content -LiteralPath $FactorySpec -Raw|ConvertFrom-Json).shipyard -or (Get-Content -LiteralPath $FactorySpec -Raw|ConvertFrom-Json).buildings)){600}else{0}
+$extraWait=if($CampSpec){180}elseif($DockSpec){180}elseif($InteriorSpec){300}elseif($FactorySpec -and ((Get-Content -LiteralPath $FactorySpec -Raw|ConvertFrom-Json).shipyard -or (Get-Content -LiteralPath $FactorySpec -Raw|ConvertFrom-Json).buildings)){600}else{0}
+if($CampSpec -and (!$ResumeFrom -or $Headless -or $Performance -or $ClientCount -ne 2 -or $DockSpec -or $InteriorSpec -or $FactorySpec -or $CombatSpec)){throw 'Camp probe requires an isolated two-client graphical resume fixture'}
 if($DockSpec -and ($FactorySpec -or $InteriorSpec -or $CombatSpec -or $Chat -or $ListingRecovery -or $ServerOnly -or $ClientCount -ne 2 -or !$ResumeFrom)){throw 'Dock probe needs an isolated two-client resume fixture'}
 if($InteriorSpec -and ($FactorySpec -or $Chat -or $ListingRecovery -or $ServerOnly -or $ClientCount -ne 2 -or !$ResumeFrom -or $ProbeVersion -ne '13')){throw 'Interior probe needs a current isolated two-client resume fixture'}
 if($FactorySpec -and ($Chat -or $ListingRecovery -or $JoinCodeDelaySeconds -gt 0 -or $ServerOnly -or $ClientCount -ne 2 -or !$ResumeFrom -or $ProbeVersion -ne '13')){throw 'Factory probe requires two matching current clients and an isolated resume fixture'}
@@ -130,6 +132,7 @@ try {
         if($HoldSeconds -gt 0){$clientArgs+=@('-survival-probe-hold-seconds',"$HoldSeconds")}
         if($CombatSpec){$clientArgs+=@('-survival-probe-combat',(Quote-Argument ([IO.Path]::GetFullPath($CombatSpec))))}
         if($DockSpec){$clientArgs+=@('-survival-probe-dock',(Quote-Argument ([IO.Path]::GetFullPath($DockSpec))))}
+        if($CampSpec){$clientArgs+=@('-survival-probe-camp',(Quote-Argument ([IO.Path]::GetFullPath($CampSpec))))}
         if($InteriorSpec){$clientArgs+=@('-survival-probe-interior',(Quote-Argument ([IO.Path]::GetFullPath($InteriorSpec))))}
         if($FactorySpec){$clientArgs+=@('-survival-probe-factory',(Quote-Argument ([IO.Path]::GetFullPath($FactorySpec))),'-survival-probe-factory-phase',$FactoryPhase,'-survival-probe-factory-state',(Quote-Argument $runRoot))}
         $launchExe=if($Performance -and $index -gt 1){$ServerExe}else{$ClientExe}
@@ -198,7 +201,7 @@ finally {
     foreach($process in $processes){if(!$process.HasExited){Stop-Process -InputObject $process -Force;if(!$failure){$failure='A probe process required termination after its cleanup timeout'}}elseif($process.ExitCode -ne 0 -and !$failure){$failure="Probe process exited with code $($process.ExitCode)"}}
     if($ListingRecovery -and !$failure){$discovery=Get-Content -LiteralPath $serverReport -Raw|ConvertFrom-Json;if($discovery.status -ne 'PASS' -or !$discovery.listingRestored -or !$discovery.listingConnectionsPreserved -or !$discovery.listingMetadataMatches){$failure='Dedicated listing recovery assertions did not pass'}}
     if($JoinCodeDelaySeconds -gt 0 -and !$failure){$delayed=Get-Content -LiteralPath $serverReport -Raw|ConvertFrom-Json;if($delayed.status -ne 'PASS' -or !$delayed.joinCodeDelayChecked -or $delayed.joinCodeDelaySeconds -lt $JoinCodeDelaySeconds -or $delayed.joinCodeDelayTicks -le 0){$failure='Dedicated bound-transport/join-code-delay assertions did not pass'}}
-    if($ResumeFrom -and !$ServerOnly -and !$failure){
+    if($ResumeFrom -and !$ServerOnly -and !$failure -and !$CampSpec){
         [xml]$after=Get-Content -LiteralPath $config.savePath
         foreach($reportPath in $clientReports){
             $result=Get-Content -LiteralPath $reportPath -Raw|ConvertFrom-Json;$before=$previousPoses[[long]$result.actor];$actor=$after.IndustrialWorld.actors.IndustrialActor|Where-Object {[long]$_.id -eq [long]$result.actor}
@@ -223,6 +226,7 @@ finally {
     $status=if($failure){'FAIL'}else{'PASS'}
     $scope=if($ServerOnly){'Dedicated service startup/cleanup only. No clients or gameplay validation.'}elseif($Headless){'Two headless authenticated production transport/prediction clients only. No rendering, UI, Vivox, full survival or capacity acceptance.'}else{'Two authenticated standalone clients: movement, remote visibility, prediction samples and reconnect only. Not Vivox, full survival, capacity, frame-time or army acceptance.'}
     if(!$Headless -and !$ServerOnly -and (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $ClientExe) 'graphics-probe-only'))){$scope='Two graphics-enabled survival fixtures with offline army kernels omitted. Not release, UI/Vivox, full survival, capacity, rendered frame-time or army acceptance.'}
+    if($CampSpec){$scope+=" Includes isolated camp/EVA phase $((Get-Content -LiteralPath $CampSpec -Raw|ConvertFrom-Json).phase) with production commands and UI pointer callbacks. No physical keyboard/voice or capacity acceptance."}
     if($Inventory){$scope+=" Includes attached UI Toolkit search/quantity/pointer callbacks, two authoritative crafting jobs with full cancellation refunds, slot split, selection, drop, recovery and item conservation; no physical mouse/keyboard automation."}
     if($Performance){$scope="One graphical diagnostic client and one headless peer with co-hosted dedicated server, fixed checkpoint, $PerformanceWarmupSeconds-second warmup and $PerformanceSampleSeconds-second sample. Explicit 2560x1440 HDRP render with GPU completion fence. Baseline flag selects prior presentation/UI/cache paths in the current source, not an archived release binary. Not release FPS or capacity acceptance."}
     if($PilotWeather){$scope+=" Real pilot command, authoritative orbital motion, occupied cockpit and weather depth tracing. Restart checks compare attached character positions with their moving ship; no stationary-ground displacement assertion."}

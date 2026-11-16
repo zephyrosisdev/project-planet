@@ -39,10 +39,10 @@ namespace MassiveArmy.Planetary {
         public void CloseMenu(){if(!MenuOpen)return;MenuOpen=false;if(menu!=null)menu.style.display=DisplayStyle.None;world.SetIndustryCursor(false);}
         void RebuildMenu(){
             if(menu==null)return;menu.Clear();recipeButtons.Clear();browserGrid=details=queue=contextInventory=contextActions=null;craftProgress=machineProgress=null;contextStatus=null;recipeSearch=null;availableOnly=null;craftQuantity=null;lastUiState=lastQueueState=lastContextState="";
-            var heading=UiBox(menu,"industry-heading");titleLabel=UiText(heading,uiMode=="construction"?"CONSTRUCTION":uiMode=="machine"||uiMode=="pile"?"INTERACT":uiMode=="recipes"?"MACHINE RECIPES":"CRAFTING","industry-title");UiButton(heading,"CLOSE  [ESC]",CloseMenu,"industry-close");
-            var tabs=UiBox(menu,"industry-tabs");UiButton(tabs,"INVENTORY",world.ShowPersonalInventoryFromIndustry);UiButton(tabs,"CRAFTING",()=>OpenMenu("crafting"));if(!Authority.World.inventoryWorkflow)UiButton(tabs,"CONSTRUCTION",()=>OpenMenu("construction"));UiButton(tabs,"SAVE WORLD",()=>{Authority.Save();message="World saved";});var creative=new Toggle("CREATIVE MODE"){value=Authority.World.creativeMode,name="industry-creative-toggle"};creative.SetEnabled(actor.id==1);tabs.Add(creative);creative.RegisterValueChangedCallback(e=>{Execute(Command("creative",count:e.newValue?1:0));RebuildMenu();});if(contextTarget!=0&&Authority.World.Machine(contextTarget)!=null)UiButton(tabs,"BACK TO MACHINE",()=>OpenMenu("machine"));
+            var heading=UiBox(menu,"industry-heading");titleLabel=UiText(heading,uiMode=="camps"?"CAMPS · LANDING & BARTER":uiMode=="construction"?"CONSTRUCTION":uiMode=="machine"||uiMode=="pile"?"INTERACT":uiMode=="recipes"?"MACHINE RECIPES":"CRAFTING","industry-title");UiButton(heading,"CLOSE  [ESC]",CloseMenu,"industry-close");
+            var tabs=UiBox(menu,"industry-tabs");UiButton(tabs,"INVENTORY",world.ShowPersonalInventoryFromIndustry);UiButton(tabs,"CRAFTING",()=>OpenMenu("crafting"));UiButton(tabs,"CAMPS / PADS / BARTER [F7]",()=>OpenMenu("camps"));if(!Authority.World.inventoryWorkflow)UiButton(tabs,"CONSTRUCTION",()=>OpenMenu("construction"));UiButton(tabs,"SAVE WORLD",()=>{Authority.Save();message="World saved";});var creative=new Toggle("CREATIVE MODE"){value=Authority.World.creativeMode,name="industry-creative-toggle"};creative.SetEnabled(actor.id==1);tabs.Add(creative);creative.RegisterValueChangedCallback(e=>{Execute(Command("creative",count:e.newValue?1:0));RebuildMenu();});if(contextTarget!=0&&Authority.World.Machine(contextTarget)!=null)UiButton(tabs,"BACK TO MACHINE",()=>OpenMenu("machine"));
             menuFeedback=UiText(menu,message,"industry-muted");if(Authority.World.creativeMode&&Authority.World.inventoryWorkflow&&uiMode=="crafting"){var supplies=new Foldout{text="CREATIVE TEST SUPPLIES",value=false};menu.Add(supplies);BuildCreativeSupplies(supplies);}menuFeedback.name="craft-feedback";
-            if(uiMode=="construction")BuildConstruction();else if(uiMode=="machine"||uiMode=="pile")BuildInteraction();else BuildRecipeBrowser();
+            if(uiMode=="camps")BuildCampMenu();else if(uiMode=="construction")BuildConstruction();else if(uiMode=="machine"||uiMode=="pile")BuildInteraction();else BuildRecipeBrowser();
             RefreshToolkitMenu(true);
         }
         internal void AppendInventory(VisualElement parent){personalMaterials=UiBox(parent,"industry-personal-materials");var sheet=Resources.Load<StyleSheet>("MassiveArmy/UI/Industry");if(sheet!=null)personalMaterials.styleSheets.Add(sheet);lastPersonalMaterials="";RespawnDeployButtons(parent);RefreshPersonalMaterials();}
@@ -143,6 +143,8 @@ namespace MassiveArmy.Planetary {
         }
     }
 }
+
+
 
 
 

@@ -33,8 +33,8 @@ namespace MassiveArmy.Networking {
         void RenderEntities(){
             if(clientWorld==null||!clientWorld.Ready)return;
             if(playerMaterial==null){var shader=Shader.Find("HDRP/Lit");playerMaterial=new Material(shader);playerMaterial.SetColor("_BaseColor",Color.cyan);machineMaterial=new Material(shader);machineMaterial.SetColor("_BaseColor",new Color(.35f,.4f,.45f));depositMaterial=new Material(shader);depositMaterial.SetColor("_BaseColor",new Color(.7f,.4f,.15f));}
-            shipMeshesBuiltThisFrame=0;PrepareShipPoses();if(predicted?.ship==null)clientWorld.SetNetworkCraft(null,false);
-            foreach(var pair in visible){var entity=pair.Value;if(entity.kind=="machine"&&clientMachines.TryGetValue(pair.Key/8,out var virtualMachine)&&virtualMachine.integratedLogistics)continue;if(entity.pose.body!=clientWorld.definition.bodyId||(entity.kind=="ship-layout"||entity.kind=="factory-link"||entity.kind=="building"))continue;
+            PresentCamps();shipMeshesBuiltThisFrame=0;PrepareShipPoses();if(predicted?.ship==null)clientWorld.SetNetworkCraft(null,false);
+            foreach(var pair in visible){var entity=pair.Value;if(entity.kind=="machine"&&clientMachines.TryGetValue(pair.Key/8,out var virtualMachine)&&virtualMachine.integratedLogistics)continue;if(entity.pose.body!=clientWorld.definition.bodyId||(entity.kind=="ship-layout"||entity.kind=="factory-link"||entity.kind=="building"||entity.kind=="camp"))continue;
                 if(entity.kind=="ship"&&clientShipAssemblies.TryGetValue(pair.Key/8,out var fullLayout)&&clientShips.TryGetValue(pair.Key/8,out var fullState)){
                     if(!craftViews.TryGetValue(pair.Key,out var craft)){craft=clientWorld.CreateNetworkCraft();craftViews.Add(pair.Key,craft);}
                     var state=predicted?.ship?.entity==fullState.entity?predicted.ship:fullState;
@@ -79,7 +79,7 @@ namespace MassiveArmy.Networking {
             RenderPlacement();RenderFactoryLinks();RenderBuildings();
             var removed=new List<long>();foreach(var pair in entityViews)if(!visible.ContainsKey(pair.Key)){Destroy(pair.Value);removed.Add(pair.Key);}foreach(long id in removed){entityViews.Remove(id);entityPositions.Remove(id);renderedShipLayouts.Remove(id);renderedShipDoors.Remove(id);}
         }
-        void ClearEntityViews(){visualShipPhysics.Clear();clientWorld?.SetNetworkCraft(null,false);foreach(var craft in craftViews.Values)craft.Dispose();craftViews.Clear();clientStations.Clear();if(stationMesh!=null)Destroy(stationMesh);stationMesh=null;ClearParentPresentations();ClearFactoryViews();ClearBuildings();if(placementGhost!=null)Destroy(placementGhost);placementGhost=null;placingMachine=null;placementPose=null;foreach(var view in entityViews.Values)if(view!=null)Destroy(view);entityViews.Clear();entityPositions.Clear();if(playerMaterial!=null)Destroy(playerMaterial);if(machineMaterial!=null)Destroy(machineMaterial);if(depositMaterial!=null)Destroy(depositMaterial);if(shipMaterial!=null)Destroy(shipMaterial);foreach(var mesh in combinedShips.Values)Destroy(mesh);combinedShips.Clear();renderedShipLayouts.Clear();renderedShipDoors.Clear();proxyCube=null;}
+        void ClearEntityViews(){DisposeCamps();visualShipPhysics.Clear();clientWorld?.SetNetworkCraft(null,false);foreach(var craft in craftViews.Values)craft.Dispose();craftViews.Clear();clientStations.Clear();if(stationMesh!=null)Destroy(stationMesh);stationMesh=null;ClearParentPresentations();ClearFactoryViews();ClearBuildings();if(placementGhost!=null)Destroy(placementGhost);placementGhost=null;placingMachine=null;placementPose=null;foreach(var view in entityViews.Values)if(view!=null)Destroy(view);entityViews.Clear();entityPositions.Clear();if(playerMaterial!=null)Destroy(playerMaterial);if(machineMaterial!=null)Destroy(machineMaterial);if(depositMaterial!=null)Destroy(depositMaterial);if(shipMaterial!=null)Destroy(shipMaterial);foreach(var mesh in combinedShips.Values)Destroy(mesh);combinedShips.Clear();renderedShipLayouts.Clear();renderedShipDoors.Clear();proxyCube=null;}
         void DrawNetworkToolkit(){
             if(HeadlessProbeClient||!Online||latest?.self==null)return;
             networkUi.Begin();
@@ -93,3 +93,4 @@ namespace MassiveArmy.Networking {
         }
     }
 }
+

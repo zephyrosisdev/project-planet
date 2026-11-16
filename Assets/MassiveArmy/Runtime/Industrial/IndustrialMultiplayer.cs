@@ -6,6 +6,8 @@ namespace MassiveArmy.Industrial {
     [Serializable] public sealed class SurvivalPlayerRecord {
         public long actor; public string identity,name; public FramePose spawn;
         public double oxygen=100,hunger=100,thirst=100,verticalSpeed,walkVelocityX,walkVelocityY,walkVelocityZ;
+        public bool eva;public double evaVelocityX,evaVelocityY,evaVelocityZ,evaSuitX,evaSuitY,evaSuitZ;
+        public long evaBoardReadyTick;
         public int shipSeat=-1;public bool initialSpawnPending,interiorWalking;public FramePose interiorPose;
         public float pitch; public long controlledEntity,controlledShip,attachedShip,pendingVehicleExit,lastActionSequence,nextUseTick,nextGatherTick,nextAttackTick; public uint acknowledgedInput;
     }
@@ -64,7 +66,7 @@ namespace MassiveArmy.Industrial {
     [Serializable] public sealed class SurvivalRegistration {public SurvivalPlayerRecord player;public string worldId,instanceId;public int seed;}
     [Serializable] public sealed class SurvivalServerConfig {
         public string AuthenticationProfile(){using(var hash=System.Security.Cryptography.SHA256.Create())return "server_"+BitConverter.ToString(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(instanceId))).Replace("-","").Substring(0,23);}
-        public const int Protocol=13;public const string Content="survival-5";
+        public const int Protocol=13;public const string Content="survival-6";
         public bool allowTestTimeControls=false;public int testTimeScale=1;
         public static bool ValidTestTimeScale(long value)=>value==1||value==2||value==4||value==8;
         public static int AdjacentTestTimeScale(int value,int direction)=>direction>0?Math.Min(8,value*2):Math.Max(1,value/2);
@@ -73,6 +75,7 @@ namespace MassiveArmy.Industrial {
         public float systemSizeMultiplier=0;public string worldPresetPath="";
         public double surfaceRadius=500,shipRadius=5000,proxyRadius=100000,hysteresis=100;
         public double walkSnap=3,vehicleSnap=10,shipSnap=50,walkSpeed=7;
+        public double evaSpeed=10,evaBoostSpeed=30,evaAcceleration=8;
         public double walkAcceleration=40,walkBraking=60,vehicleSpeed=10,workVehicleSpeed=5,vehicleAcceleration=3,vehicleBraking=7;
         public double shipAssistSpeed=120,shipBoostSpeed=360,shipAcceleration=40,shipBoostAcceleration=160,shipAssistAcceleration=80,shipAssistBraking=160,warpSpeed=100000000;
         public float shipRecallSpeed=1000;
@@ -84,7 +87,8 @@ namespace MassiveArmy.Industrial {
             if(worldPresetPath?.Length>4096)throw new ArgumentException("World preset path is too long");
             if(maxPlayers<1||maxPlayers>149)throw new ArgumentOutOfRangeException(nameof(maxPlayers),"Relay capacity must leave room for the allocating server (1–149 clients)");
             if(tickRate<10||tickRate>60||snapshotRate<1||snapshotRate>tickRate)throw new ArgumentException("Invalid tick/snapshot rates");
-            foreach(double n in new[]{surfaceRadius,shipRadius,proxyRadius,walkSnap,vehicleSnap,shipSnap,walkSpeed})if(!Finite(n)||n<=0)throw new ArgumentException("Distances and speeds must be finite and positive");
+            foreach(double n in new[]{surfaceRadius,shipRadius,proxyRadius,walkSnap,vehicleSnap,shipSnap,walkSpeed,evaSpeed,evaBoostSpeed,evaAcceleration})if(!Finite(n)||n<=0)throw new ArgumentException("Distances and speeds must be finite and positive");
+            if(evaSpeed>100||evaBoostSpeed<evaSpeed||evaBoostSpeed>200||evaAcceleration>100)throw new ArgumentException("EVA limits exceed bounded suit ranges");
             foreach(double n in new[]{walkAcceleration,walkBraking,vehicleSpeed,workVehicleSpeed,vehicleAcceleration,vehicleBraking,shipAssistSpeed,shipBoostSpeed,shipAcceleration,shipBoostAcceleration,shipAssistAcceleration,shipAssistBraking,warpSpeed})if(!Finite(n)||n<=0)throw new ArgumentException("Movement limits must be finite and positive");
             if(walkSpeed>100||walkAcceleration>10000||walkBraking>10000||vehicleSpeed>1000||workVehicleSpeed>1000||vehicleAcceleration>10000||vehicleBraking>10000||shipAssistSpeed>100000||shipBoostSpeed>100000||shipAcceleration>10000||shipBoostAcceleration>10000||shipAssistAcceleration>10000||shipAssistBraking>10000||warpSpeed>10000000000)throw new ArgumentException("Movement limits exceed bounded simulation ranges");
             if(!Finite(hysteresis)||hysteresis<0||surfaceRadius>shipRadius||shipRadius>proxyRadius||packetBytesPerSecond<4096||packetBytesPerSecond>1048576)throw new ArgumentException("Invalid interest or packet budget");
@@ -126,6 +130,7 @@ namespace MassiveArmy.Industrial {
     public sealed class SurvivalEntityTickBudget {
         long current=long.MinValue;readonly HashSet<long> advanced=new HashSet<long>();
         public bool TryAdvance(long tick,long entity){if(tick!=current){advanced.Clear();current=tick;}return advanced.Add(entity);}
+        public bool HasAdvanced(long tick,long entity)=>tick==current&&advanced.Contains(entity);
     }
     // Delivery state changes only after the enclosing reliable snapshot was sent.
     public sealed class SurvivalInterestDelivery {

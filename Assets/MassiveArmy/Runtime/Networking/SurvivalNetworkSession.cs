@@ -73,7 +73,7 @@ namespace MassiveArmy.Networking {
             if(Array.IndexOf(Environment.GetCommandLineArgs(),"-survival-probe-report")<0&&Array.IndexOf(Environment.GetCommandLineArgs(),"-survival-offline-preset-probe")<0){Debug.LogError("This survival graphics fixture requires an explicit diagnostic probe; it is not a release build.");Application.Quit(2);return;}
 #endif
 #if UNITY_EDITOR || UNITY_SERVER
-            var bootArgs=Environment.GetCommandLineArgs();int dockIndex=Array.IndexOf(bootArgs,"-survival-dock-seed");if(dockIndex>=0){bool ok=dockIndex+1<bootArgs.Length&&SeedDockFixture(bootArgs[dockIndex+1]);Application.Quit(ok?0:1);return;}int combatIndex=Array.IndexOf(bootArgs,"-survival-combat-seed");if(combatIndex>=0){bool ok=combatIndex+1<bootArgs.Length&&SeedCombatFixture(bootArgs[combatIndex+1]);Application.Quit(ok?0:1);return;}int planetIndex=Array.IndexOf(bootArgs,"-survival-planet-seed");if(planetIndex>=0){bool ok=planetIndex+1<bootArgs.Length&&SeedPlanetFixture(bootArgs[planetIndex+1]);Application.Quit(ok?0:1);return;}int interiorIndex=Array.IndexOf(bootArgs,"-survival-interior-seed");if(interiorIndex>=0){bool ok=interiorIndex+1<bootArgs.Length&&SeedInteriorFixture(bootArgs[interiorIndex+1]);Application.Quit(ok?0:1);return;}int fixtureIndex=Array.IndexOf(bootArgs,"-survival-factory-seed");if(fixtureIndex>=0){bool ok=fixtureIndex+1<bootArgs.Length&&SeedFactoryFixture(bootArgs[fixtureIndex+1]);Application.Quit(ok?0:1);return;}
+            var bootArgs=Environment.GetCommandLineArgs();int campIndex=Array.IndexOf(bootArgs,"-survival-camp-seed");if(campIndex>=0){bool ok=campIndex+1<bootArgs.Length&&SeedCampFixture(bootArgs[campIndex+1]);Application.Quit(ok?0:1);return;}int dockIndex=Array.IndexOf(bootArgs,"-survival-dock-seed");if(dockIndex>=0){bool ok=dockIndex+1<bootArgs.Length&&SeedDockFixture(bootArgs[dockIndex+1]);Application.Quit(ok?0:1);return;}int combatIndex=Array.IndexOf(bootArgs,"-survival-combat-seed");if(combatIndex>=0){bool ok=combatIndex+1<bootArgs.Length&&SeedCombatFixture(bootArgs[combatIndex+1]);Application.Quit(ok?0:1);return;}int planetIndex=Array.IndexOf(bootArgs,"-survival-planet-seed");if(planetIndex>=0){bool ok=planetIndex+1<bootArgs.Length&&SeedPlanetFixture(bootArgs[planetIndex+1]);Application.Quit(ok?0:1);return;}int interiorIndex=Array.IndexOf(bootArgs,"-survival-interior-seed");if(interiorIndex>=0){bool ok=interiorIndex+1<bootArgs.Length&&SeedInteriorFixture(bootArgs[interiorIndex+1]);Application.Quit(ok?0:1);return;}int fixtureIndex=Array.IndexOf(bootArgs,"-survival-factory-seed");if(fixtureIndex>=0){bool ok=fixtureIndex+1<bootArgs.Length&&SeedFactoryFixture(bootArgs[fixtureIndex+1]);Application.Quit(ok?0:1);return;}
             if(Array.IndexOf(Environment.GetCommandLineArgs(),"-survival-simulation-checks")>=0){SurvivalSimulationChecks.Run();Application.Quit(SurvivalSimulationChecks.LastRunPassed?0:1);return;}
 #endif
 #if UNITY_SERVER
@@ -195,7 +195,7 @@ namespace MassiveArmy.Networking {
             if(!admitted.TryGetValue(id,out var identity)){manager.DisconnectClient(id,"Admission missing");return;}admitted.Remove(id);
             var record=authority.World.multiplayer.players.Find(p=>p.identity==identity);if(!RestoreDriverExit(record)){manager.DisconnectClient(id,"Your vehicle exit is blocked; clear the surrounding area before reconnecting");return;}record.controlledEntity=0;var actor=authority.World.Actor(record.actor);
             var forward=SurvivalMovement.Tangent(Vector3.forward,PlanetPrecisionPolicy.Direction(new Double3(actor.pose.x,actor.pose.y,actor.pose.z)));
-            var peer=new Peer{record=record,newestAction=record.lastActionSequence,motion=new SurvivalMotion{actor=record.actor,name=record.name,pose=actor.pose,pitch=record.pitch,verticalSpeed=record.verticalSpeed,walkVelocityX=record.walkVelocityX,walkVelocityY=record.walkVelocityY,walkVelocityZ=record.walkVelocityZ,forwardX=forward.x,forwardY=forward.y,forwardZ=forward.z,grounded=true}};
+            var peer=new Peer{record=record,newestAction=record.lastActionSequence,motion=new SurvivalMotion{actor=record.actor,name=record.name,pose=actor.pose,pitch=record.pitch,verticalSpeed=record.verticalSpeed,walkVelocityX=record.walkVelocityX,walkVelocityY=record.walkVelocityY,walkVelocityZ=record.walkVelocityZ,eva=record.eva,evaVelocityX=record.evaVelocityX,evaVelocityY=record.evaVelocityY,evaVelocityZ=record.evaVelocityZ,evaSuitX=record.evaSuitX,evaSuitY=record.evaSuitY,evaSuitZ=record.evaSuitZ,forwardX=forward.x,forwardY=forward.y,forwardZ=forward.z,grounded=!record.eva}};
             EnsurePlayerShip(record);peer.motion.pose=actor.pose;if(!RestorePassengerBerth(record)){manager.DisconnectClient(id,"Passenger berths are full; retry after a berth is free");return;}if(record.attachedShip!=0){var aboard=authority.World.multiplayer.ships.Find(s=>s.entity==record.attachedShip);if(aboard!=null){if(!RestoreInterior(peer,aboard)){manager.DisconnectClient(id,"No clear space aboard your ship; retry after the area is clear");return;}}else {record.attachedShip=0;record.interiorWalking=false;}}
             actor.networkAbsent=false;peer.regionBody=actor.pose.body;peers.Add(id,peer);connectedActors.Add(record.actor);actor.pose=ActorPose(peer.motion);var definition=surfaces[actor.pose.body].Definition;
             Send(WelcomeMessage,id,new SurvivalWelcome{actor=record.actor,config=PublicConfig(),definition=JsonUtility.ToJson(definition),universe=universe.Manifest(Config.instanceId),simulationSeconds=authority.World.multiplayer.simulationSeconds});_ = services.Population(peers.Count);
@@ -244,7 +244,7 @@ namespace MassiveArmy.Networking {
             if(string.IsNullOrWhiteSpace(json))throw new InvalidDataException("Server config is empty");
             var config=new SurvivalServerConfig();JsonUtility.FromJsonOverwrite(json,config);config.Validate();return config;
         }
-        internal const int ServerSaveContent=3;
+        internal const int ServerSaveContent=4;
         internal static bool SupportsServerSaveContent(int version)=>version>=1&&version<=ServerSaveContent;
 #endif
 #if UNITY_SERVER
@@ -261,7 +261,7 @@ namespace MassiveArmy.Networking {
                 if(saved.multiplayer!=null)saved.multiplayer.stations??=new List<SurvivalStationState>();
                 saved.multiplayer??=new SurvivalSessionState{worldId=Config.worldId,instanceId=Config.instanceId,worldSeed=Config.seed};saved.multiplayer.contentVersion=ServerSaveContent;authority=new IndustrialAuthority(saved,Config.savePath);authority.JournalTiming=(serialize,flush)=>{metrics.Record(SurvivalNetworkMetrics.Phase.JournalSerialize,serialize);metrics.Record(SurvivalNetworkMetrics.Phase.JournalFlush,flush);};authority.CheckpointTiming=milliseconds=>metrics.Record(SurvivalNetworkMetrics.Phase.Checkpoint,milliseconds);authority.World.InventoryPoseResolver=ResolveNetworkInventoryPose;ResetDriverLeases();ResetPilotLeases();clock.Restore(saved.multiplayer.serverTick);authority.Save();
                 InitializeUniverse();
-                SeedResources(Spawn());Setup(true);manager.NetworkConfig.TickRate=(uint)Config.tickRate;
+                SeedResources(Spawn());EnsureCampNear(Spawn());Setup(true);manager.NetworkConfig.TickRate=(uint)Config.tickRate;
                 await services.Initialize(Config.environment,Config.AuthenticationProfile());await verifier.Prepare();await services.Allocate(transport,Config);
                 if(!manager.StartServer())throw new InvalidOperationException("Server transport could not start");RegisterMessages();
                 // Offset publication from the 10 Hz industrial journal/step at the default rates.
@@ -283,7 +283,7 @@ namespace MassiveArmy.Networking {
         bool metricsReportDue;
         long simulationStep;int pendingTestTimeScale;
         void ServerTick(){
-            float dt=1f/Config.tickRate;
+            float dt=1f/Config.tickRate;UpdateCamps();
             if(pendingTestTimeScale!=0){int speed=pendingTestTimeScale;pendingTestTimeScale=0;if(speed!=Config.testTimeScale){Config.testTimeScale=speed;foreach(var peer in peers.Values){peer.motion.epoch++;peer.input.Clear();}Debug.Log("TEST server time: "+Config.testTimeScale+"x");}}
             foreach(var peer in peers.Values)peer.tickInput=peer.input.Next(peer.motion.vehicle!=null);
             // One transport/input tick contains bounded ordinary physics steps.
@@ -295,17 +295,17 @@ namespace MassiveArmy.Networking {
             saveElapsed+=dt;if(saveElapsed>=30){authority.Save();metricsReportDue=true;saveElapsed=0;}
         }
         void ServerSimulationStep(float dt,int substep){
-            simulationStep++;long stage=metrics.Begin();StepUniverse(dt);UpdateServerContacts();
+            simulationStep++;CaptureEvaFrames();long stage=metrics.Begin();StepUniverse(dt);UpdateServerContacts();
             foreach(var peer in peers.Values){var actor=authority.World.Actor(peer.record.actor);var input=peer.tickInput.Substep(substep);if(substep>0&&input.epoch!=peer.motion.epoch)input=new SurvivalInput{sequence=peer.motion.sequence,epoch=peer.motion.epoch};
                 if(actor.health>0&&surfaces.TryGetValue(actor.pose.body,out var surface)){if(peer.record.controlledEntity!=0)DriveServer(peer,input,dt);else if(peer.record.attachedShip!=0)DriveServerShip(peer,input,dt);else StepWalking(peer.motion,input,surface,dt,actor.dose>=50?4:actor.dose>=25?6:Config.walkSpeed,true);}
-                peer.motion.sequence=input.sequence;peer.motion.tick=clock.Tick;actor.pose=ActorPose(peer.motion);if(actor.health>0&&peer.record.attachedShip==0)TryWalkAboard(peer);actor.collisionRadius=peer.motion.vehicle!=null?2.8:.35;peer.record.walkVelocityX=peer.motion.walkVelocityX;peer.record.walkVelocityY=peer.motion.walkVelocityY;peer.record.walkVelocityZ=peer.motion.walkVelocityZ;peer.record.verticalSpeed=peer.motion.verticalSpeed;peer.record.pitch=peer.motion.pitch;peer.record.acknowledgedInput=peer.motion.sequence;
+                peer.motion.sequence=input.sequence;peer.motion.tick=clock.Tick;actor.pose=ActorPose(peer.motion);if(actor.health>0&&peer.record.attachedShip==0&&!peer.motion.eva)TryWalkAboard(peer);actor.collisionRadius=peer.motion.vehicle!=null?2.8:.35;peer.record.walkVelocityX=peer.motion.walkVelocityX;peer.record.walkVelocityY=peer.motion.walkVelocityY;peer.record.walkVelocityZ=peer.motion.walkVelocityZ;peer.record.verticalSpeed=peer.motion.verticalSpeed;peer.record.pitch=peer.motion.pitch;peer.record.acknowledgedInput=peer.motion.sequence;StoreEva(peer.motion,peer.record);
                 peer.record.hunger=Math.Max(0,peer.record.hunger-dt*.02);peer.record.thirst=Math.Max(0,peer.record.thirst-dt*.035);
                 if(peer.record.hunger<=0||peer.record.thirst<=0)actor.health=Math.Max(0,actor.health-dt*.5);
                 var body=surfaces[actor.pose.body].Definition;double altitude=new Double3(actor.pose.x,actor.pose.y,actor.pose.z).Magnitude-body.radius;
                 if(!body.BreathableAt((float)altitude)&&!ShipPressurized(peer)){peer.record.oxygen=Math.Max(0,peer.record.oxygen-dt*.5);if(peer.record.oxygen<=0)actor.health=Math.Max(0,actor.health-dt*5);}
                 if(actor.health<=0){DropDeadSurvivor(peer.record);ReleaseDriver(peer);SurvivalShipAuthority.Release(authority.World,peer.record);}
             }
-            metrics.Measure(SurvivalNetworkMetrics.Phase.Players,stage);stage=metrics.Begin();StepUnoccupiedVehicles(dt);StepServerShips(dt);metrics.Measure(SurvivalNetworkMetrics.Phase.Craft,stage);
+            metrics.Measure(SurvivalNetworkMetrics.Phase.Players,stage);stage=metrics.Begin();StepUnoccupiedVehicles(dt);StepServerShips(dt);CompleteEvaTransitions();metrics.Measure(SurvivalNetworkMetrics.Phase.Craft,stage);
             industryElapsed+=dt;if(industryElapsed>=.1){stage=metrics.Begin();authority.Step();metrics.Measure(SurvivalNetworkMetrics.Phase.Industry,stage);industryElapsed-=.1;}
             stage=metrics.Begin();ProcessNetworkDeaths();metrics.Measure(SurvivalNetworkMetrics.Phase.Death,stage);
         }
@@ -320,6 +320,9 @@ namespace MassiveArmy.Networking {
                     case "industrial":
                         actionError=ExecuteNetworkIndustrial(peer,action.command);break;
                     case "building":actionError=ExecuteBuilding(actor.id,action.building);break;
+                    case "camp-land":actionError=LandAtCamp(peer,action.entity,action.slot);break;
+                    case "camp-launch":actionError=CampFlightAction(peer,true);break;
+                    case "camp-abort":actionError=CampFlightAction(peer,false);break;
                     case "station-deploy":actionError=DeployStation(peer);break;
                     case "station-dock":actionError=ToggleStationDock(peer,action.entity);break;
                     case "station-invite":case "station-revoke":actionError=InviteStation(peer,action.entity,action.count,action.kind=="station-invite");break;
@@ -351,7 +354,7 @@ namespace MassiveArmy.Networking {
             }catch(Exception e){error="Rejected: "+e.GetType().Name;}
             Send(ReplyMessage,client,new SurvivalActionReply{sequence=action.sequence,tick=clock.Tick,accepted=error==null,message=error??(action.kind=="ship-recall"?"Your ship is flying to a landing area near your call location":action.kind=="ship-recall-cancel"?"Ship recall cancelled":"Applied")});
         }
-        static readonly HashSet<string> AllowedIndustrial=new HashSet<string>{"place","pack","pile","craft","cancel-craft","dig","dig-vehicle","pump-intake","shield","dump","scoop","bulk-transfer","feed","deposit-item","withdraw-item","withdraw-input","fill-water","drain-water","protection","treat","recipe","toggle","drain-energy","recycle-legacy","recover-tailings","haul-stop","power","water","belt","remove-power","remove-water","remove-belt","disconnect","ship-place","ship-remove","ship-wire","ship-unwire"};
+        static readonly HashSet<string> AllowedIndustrial=new HashSet<string>{"place","pack","pile","craft","cancel-craft","camp-barter","dig","dig-vehicle","pump-intake","shield","dump","scoop","bulk-transfer","feed","deposit-item","withdraw-item","withdraw-input","fill-water","drain-water","protection","treat","recipe","toggle","drain-energy","recycle-legacy","recover-tailings","haul-stop","power","water","belt","remove-power","remove-water","remove-belt","disconnect","ship-place","ship-remove","ship-wire","ship-unwire"};
         string ExecuteNetworkIndustrial(Peer peer,IndustrialCommand command){
             var actor=authority.World.Actor(peer.record.actor);if(actor==null||actor.health<=0)return "Respawn before performing gameplay actions";
             if(command==null||command.route?.Count>128||!AllowedIndustrial.Contains(command.kind??""))return "Action is not available through this network adapter";
@@ -372,7 +375,7 @@ namespace MassiveArmy.Networking {
             foreach(var point in authority.World.respawnPoints){var resolved=ResolveNetworkInventoryPose(point.pose);if(resolved.HasValue)AddEntity(point.id*8+7,"respawn-point",resolved.Value,point.definition);}
             foreach(var drop in authority.World.droppedItems){var pose=ResolveNetworkInventoryPose(drop.pose)??drop.resolvedPose;AddEntity(drop.id*8,"loot",pose,"");}
             foreach(var ship in authority.World.multiplayer.ships){var state=ship.Copy();state.physics="";state.invitedActors.Clear();AddEntity(ship.entity*8+5,"ship",ship.pose,JsonUtility.ToJson(state));entities[ship.entity*8+6]=new SurvivalEntity{id=ship.entity*8+6,kind="ship-layout",pose=new FramePose{body=ship.pose.body,frame=ship.entity},data=ShipLayout(ship)};}
-            PublishFactoryLinks();PublishBuildings();PublishStations();
+            PublishFactoryLinks();PublishBuildings();PublishStations();PublishCamps();
             foreach(var pair in peers){var peer=pair.Value;var actor=authority.World.Actor(peer.record.actor);
                 PublishRegion(pair.Key,peer,actor.pose.body);
                 double speed=peer.motion.ship==null?0:new Double3(peer.motion.ship.velocityX,peer.motion.ship.velocityY,peer.motion.ship.velocityZ).Magnitude;
@@ -395,7 +398,7 @@ namespace MassiveArmy.Networking {
                 bool sendLayout=assembly!=null&&(peer.privateShip!=peer.motion.ship.entity||peer.privateShipRevision!=assembly.revision);
                 var packetMotion=peer.motion;if(packetMotion.ship!=null){packetMotion=packetMotion.Copy();packetMotion.ship.invitedActors.Clear();if(packetMotion.ship.owner!=actor.id)packetMotion.ship.physics="";}
                 var ownShip=authority.World.multiplayer.ships.Find(s=>s.owner==actor.id);
-                var packet=new SurvivalSnapshot{testTimeScale=Config.testTimeScale,simulationSeconds=authority.World.multiplayer.simulationSeconds,tick=clock.Tick,motion=packetMotion,self=actor,vitals=peer.record,pilotedShip=sendLayout&&peer.large==null?(assembly.owner==actor.id?assembly:JsonUtility.FromJson<ShipAssembly>(ShipLayout(peer.motion.ship))):null,ownedShip=ownShip?.entity??0,shipInvites=ShipInvites(ownShip),incomingInvitations=IncomingInvitations(actor.id)};
+                var packet=new SurvivalSnapshot{campBeacons=CampBeacons(actor.pose.body),testTimeScale=Config.testTimeScale,simulationSeconds=authority.World.multiplayer.simulationSeconds,tick=clock.Tick,motion=packetMotion,self=actor,vitals=peer.record,pilotedShip=sendLayout&&peer.large==null?(assembly.owner==actor.id?assembly:JsonUtility.FromJson<ShipAssembly>(ShipLayout(peer.motion.ship))):null,ownedShip=ownShip?.entity??0,shipInvites=ShipInvites(ownShip),incomingInvitations=IncomingInvitations(actor.id)};
                 if(ownShip!=null)packet.shipNavigation=new SurvivalShipNavigation{entity=ownShip.entity,pose=ownShip.pose};
                 packet.industryTick=authority.World.tick;foreach(var point in authority.World.respawnPoints)if(point.owner==actor.id)packet.respawnPoints.Add(point);
                 peer.delivery.RetainPending(nearby);
@@ -567,3 +570,6 @@ namespace MassiveArmy.Networking {
         void OnDestroy(){if(Active==this)Active=null;}
     }
 }
+
+
+

@@ -35,5 +35,8 @@
   "shipAssistAcceleration": 80,
   "shipAssistBraking": 160,
   "warpSpeed": 100000000,
-  "shipRecallSpeed": 1000
+  "shipRecallSpeed": 1000,
+  "evaSpeed": 10,
+  "evaBoostSpeed": 30,
+  "evaAcceleration": 8
 }

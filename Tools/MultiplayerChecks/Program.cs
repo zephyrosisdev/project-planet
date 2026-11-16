@@ -55,6 +55,7 @@ static class Program {
         Check(oneShot.Substep(0).jump&&oneShot.Substep(0).lookX==9,"First accelerated substep retains one-shot input");var heldSubstep=oneShot.Substep(63);
         Check(heldSubstep.lookX==0&&heldSubstep.lookY==0&&!heldSubstep.jump&&!heldSubstep.toggleAssist&&!heldSubstep.toggleGear&&!heldSubstep.toggleLock&&!heldSubstep.toggleOrbit&&!heldSubstep.matchOrbit&&heldSubstep.x==1&&heldSubstep.roll==1&&heldSubstep.boost&&heldSubstep.brake&&heldSubstep.cruise,"Extra simulation steps repeat continuous controls without repeating mouse deltas or toggles");
         StationChecks();
+        CampChecks.Run(Check);
         RespawnShipOwnershipChecks();
         var chatInput=new MassiveArmy.Networking.SurvivalChatInput();
         Check(!chatInput.Escape(0)&&!chatInput.Blocks(0),"Escape outside chat remains available to the game menu");

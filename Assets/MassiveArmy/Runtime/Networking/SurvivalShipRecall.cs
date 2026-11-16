@@ -5,7 +5,8 @@ namespace MassiveArmy.Networking {
     public sealed partial class SurvivalNetworkSession {
         UnityEngine.Vector2 recallMenuScroll;
         bool RecallPathClear(SurvivalShipState ship,Double3 from,Double3 to,float dt){
-            foreach(var actor in authority.World.actors)if(!actor.networkAbsent&&actor.health>0&&actor.pose.body==ship.pose.body&&SegmentDistance(from,to,SurvivalVehicleSimulation.Position(actor.pose))<ship.collisionRadius+1)return false;
+            if(authority!=null){foreach(var actor in authority.World.actors)if(!authority.World.multiplayer.players.Exists(p=>p.actor==actor.id&&p.attachedShip==ship.entity)&&!actor.networkAbsent&&actor.health>0&&actor.pose.body==ship.pose.body&&SegmentDistance(from,to,SurvivalVehicleSimulation.Position(actor.pose))<ship.collisionRadius+1)return false;}
+            else {foreach(var entity in visible.Values)if(entity.kind=="player"&&entity.pose.body==ship.pose.body){var player=UnityEngine.JsonUtility.FromJson<SurvivalPlayerProxy>(entity.data);if(player.parentKind=="ship"&&player.parent==ship.entity||player.parentKind=="vehicle"&&clientMachines.TryGetValue(player.parent,out var cargo)&&cargo.pose.frame==ship.entity)continue;if(SegmentDistance(from,to,SurvivalVehicleSimulation.Position(entity.pose))<ship.collisionRadius+1)return false;}}
             return universe==null||universe.SweepCelestials(ship.pose.body,from,to,dt,out _,true)>=1;
         }
         string RecallShip(Peer peer,long entity){
@@ -31,7 +32,7 @@ namespace MassiveArmy.Networking {
             if(!found)return "No clear, dry, level landing area nearby; move to more open ground";
             if(!SealForTakeoff(ship))return "Clear the exterior hatch before recalling the ship";
             if(!simulation.ship.BeginRecall(landing,rotation,Config.shipRecallSpeed))return "Ship recall needs a powered cockpit and engines";
-            ship.rearOpen=ship.innerOpen=false;interiorModels.Remove(ship.entity);ship.recallReadyTick=clock.Tick+Config.tickRate*10;CaptureShip(ship,simulation);return null;
+            ClearCampReservation(ship);ship.rearOpen=ship.innerOpen=false;interiorModels.Remove(ship.entity);ship.recallReadyTick=clock.Tick+Config.tickRate*10;CaptureShip(ship,simulation);return null;
         }
         string CancelShipRecall(Peer peer,long entity){
             var ship=authority.World.multiplayer.ships.Find(s=>s.entity==entity);if(ship==null||ship.owner!=peer.record.actor)return "Only the ship owner can cancel recall";
@@ -47,3 +48,4 @@ namespace MassiveArmy.Networking {
         }
     }
 }
+

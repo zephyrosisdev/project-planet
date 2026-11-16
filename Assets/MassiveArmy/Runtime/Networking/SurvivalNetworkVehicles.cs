@@ -30,7 +30,7 @@ namespace MassiveArmy.Networking {
             motion.tick++;double end=StationTime(motion),start=end-Config.testTimeScale*dt;
             for(int substep=0;substep<Config.testTimeScale;substep++){double time=start+(substep+1)*dt;universe?.Advance(time);PredictMotionStep(motion,input.Substep(substep),dt,time);}
         }
-        void PredictMotionStep(SurvivalMotion motion,SurvivalInput input,float dt,double time){
+        void PredictMotionStep(SurvivalMotion motion,SurvivalInput input,float dt,double time){evaPredictionTime=time;
             var definition=ClientSimulationDefinition;var canonical=universe?.Definition(definition.bodyId);if(canonical!=null){definition.position=canonical.position;definition.velocity=canonical.velocity;}var surface=new PlanetSurface(definition);
             if(motion.ship!=null){var state=motion.ship;bool pilot=latest.vitals.controlledShip==state.entity;var layout=latest.pilotedShip;if(layout==null||layout.id!=state.entity)clientShipAssemblies.TryGetValue(state.entity,out layout);if(state.owner==ActorId&&layout!=null&&!string.IsNullOrEmpty(state.physics))SimulateShip(state,layout,definition,pilot?input:default,dt,time);else {state.pose.x+=state.velocityX*dt;state.pose.y+=state.velocityY*dt;state.pose.z+=state.velocityZ*dt;}if(motion.vehicle!=null){VehicleSimulation(motion.vehicle,motion.vehicleDefinition,surface).Step(motion.vehicle,input,dt,clientMachines.Values);FollowVehicle(motion,motion.vehicle,input);}else if(motion.interior)PredictInterior(motion,input,dt);else FollowShip(motion,state,input,pilot);}
             else if(motion.vehicle!=null){VehicleSimulation(motion.vehicle,motion.vehicleDefinition,surface).Step(motion.vehicle,input,dt,clientMachines.Values);FollowVehicle(motion,motion.vehicle,input);}
@@ -102,3 +102,4 @@ namespace MassiveArmy.Networking {
         void DisposeVehicleSimulations(){foreach(var simulation in vehicleSimulations.Values)simulation.Dispose();vehicleSimulations.Clear();clientMachines.Clear();}
     }
 }
+

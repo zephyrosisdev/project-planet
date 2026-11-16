@@ -87,6 +87,7 @@ namespace MassiveArmy.Industrial {
             if(c.kind=="place"||c.kind=="pack"||c.kind=="pile"||c.kind=="belt"||c.kind=="remove-belt"||c.kind=="power"||c.kind=="water"||c.kind=="ship-place"||c.kind=="ship-remove"||c.kind=="ship-wire"||c.kind=="ship-unwire"){
                 string policyError=ConstructionPolicyError(actorId);if(policyError!=null)return Fail(policyError);
             }
+            if((c.kind=="place"||c.kind=="pile")&&CampReserved(c.pose,10))return Fail("Keep neutral camps and pad approaches clear of construction");
             Action apply=null;long entity=0;string message="Applied";
             var from=Machine(c.source);var to=Machine(c.target);
             switch(c.kind){
@@ -106,6 +107,8 @@ namespace MassiveArmy.Industrial {
                     if(!creativeMode||c.count<1||c.count>10000||!a.inventory.CanAdd(c.item,c.count))return Fail("Enable creative mode and make room for pay dirt");apply=()=>a.inventory.bulk.Add(new MaterialLot{litres=c.count,iron=c.count/5,copper=c.count/10});break;
                 case "recycle-legacy":
                     if(!IndustrialCatalog.RetiredConstructionRecipe(c.item)||!IndustrialCatalog.Recipes.TryGetValue(c.item,out var oldRecipe))return Fail("Not a legacy construction item");long batch=oldRecipe.output[0].count,legacyStock=a.inventory.Count(c.item);if(legacyStock<batch)return Fail("Collect a complete legacy batch before recovering materials");long copies=legacyStock/batch,returned=IndustrialConstruction.Quantity(oldRecipe.input)*copies;if(a.inventory.Free+copies*batch<returned)return Fail("Make room for recovered materials");var recoveryPlan=a.inventory.CloneSlots();recoveryPlan.Extract(c.item,copies*batch);var recoveryItems=new List<ItemStack>();foreach(var input in oldRecipe.input)recoveryItems.Add(new ItemStack(input.item,input.count*copies));if(!recoveryPlan.CanAddBatch(recoveryItems))return Fail("Make slots available for recovered materials");apply=()=>{double activity=a.inventory.Extract(c.item,copies*batch);var refund=new List<ItemStack>();foreach(var item in oldRecipe.input)refund.Add(new ItemStack(item.item,item.count*copies){activity=refund.Count==0?activity:0});IndustrialConstruction.Return(a.inventory,refund);};break;
+                case "camp-barter":
+                    var barterError=PrepareBarter(a,c,out apply);if(barterError!=null)return Fail(barterError);message="Trade completed";break;
                 case "craft":
                     var craftError=PrepareHandcraft(a,c.item,c.count,out apply,creativeMode&&!legacyEconomy,legacyEconomy);if(craftError!=null)return Fail(craftError);break;
                 case "cancel-craft":
@@ -262,6 +265,7 @@ namespace MassiveArmy.Industrial {
         }
     }
 }
+
 
 
 

@@ -80,6 +80,7 @@ namespace MassiveArmy.Planetary {
         bool TouchesActor(PlayerBuildSite site,PlayerModuleRecord record,IndustrialActor person){var feet=Double3.Rotate(Quaternion.Inverse(site.rotation),SurvivalPosition(person.pose)-site.anchor).Float;foreach(var shape in profiles[(int)record.kind].Shape(record.open))if(PlayerBuildingProfiles.Overlap(shape,record.position,Quaternion.Euler(0,record.yaw,0),BuildSolid.Box(-.35f,.35f,-.35f,.35f,.02f,1.8f),feet,Quaternion.identity))return true;return false;}
         static Double3 SurvivalPosition(FramePose p)=>new Double3(p.x,p.y,p.z);
         string Validate(PlayerBuildStorage storage,PlayerBuildSite site,PlayerModuleRecord record,IndustrialActor actor,bool door){
+            if(authority.World.CampReserved(Pose(actor.pose.body,site,record.position),10))return "Keep neutral camps and pad approaches clear of construction";
             var profile=profiles[(int)record.kind];int body=actor.pose.body;var centre=Point(site,record.position);var rotation=Rotation(site,record);
             if(record.position.magnitude>PlayerBuildingProfiles.SiteRadius||Pose(body,site,record.position).Distance(actor.pose)>PlayerBuildingProfiles.Reach)return "Move within construction reach and site extent";
             foreach(var otherSite in storage.playerBuildSites){if((centre-otherSite.anchor).Magnitude>PlayerBuildingProfiles.SiteRadius+32)continue;var position=Double3.Rotate(Quaternion.Inverse(otherSite.rotation),centre-otherSite.anchor).Float;var q=Quaternion.Inverse(otherSite.rotation)*rotation;
@@ -102,3 +103,4 @@ namespace MassiveArmy.Planetary {
         }
     }
 }
+

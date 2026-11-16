@@ -7,7 +7,7 @@ using UnityEngine;
 namespace MassiveArmy.Networking {
     // Canonical CPU prisms; the index never contains floating-origin transforms.
     internal sealed class SurvivalContacts {
-        internal sealed class Shape {internal long id;internal int body;internal Double3 origin;internal Quaternion rotation;internal BuildSolid[] solids;internal Ramp[] ramps;internal double radius;}
+        internal sealed class Shape {internal long id;internal int body;internal Double3 origin;internal Quaternion rotation;internal BuildSolid[] solids;internal Ramp[] ramps;internal double radius;internal Vector4[] indexingSpheres;}
         internal readonly struct Ramp {
             internal readonly float x0,x1,z0,z1,y0,y1;internal readonly bool alongX;
             internal Ramp(float x0,float x1,float z0,float z1,float y0,float y1,bool alongX=false){this.x0=x0;this.x1=x1;this.z0=z0;this.z1=z1;this.y0=y0;this.y1=y1;this.alongX=alongX;}
@@ -33,17 +33,19 @@ namespace MassiveArmy.Networking {
         const double Cell=32;
         internal void Remove(long id){if(occupied.Remove(id,out var keys))foreach(var key in keys)if(cells.TryGetValue(key,out var bucket)){bucket.Remove(id);if(bucket.Count==0)cells.Remove(key);}shapes.Remove(id);}
         internal void Put(Shape shape){Remove(shape.id);shapes[shape.id]=shape;var keys=new List<(int,long,long,long)>();double r=shape.radius;
+            if(shape.indexingSpheres!=null){var unique=new HashSet<(int,long,long,long)>();foreach(var sphere in shape.indexingSpheres){var center=shape.origin+Double3.Rotate(shape.rotation,new Double3(sphere.x,sphere.y,sphere.z));for(long x=(long)Math.Floor((center.x-sphere.w)/Cell);x<=(long)Math.Floor((center.x+sphere.w)/Cell);x++)for(long y=(long)Math.Floor((center.y-sphere.w)/Cell);y<=(long)Math.Floor((center.y+sphere.w)/Cell);y++)for(long z=(long)Math.Floor((center.z-sphere.w)/Cell);z<=(long)Math.Floor((center.z+sphere.w)/Cell);z++){var key=(shape.body,x,y,z);if(!unique.Add(key))continue;if(!cells.TryGetValue(key,out var bucket))cells[key]=bucket=new HashSet<long>();bucket.Add(shape.id);keys.Add(key);}}occupied[shape.id]=keys;return;}
             for(long x=(long)Math.Floor((shape.origin.x-r)/Cell);x<=(long)Math.Floor((shape.origin.x+r)/Cell);x++)for(long y=(long)Math.Floor((shape.origin.y-r)/Cell);y<=(long)Math.Floor((shape.origin.y+r)/Cell);y++)for(long z=(long)Math.Floor((shape.origin.z-r)/Cell);z<=(long)Math.Floor((shape.origin.z+r)/Cell);z++){var key=(shape.body,x,y,z);if(!cells.TryGetValue(key,out var bucket))cells[key]=bucket=new HashSet<long>();bucket.Add(shape.id);keys.Add(key);}occupied[shape.id]=keys;
         }
         internal void Clear(){shapes.Clear();cells.Clear();occupied.Clear();near.Clear();candidates.Clear();}
         void Query(int body,Double3 from,Double3 to,double margin=3){candidates.Clear();near.Clear();
+            if((to-from).Magnitude>Cell*2){QueryRay(body,from,to,(int)Math.Ceiling(margin/Cell));return;}
             for(long x=(long)Math.Floor((Math.Min(from.x,to.x)-margin)/Cell);x<=(long)Math.Floor((Math.Max(from.x,to.x)+margin)/Cell);x++)for(long y=(long)Math.Floor((Math.Min(from.y,to.y)-margin)/Cell);y<=(long)Math.Floor((Math.Max(from.y,to.y)+margin)/Cell);y++)for(long z=(long)Math.Floor((Math.Min(from.z,to.z)-margin)/Cell);z<=(long)Math.Floor((Math.Max(from.z,to.z)+margin)/Cell);z++)if(cells.TryGetValue((body,x,y,z),out var bucket))foreach(long id in bucket)candidates.Add(id);
             // Stable order keeps replay independent of dictionary insertion history.
             ordered.Clear();ordered.AddRange(candidates);ordered.Sort();foreach(long id in ordered)near.Add(shapes[id]);
         }
         // Traverse only cells touched by the ray. Long weapon rays must not
         // query the entire three-dimensional bounding cube between endpoints.
-        void QueryRay(int body,Double3 from,Double3 to){
+        void QueryRay(int body,Double3 from,Double3 to,int padding=0){
             candidates.Clear();near.Clear();var delta=to-from;
             long x=(long)Math.Floor(from.x/Cell),y=(long)Math.Floor(from.y/Cell),z=(long)Math.Floor(from.z/Cell);
             long ex=(long)Math.Floor(to.x/Cell),ey=(long)Math.Floor(to.y/Cell),ez=(long)Math.Floor(to.z/Cell);
@@ -52,7 +54,7 @@ namespace MassiveArmy.Networking {
             double tx=sx==0?double.PositiveInfinity:(((sx>0?x+1:x)*Cell)-from.x)/delta.x,ty=sy==0?double.PositiveInfinity:(((sy>0?y+1:y)*Cell)-from.y)/delta.y,tz=sz==0?double.PositiveInfinity:(((sz>0?z+1:z)*Cell)-from.z)/delta.z;
             long maximum=Math.Abs(ex-x)+Math.Abs(ey-y)+Math.Abs(ez-z)+4;
             for(long step=0;step<maximum;step++){
-                if(cells.TryGetValue((body,x,y,z),out var bucket))foreach(long id in bucket)candidates.Add(id);
+                for(int ox=-padding;ox<=padding;ox++)for(int oy=-padding;oy<=padding;oy++)for(int oz=-padding;oz<=padding;oz++)if(cells.TryGetValue((body,x+ox,y+oy,z+oz),out var bucket))foreach(long id in bucket)candidates.Add(id);
                 if(x==ex&&y==ey&&z==ez)break;
                 double next=Math.Min(tx,Math.Min(ty,tz));
                 if(tx<=next){x+=sx;tx+=ax;}if(ty<=next){y+=sy;ty+=ay;}if(tz<=next){z+=sz;tz+=az;}
@@ -64,12 +66,12 @@ namespace MassiveArmy.Networking {
             double boundary=-value/change;if(change>0)low=Math.Max(low,boundary);else high=Math.Min(high,boundary);return low<=high;
         }
         internal static bool PrismRay(BuildSolid solid,Vector3 from,Vector3 delta,out double entry)=>PrismRay(solid,from,delta,out entry,out _);
-        static bool PrismRay(BuildSolid solid,Vector3 from,Vector3 delta,out double entry,out double exit){
+        static bool PrismRay(BuildSolid solid,Vector3 from,Vector3 delta,out double entry,out double exit,double margin=0){
             double low=0,high=1;entry=exit=0;
-            if(!ClipRay(from.y-solid.bottom,delta.y,ref low,ref high)||!ClipRay(solid.top-from.y,-delta.y,ref low,ref high))return false;
+            if(!ClipRay(from.y-solid.bottom+margin,delta.y,ref low,ref high)||!ClipRay(solid.top-from.y+margin,-delta.y,ref low,ref high))return false;
             var points=solid.polygon;double area=0;for(int i=0;i<points.Length;i++){var a=points[i];var b=points[(i+1)%points.Length];area+=a.x*b.y-b.x*a.y;}double sign=area>=0?1:-1;
             for(int i=0;i<points.Length;i++){var a=points[i];var b=points[(i+1)%points.Length];double dx=b.x-a.x,dz=b.y-a.y;
-                if(!ClipRay(sign*(dx*(from.z-a.y)-dz*(from.x-a.x)),sign*(dx*delta.z-dz*delta.x),ref low,ref high))return false;}
+                if(!ClipRay(sign*(dx*(from.z-a.y)-dz*(from.x-a.x))+margin*Math.Sqrt(dx*dx+dz*dz),sign*(dx*delta.z-dz*delta.x),ref low,ref high))return false;}
             if(high<0||low>1)return false;entry=Math.Max(0,low);exit=Math.Min(1,high);return true;
         }
         internal bool RayBlocked(int body,Double3 from,Double3 to,long ignore=0,long ignoreOther=0){
@@ -117,6 +119,9 @@ namespace MassiveArmy.Networking {
         internal bool ClearAt(int body,Double3 point,Vector3 up){Query(body,point,point);return !Blocked(point,Quaternion.FromToRotation(Vector3.up,up));}
         internal void Resolve(SurvivalMotion state,FramePose previous,bool wasGrounded,Vector3? fixedUp=null){
             var from=new Double3(previous.x,previous.y,previous.z);var target=new Double3(state.pose.x,state.pose.y,state.pose.z);Query(state.pose.body,from,target);if(near.Count==0)return;
+            // Orbital EVA can travel hundreds of metres per tick. Sweep a
+            // conservative capsule envelope before ordinary local contact steps.
+            if(state.eva&&(target-from).Magnitude>19){var evaUp=fixedUp??PlanetPrecisionPolicy.Direction(from);double fraction=1;foreach(var shape in near){var inverse=Quaternion.Inverse(shape.rotation);var start=Double3.Rotate(inverse,from+new Double3(evaUp)*.9-shape.origin).Float;var rayDelta=Double3.Rotate(inverse,target-from).Float;foreach(var solid in shape.solids??Array.Empty<BuildSolid>())if(PrismRay(solid,start,rayDelta,out double entry,out _,.9)&&entry<fraction)fraction=entry;}if(fraction<1){target=from+(target-from)*Math.Max(0,fraction-.005/Math.Max(1,(target-from).Magnitude));state.pose.x=target.x;state.pose.y=target.y;state.pose.z=target.z;state.evaVelocityX=state.evaVelocityY=state.evaVelocityZ=state.evaSuitX=state.evaSuitY=state.evaSuitZ=0;}}
             var up=fixedUp??PlanetPrecisionPolicy.Direction(from);var orientation=Quaternion.FromToRotation(Vector3.up,up);var delta=target-from;int steps=Math.Max(1,(int)Math.Ceiling(delta.Magnitude/.15));steps=Math.Min(steps,128);var increment=delta*(1.0/steps);var current=from;bool supported=false;
             RecoverOverlap(ref current,orientation,up,delta,SurvivalMovement.Tangent(SurvivalMovement.Forward(state),up));
             for(int i=0;i<steps;i++){
@@ -151,8 +156,12 @@ namespace MassiveArmy.Networking {
             foreach(long id in new List<long>(contactMachineSignatures.Keys))if(!alive.Contains(id)){serverContacts.Remove(id*8+2);contactMachineSignatures.Remove(id);}
         }
         void PutMachineContact(SurvivalContacts contacts,IndustrialMachine machine){var data=FactoryCollisionData(machine);var solids=new BuildSolid[data.solids.Length];for(int i=0;i<solids.Length;i++)solids[i]=data.solids[i].Shape();var position=SurvivalVehicleSimulation.Position(machine.pose);contacts.Put(new SurvivalContacts.Shape{id=machine.id*8+2,body=machine.pose.body,origin=position,rotation=(machine.pose.frame==0?Quaternion.FromToRotation(Vector3.up,PlanetPrecisionPolicy.Direction(position)):Quaternion.identity)*Quaternion.Euler(0,machine.pose.yaw,0),solids=solids,radius=data.bound});}
-        void ReceiveContacts(SurvivalSnapshot snapshot){foreach(long id in snapshot.removed)clientContacts.Remove(id);foreach(var entity in snapshot.changed){if(entity.kind=="building"&&clientBuildings.TryGetValue(entity.id,out var part))clientContacts.Put(BuildingShape(entity.pose.body,part.Site(),part.Record(),BuildingProfiles[(int)part.kind]));else if(entity.kind=="machine"&&clientMachines.TryGetValue(entity.id/8,out var machine)){if(machine.pose.frame==0&&!machine.integratedLogistics)PutMachineContact(clientContacts,machine);else clientContacts.Remove(entity.id);}}}
-        void StepWalking(SurvivalMotion motion,SurvivalInput input,PlanetSurface surface,float dt,double speed,bool server){var previous=motion.pose;bool grounded=motion.grounded;SurvivalMovement.Step(motion,input,surface,dt,speed,Config.walkAcceleration,Config.walkBraking);(server?serverContacts:clientContacts).Resolve(motion,previous,grounded);ResolveExteriorRamps(motion,previous,grounded,server);}
+        void ReceiveContacts(SurvivalSnapshot snapshot){ReceiveCamps(snapshot);foreach(long id in snapshot.removed)clientContacts.Remove(id);foreach(var entity in snapshot.changed){if(entity.kind=="building"&&clientBuildings.TryGetValue(entity.id,out var part))clientContacts.Put(BuildingShape(entity.pose.body,part.Site(),part.Record(),BuildingProfiles[(int)part.kind]));else if(entity.kind=="machine"&&clientMachines.TryGetValue(entity.id/8,out var machine)){if(machine.pose.frame==0&&!machine.integratedLogistics)PutMachineContact(clientContacts,machine);else clientContacts.Remove(entity.id);}}}
+        void StepWalking(SurvivalMotion motion,SurvivalInput input,PlanetSurface surface,float dt,double speed,bool server){var previous=motion.pose;bool grounded=motion.grounded;if(motion.eva)StepEva(motion,input,surface,dt);else SurvivalMovement.Step(motion,input,surface,dt,speed,Config.walkAcceleration,Config.walkBraking);(server?serverContacts:clientContacts).Resolve(motion,previous,grounded);ResolveExteriorRamps(motion,previous,grounded,server);if(motion.eva&&!server)ResolvePredictedEvaContacts(motion,previous,surface,dt);if(motion.eva&&motion.grounded)ClearEva(motion);}
         void ClearContacts(){serverContacts.Clear();clientContacts.Clear();contactBuildJson.Clear();contactBuildIds.Clear();contactMachineSignatures.Clear();}
     }
 }
+
+
+
+

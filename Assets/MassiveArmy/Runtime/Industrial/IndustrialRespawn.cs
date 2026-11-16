@@ -41,7 +41,7 @@ namespace MassiveArmy.Industrial {
                 // This is part of the journalled revival itself, including recovery
                 // from a crash before the network adapter's following checkpoint.
                 var survivor=multiplayer?.players.Find(p=>p.actor==actor.id);
-                if(survivor!=null){SurvivalVehicleAuthority.Release(this,survivor);SurvivalShipAuthority.Release(this,survivor);survivor.attachedShip=survivor.pendingVehicleExit=0;survivor.interiorWalking=false;survivor.shipSeat=-1;survivor.oxygen=survivor.hunger=survivor.thirst=100;survivor.walkVelocityX=survivor.walkVelocityY=survivor.walkVelocityZ=0;survivor.verticalSpeed=0;survivor.pitch=0;if(change.shipRespawn){survivor.attachedShip=change.attachedShip;survivor.interiorPose=change.interiorPose;survivor.interiorWalking=true;}}
+                if(survivor!=null){SurvivalVehicleAuthority.Release(this,survivor);SurvivalShipAuthority.Release(this,survivor);survivor.attachedShip=survivor.pendingVehicleExit=0;survivor.interiorWalking=false;survivor.shipSeat=-1;survivor.oxygen=survivor.hunger=survivor.thirst=100;survivor.walkVelocityX=survivor.walkVelocityY=survivor.walkVelocityZ=0;survivor.eva=false;survivor.evaVelocityX=survivor.evaVelocityY=survivor.evaVelocityZ=survivor.evaSuitX=survivor.evaSuitY=survivor.evaSuitZ=0;survivor.verticalSpeed=0;survivor.pitch=0;if(change.shipRespawn){survivor.attachedShip=change.attachedShip;survivor.interiorPose=change.interiorPose;survivor.interiorWalking=true;}}
             }else if(change.kind=="death"){actor.health=0;}
             else if(change.kind=="rename"){RespawnPoint(change.id).name=change.name;}
             else if(change.kind=="pack"){
@@ -69,5 +69,6 @@ namespace MassiveArmy.Industrial {
         }
     }
 }
+
 
 

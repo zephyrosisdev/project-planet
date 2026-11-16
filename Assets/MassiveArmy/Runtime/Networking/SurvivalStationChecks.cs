@@ -6,7 +6,7 @@ using UnityEngine;
 namespace MassiveArmy.Networking {
     public sealed partial class SurvivalNetworkSession {
         internal static void RunStationChecks(Action<bool,string> check){
-            check(SupportsServerSaveContent(1)&&SupportsServerSaveContent(2)&&SupportsServerSaveContent(3)&&!SupportsServerSaveContent(0)&&!SupportsServerSaveContent(4),"Recall-aware servers migrate previous saves and reject unknown future content; the content-3 marker prevents older servers from misreading an in-flight recall");
+            check(SupportsServerSaveContent(1)&&SupportsServerSaveContent(2)&&SupportsServerSaveContent(3)&&!SupportsServerSaveContent(0)&&SupportsServerSaveContent(4)&&!SupportsServerSaveContent(5),"EVA-aware servers migrate previous saves and reject unknown future content; content 4 protects EVA persistence from older servers");
             var legacyConfig=ReadServerConfig("{\"maxPlayers\":2,\"walkSnap\":4}");check(legacyConfig.maxPlayers==2&&legacyConfig.walkSnap==4&&legacyConfig.tickRate==30&&legacyConfig.walkAcceleration==40&&legacyConfig.shipBoostSpeed==360,"Existing server configs retain custom values and receive defaults for newly introduced movement profiles");
             int meshes=Resources.FindObjectsOfTypeAll<Mesh>().Length,cameras=Resources.FindObjectsOfTypeAll<Camera>().Length;
             var go=new GameObject("Station docking authority fixture");var session=go.AddComponent<SurvivalNetworkSession>();var world=new IndustrialWorld{multiplayer=new SurvivalSessionState{worldId="station-native",simulationSeconds=10}};var store=new IndustrialAuthority(world);session.authority=store;session.Config=new SurvivalServerConfig();
@@ -41,3 +41,4 @@ namespace MassiveArmy.Networking {
     }
 }
 #endif
+

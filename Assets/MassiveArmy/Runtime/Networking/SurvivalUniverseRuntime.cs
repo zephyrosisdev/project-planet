@@ -30,6 +30,7 @@ namespace MassiveArmy.Networking {
             foreach(var peer in peers.Values)active.Add(authority.World.Actor(peer.record.actor).pose.body);
             universe.UpdatePowerEnvironments(authority.World,active);
         }
-        void DisposeUniverse(){universe?.Dispose();universe=null;surfaces.Clear();spawnPose=null;}
+        void DisposeUniverse(){ClearEvaTracking();universe?.Dispose();universe=null;surfaces.Clear();spawnPose=null;}
     }
 }
+

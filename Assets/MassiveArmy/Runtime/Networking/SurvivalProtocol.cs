@@ -16,6 +16,7 @@ namespace MassiveArmy.Networking {
         public float forwardX,forwardY,forwardZ;public double walkVelocityX,walkVelocityY,walkVelocityZ;public bool grounded,interior;public string notice;
         public SurvivalVehicleState vehicle;public string vehicleDefinition;public float viewYaw;
         public SurvivalShipState ship;
+        public bool eva;public double evaVelocityX,evaVelocityY,evaVelocityZ,evaSuitX,evaSuitY,evaSuitZ;
         public SurvivalMotion Copy(){var copy=(SurvivalMotion)MemberwiseClone();if(vehicle!=null)copy.vehicle=vehicle.Copy();if(ship!=null)copy.ship=ship.Copy();return copy;}
     }
     [Serializable] internal sealed class SurvivalAction {
@@ -54,6 +55,7 @@ namespace MassiveArmy.Networking {
     [Serializable] internal struct SurvivalShipNavigation {public long entity;public FramePose pose;}
     [Serializable] internal sealed class SurvivalSnapshot {
         public int testTimeScale=1;
+        public List<SurvivalCampBeacon> campBeacons=new List<SurvivalCampBeacon>();
         public bool privateDetails=true;public SurvivalChunk chunk;public long cancelTransfer;
         public long tick;public double simulationSeconds;public SurvivalMotion motion;public IndustrialActor self;public SurvivalPlayerRecord vitals;
         public ShipAssembly pilotedShip;

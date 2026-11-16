@@ -134,6 +134,7 @@ namespace MassiveArmy.Networking {
                 SurvivalNetworkSession.RunCombatChecks(Check);
                 SurvivalNetworkSession.RunClientPresentationChecks(Check);
                 SurvivalNetworkSession.RunCraftingPresentationChecks(Check);
+                SurvivalNetworkSession.RunCampEvaChecks(Check);
                 SurvivalNetworkSession.RunShipWalkingChecks(Check);
                 SurvivalNetworkSession.RunRegionChecks(Check);
                 SurvivalNetworkSession.RunStationChecks(Check);
