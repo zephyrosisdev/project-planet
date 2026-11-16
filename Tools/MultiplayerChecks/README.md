@@ -1,11 +1,36 @@
 # Multiplayer checks
 
+Current source uses protocol 13, session-probe marker 13 and load-probe marker 3.
+Shared-world-preset builds use content `survival-5` and server save version 3. Both ends
+must use that content version. Versions 1/2 saves upgrade on server startup;
+older servers reject the upgraded save rather than misreading recall flight state.
+Native recall checks cover owner-only admission, occupied/docked/cross-planet
+rejection, dry-ground requests, bounded flight outside AOI, reconstruction from
+persisted route state, collision stops, cancellation, landing and no render
+resource allocation. These do not replace interactive Relay recall playtesting.
+Historical protocol-specific results below do not validate a changed player binary.
+`RunSessionProbe.ps1 -Performance -PilotWeather -ResumeFrom <fixture>
+-TestClockControls` checks rejection of an invalid speed, 8x authoritative
+simulation seconds per transport tick and return to 1x. `-TestTimeScale 8`
+starts a constant-speed diagnostic run. Packet scheduling stays on wall time.
+Use `RunLoadProbe.ps1 -ClientCount 8 -Workers 2 -HoldSeconds 90` to verify the
+multi-process barriers before increasing population. Workers share one rally and
+server-tick measurement interval; their engine frame times are separate worker
+measurements, not individual rendered-client frame times.
+
+
 Run from the repository root using the pinned editor's bundled SDK:
 
 ```powershell
 & 'C:/Program Files/Unity/Hub/Editor/6000.6.4f1/Editor/Data/DotNetSdk/dotnet.exe' run --project Tools/MultiplayerChecks/MultiplayerChecks.csproj
 & ./Tools/MultiplayerChecks/Compile.ps1 -Target All
 ```
+
+If the open project's cached compiler response predates package resolution, use
+`Compile.ps1 -Target All -ProjectPath .mpb` after Unity has resolved and compiled
+the isolated project. This checks that project's source snapshot and reference
+assemblies; synchronize current source before starting its Unity build. A compile
+check does not replace the standalone build or native simulation checks.
 
 The domain executable compiles the production industrial/network-domain sources.
 It checks input admission, fixed-clock timing, reference-frame/body filtering,
@@ -210,3 +235,14 @@ after the first snapshot or after measurement begins fails the run. Pending NGO
 shutdown is awaited and manager destruction precedes transport destruction,
 including timeout/cancellation cleanup. Early load-marker-1 orbit scenarios are
 spawn-area tests, not verified dense hubs; retain their failure/evidence records.
+
+`RunDockProbe.ps1 -From <completed-two-client-live-run> -ServerExe <current-server>`
+clones disposable profiles/checkpoints, prepares a player-owned orbital gantry and
+moored ship offline, then uses ordinary authenticated commands for pilot acquisition,
+undocking, predicted thruster approach, berth reacquisition and moored ship-local
+reconnect. The passenger verifies it cannot operate the pilot's dock command. Final
+checkpoint checks require matching station/ship berth references. Fixture builds
+must carry `dock-probe.version` 1. Add `-Graphics` only with a matching diagnostic
+client; neither mode establishes station construction UI, audible voice, rendered
+pixels, full gameplay capacity or army/fog acceptance.
+

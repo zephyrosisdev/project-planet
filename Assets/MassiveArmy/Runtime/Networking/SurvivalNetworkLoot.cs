@@ -21,14 +21,14 @@ namespace MassiveArmy.Networking {
         }
         void GroundLootGUI(){
             foreach(var entity in visible.Values)if(entity.kind=="loot"&&latest.self.pose.Distance(entity.pose)<=12){
-                var drop=JsonUtility.FromJson<DroppedInventory>(entity.data);GUILayout.Label("RECOVERABLE CONTAINER #"+drop.id);
-                foreach(var stack in drop.inventory.items)if(GUILayout.Button("Take "+stack.item+" ×"+stack.count)){
+                var drop=JsonUtility.FromJson<DroppedInventory>(entity.data);networkUi.Label("RECOVERABLE CONTAINER #"+drop.id);
+                foreach(var stack in drop.inventory.items)if(networkUi.Button("Take "+stack.item+" ×"+stack.count)){
                     int destination=-1;foreach(var item in latest.self.inventory.items)if(item.item==stack.item&&item.count<Inventory.StackLimit(item.item)){destination=item.slot;break;}
                     if(destination<0)for(int slot=0;slot<latest.self.inventory.slotLimit;slot++)if(latest.self.inventory.AtSlot(slot)==null){destination=slot;break;}
                     if(destination<0){Status="Make room in your inventory";continue;}
                     Submit(new SurvivalAction{kind="inventory-move",from=new InventoryAddress{section="ground",entity=drop.id,slot=stack.slot},to=new InventoryAddress{slot=destination},count=stack.count});
                 }
-                if(drop.inventory.bulk.litres>0&&GUILayout.Button("Take pay dirt ×"+drop.inventory.bulk.litres))Submit(new SurvivalAction{kind="inventory-move",from=new InventoryAddress{section="ground",entity=drop.id,slot=-2},to=new InventoryAddress{slot=-2},count=drop.inventory.bulk.litres});
+                if(drop.inventory.bulk.litres>0&&networkUi.Button("Take pay dirt ×"+drop.inventory.bulk.litres))Submit(new SurvivalAction{kind="inventory-move",from=new InventoryAddress{section="ground",entity=drop.id,slot=-2},to=new InventoryAddress{slot=-2},count=drop.inventory.bulk.litres});
             }
         }
     }

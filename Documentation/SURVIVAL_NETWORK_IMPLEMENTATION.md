@@ -1,7 +1,230 @@
 # Survival networking implementation checkpoint
 
+## Current delivery — protocol 10 ramp reboarding correction
+
+Package: `Builds/Playtest-20261114-152650`. This supersedes protocol 9; both clients
+and the server must update. Existing worlds and character identity mappings remain
+compatible. The user deferred performance investigation after reporting Unity
+Editor was also open. No measured cause or FPS improvement is claimed here.
+
+The fall-through defect was in the network movement adapter: exterior ground
+walking ignored the ship's CPU ramp contacts until attachment, while attachment
+used a fixed -8 m entry/proximity gate and a narrow foot strip. After landing on
+uneven terrain that gate could miss the actual rendered ramp. Rotation-only
+changes also failed to invalidate its cached collision model.
+
+Ground prediction and authority now resolve the same nearby ramp contacts before
+attachment. Boarding uses actual support geometry across the supported width,
+preserves heading/pitch, and the prompt uses the terrain-adjusted endpoint. The
+cache includes landing attitude. Ownership/invitation and occupied-space validation
+remain server controlled. No correction-distance or movement-speed limit was raised.
+
+Validation: all four conditional runtime compilation modes PASS, 260 domain checks
+PASS and 238 standalone native checks PASS (`Logs/survival-ramp-final-native.log`).
+The native regression walks an off-centre ground character up an elevated, tilted
+ramp, compares prediction with authority, walks off and reboards. It also exercises
+rotation-only cache invalidation. Both normal client and dedicated server builds
+passed in `Logs/survival-ramp-final-build.log`.
+
+The rendered two-client Relay run passed in
+`Live/69f90b78b8a4/interior-result.json` (actual clients `9fbf42034b1a`), with 100 ms
+one-way delay, 20 ms jitter and 2% packet loss. It covers initial boarding, hatch
+collision, ground disembark/reboard, pilot authority, actual takeoff and landing,
+then a second disembark/reboard and stopped-character reconnect. Owner reports
+`interiorLandedReboarded` and `interiorReconnect` true. The earlier headless delayed
+round trip passed in `Live/e82cbee9d7bb/interior-result.json`. The earlier rendered
+`Live/348dd3aad3f7` failed its reconnect comparison after the landing/reboarding
+steps passed: its harness sampled position while walking inputs were still in
+flight. The passing repeat waits for server-confirmed stopped movement and retains
+the same 0.25 m reconnect bound. Failure evidence is retained.
+
+The earlier sections below describe historical packages and scopes. Physical user
+playtesting remains necessary; performance and large-capacity acceptance remain
+unmeasured/deferred as previously recorded.
+
+
+## Historical delivery — November 14: multiplayer presentation parity
+
+The protocol-9 package is `Builds/Playtest-20261114-144453`. It supersedes the
+November 13 package. Both clients and the dedicated server must update together.
+The user tested the preceding online build and reported missing single-player
+presentation; this delivery addresses those gaps.
+
+- Clients reconstruct the same saved solar/galactic system (192 planets in current
+  fixtures), stars, distant terrain and sky through the shared `PlanetSystemRuntime`.
+  Only the viewed planet has full client terrain. The network adapter borrows the
+  canonical manifest, does not run offline authority, and does not advance an
+  independent clock or initiate offline region transfers.
+- New worlds use the authored single-player 10x system scale. Existing saves retain
+  their saved scale, positions and identities; no destructive resize is performed.
+  `systemSizeMultiplier` is validated server configuration for new worlds, and the
+  effective saved value is published to joining clients.
+- Detailed unpiloted ship simulation sleeps beyond connected players' 100 km proxy
+  interest range. Occupied planets run independently; persistent industry and cheap
+  analytic celestial/station orbits continue outside visibility.
+- Detailed ships use the existing single-player `PlanetSpacecraft` presentation:
+  modular hull, cockpit glazing, fittings, lights, animated doors and a
+  terrain-adjusted access ramp. Replicated/predicted snapshots drive this view;
+  it never reads movement input or integrates authoritative flight.
+- Authorized players walk onto the ramp and through validated rear/inner hatches.
+  Boarding preserves canonical feet instead of teleporting into the airlock.
+  Ramp support uses the shared CPU contact model, disembarking is physical, takeoff
+  rejects an occupied ramp, and reconnect restores safe feet on inclined support.
+- Multiplayer status, inventory, crafting/construction, machinery, shipyard,
+  respawn, settings and chat use retained UI Toolkit elements. The offline system
+  debug IMGUI overlay is suppressed online. Element reuse handles changing control
+  types, and panels use logical UI dimensions so resolution scaling remains coherent.
+- Pilots receive the shared orbit map, gravity forecast, prograde/landing instruments
+  and celestial navigation. O/P control navigation presentation; L is a server-validated
+  attitude-hold input. Chat/focus/menu capture still suppresses gameplay and camera input.
+
+Validation: 233 native standalone checks and 260 production domain checks PASS;
+four runtime compilation modes PASS. Native tests include slope support/reconnect,
+continuous boarding, ramp takeoff safety, distant-region sleeping and attitude hold.
+Both normal client and dedicated-server Unity builds succeeded. The final client
+cleanup build is in `Logs/survival-parity-client-cleanup-build.log`; authority/native
+build evidence is in `Logs/survival-parity-complete-build.log` and
+`Logs/survival-parity-complete-native.log`.
+
+Real Relay/Vivox text and reconnect passed in `Live/9e3b2e2c83c7/result.json`.
+An earlier `Live/73073371d977` reconnect failure on the inclined ramp is retained;
+the standing-clearance fix and regression above supersede it. Rendered physical
+boarding, hatch collision, owner/passenger authority, pilot HUD, flight and walking-occupant
+character persistence passed in `Live/ce2c63043db2/interior-result.json` (actual clients
+`e48c1224ea46`). This interior test reconnects a walking occupant in a moving ship;
+station mooring itself is covered by the separate historical docking fixture.
+The delayed headless interior test passed at 100 ms one-way delay, 20 ms jitter and
+2% loss in `Live/e2f4dbd6457f/interior-result.json`. Two rendered clients walking and
+reconnecting on different planets passed in `Live/d2db4bf97efd/planet-result.json`
+(actual clients `456a8d22945b`), including no remote-player leakage across bodies
+and persistence of independent region identities. Captured world/pilot PNGs are
+beside client reports; these are automated render captures, not physical UI tests.
+
+The short Relay/chat run recorded 29.96 server ticks/s, tick median/p95 1.241/5.866 ms,
+and aggregate outbound/inbound 46.3/5.9 kB/s over 900 ticks (mean 0.927 connected players,
+maximum 2). It includes startup, reconnect and diagnostic rendering. It is not an
+equivalent standalone baseline comparison or capacity result. Client median/p95
+rendered frame times and 60 FPS at 1440p on RTX 3070 remain unmeasured. Manual controls,
+audible voice and broader gameplay remain user/friend playtest gates; 100-player
+capacity remains deferred. No army/fog pass is claimed; RTS remains retired.
+
+The sections below are historical implementation logs and earlier delivery states.
+
+
+## Historical delivery — November 13, 2026
+
+The matching protocol-8 Windows client and dedicated server are packaged in
+`Builds/Playtest-20261113-231404`. This is ready for the agreed two-player playtest;
+it is not full production, capacity or performance acceptance. See
+`MULTIPLAYER_PLAYTEST.md` for hosting, joining, controls and remaining manual checks.
+RTS retirement and deferral of the 100-player matrix were explicitly authorized
+by the user. Older entries below are historical and do not describe current builds.
+
+- Normal client and headless dedicated server builds: PASS. Client assembly
+  `8EBA8DF5C9C2E2F7A48F286386052BB6ABA67BEFABC9035AE3710C987E31303D`;
+  server assembly `0DC196905C0C42324EFA6B180096CE7ED9ACE505B7BA64FF61FFE44B80F1FD1F`.
+  The normal client excludes diagnostic session hooks. Dedicated build uses Unity's
+  Server subtarget and `UNITY_SERVER` conditional compilation; client presentation
+  remains excluded from headless paths.
+- Packaged dedicated executable: 226 native simulation checks PASS
+  (`Logs/packaged-server-simulation-checks.log`). Domain checks: 260 PASS;
+  industrial checks: 280 PASS. Four conditional runtime compilation modes PASS.
+- Real two-client Relay/Vivox graphics fixture: PASS in
+  `TestResults/Multiplayer/Live/a384f69fa4fd/result.json`, including exchanged text,
+  positional-channel membership/muting and reconnect. This is automated SDK and
+  gameplay behavior; microphone capture/playback and physical input remain manual.
+- Real orbital docking repeat: PASS in `Live/6cc3487a764b/dock-result.json`, using
+  100 ms one-way delay, 20 ms jitter and 2% loss. Owner undock, predicted approach,
+  berth reacquisition, passenger authority denial, canonical save and moored
+  reconnect passed. The owner recorded 61 matching prediction samples, zero hard
+  corrections and maximum error about 0.00000443 m. This narrow fixture does not
+  establish high-speed or full gameplay acceptance.
+- Fixed loss of orbital velocity during delayed pilot-epoch acknowledgement and
+  blocked chat/menu input: ships release thrust without synthesizing a brake;
+  ground vehicles retain their safe parking behavior. Added domain/native checks.
+- Current save content 2 upgrades content 1 atomically and rejects unsupported
+  future versions. Stations remain in the existing authority journal/checkpoint.
+
+The short graphics functional run measured server ticks at 29.89/s, tick median
+0.421 ms / p95 4.402 ms, snapshot median 0.115 ms / p95 1.186 ms, and aggregate
+outbound/inbound 36.3/5.7 kB/s. It includes startup/reconnect, averages 0.93 players
+(maximum 2) across 900 ticks, and is not a steady-state or baseline comparison.
+Observed peak private bytes were approximately 437 MB server and 1.39 GB per client;
+working-set peaks were approximately 305 MB server and 789–791 MB per client.
+Industry stage p95 was 22.211 ms, so these short results must not be extrapolated
+to crowded-world capacity. Rendered client median/p95 frame times, survival 60 FPS
+at 1440p on RTX 3070, audible voice and full manual gameplay remain unverified.
+100-player validation is deferred; sharding/provisioning remain separate work.
+
+## Historical implementation log
+
 This is an **incomplete multiplayer foundation**, not completion of the full
 survival multiplayer design or a capacity/performance acceptance result.
+
+## Product scope update — November 13
+
+The user explicitly authorized completely retiring RTS. The current product is
+single-player Survival and authoritative survival multiplayer. The main menu's
+army stress controls and the standalone million-unit harness are removed; legacy
+RTS entry points reject activation, and old planetary scene modes normalize to
+Survival. Player builds omit the retired army/strategy compute kernels. GPU terrain,
+surface sampling, industrial construction and survival rendering remain.
+
+The earlier army/million-unit/fog acceptance gates are retired, not reported as
+passes. `AGENTS.md` now reflects the user's decision. The survival 60 FPS target
+still requires standalone measurement. The delivery focus is a two-player build;
+the 100-player capacity matrix is deferred and user/friend playtesting covers
+physical controls, voice and broader gameplay. The initial army-inclusive build
+was explicitly stopped at the user's scope change; its completed graphics cache
+is retained for the survival build. No separate reduced-scale benchmark is used.
+
+## November 13 resumed verification
+
+The freshly resolved isolated dedicated build passed 210 native checks, including
+acceleration-limited walking at 30 Hz and 10 Hz. The industrial suite passes 280
+checks. The current domain suite passes 258 checks, including station deployment
+payment, identity, replay rejection and journal recovery. All four runtime
+conditional-compilation modes pass with the station source overlay.
+
+The two-worker eight-client Relay smoke passed in `Live/976290549b1f/load-result.json`
+with all eight independent identities and conserved consumables. This 30-second run
+verifies worker coordination, not gameplay capacity; it used the preceding protocol-7
+server assembly `B88C92A7B960E52CED6ABABDAF2C94CE80F8DCE6D18A832AFF872D00138A57BC`.
+
+The user selected **player-built stations only**. Current source adds paid docking
+station kits, canonical analytic orbits, stable owner identities and invitations,
+one reserved berth per station, CPU gantry sweeps, bounded approach validation,
+authoritative mooring/undocking and explicit prediction resets. Private docking
+invitations are omitted from public interest state. Stations use the existing world
+checkpoint and journal. They are external docking gantries; walking remains inside
+the ship, and no neutral starter stations are generated. Source protocol is now 8;
+221 native checks and the protocol-8 two-client session passed. The real docking
+scenario passed in `Live/0dea4b2e3469/dock-result.json` (clients `5e979a6addff`),
+including moored reconnect and the canonical ship-local checkpoint. An earlier
+runner incorrectly compared orbital displacement with ground walking; its failure
+remains recorded in `Live/d0914c9adfcd`. The latency repeat was explicitly stopped
+in `Live/72e2c4922752` after exposing a stale station contact-time issue. Matching
+replay-time and moving-frame regression checks pass in the fresh 223-check native
+player. Its delayed transport repeat (`Live/08418c1a1d71`) was explicitly stopped
+after the probe sent an action before the new pilot epoch arrived. The harness now
+waits for the authoritative pilot state; the normal UI already gates that command
+on the pilot state. This harness change awaits the next dedicated fixture
+build, along with a server-only content-2 save marker. Existing content-1 saves
+are migrated atomically, and older content-1-only servers reject the new saves
+instead of silently dropping station records. The full normal client is currently building from the timing-fixed source.
+
+The server configuration example exposes implemented movement profiles. Initial
+compilation against the open Editor failed because its restored package references
+lacked the declared networking assemblies. Fresh isolated resolution and compilation
+succeeded. The open user Editor has not been stopped or its Library modified.
+The pre-multiplayer army baseline source (`fde1a71`) is extracted separately with an
+identical editor-only build entry point and unchanged runtime/benchmark code.
+
+The user now prioritizes a matching client/server pair for two friends and defers
+the 100-player capacity matrix; the intended future target is unchanged. Voice,
+physical controls and general playtesting will be performed by the user and friend.
+Live travel, rendered client, current capacity and equivalent army/fog/60 FPS gates
+remain open. No current-source capacity or performance acceptance is claimed.
 
 ## November 8 continuation checkpoint
 
@@ -585,3 +808,281 @@ A subsequent graphics rebuild stalled under memory pressure and was explicitly
 stopped with only its verified isolated build/helper processes terminated. The
 original project editor was preserved. Delivered graphics and dedicated binaries
 are not yet a matching final set; the full client release build remains unfinished.
+
+
+## 2026-11-14 protocol 11: inventory and render-rate prediction presentation
+
+Current delivery restores shared UI Toolkit slot inventory, ten-slot action bar,
+vitals, walking compass and nearby/owned storage. All slot moves, drops,
+selection and consumable use remain validated server commands. Ship-local
+drops retain canonical frames and use the existing inventory journal.
+
+Prediction, server acknowledgements and pending-input replay already existed.
+Local visual sampling now interpolates adjacent predicted fixed ticks each
+render frame, applies unconsumed walking mouse look, and keeps occupied ship
+parents on the same sampled state. Small position corrections decay visually;
+frame/epoch changes and hard corrections reset presentation. The authoritative
+clock and input advancement do not change. UI data refreshes are bounded and
+unchanged ship physics JSON is cached.
+
+Validation: 246 native checks passed, including render interpolation without
+advancing simulation, immediate pending look, frame reset, inventory split/stale
+item validation, ship-local drop and recovery conservation. Two graphical Relay
+clients passed slot callback split/equip/drop/recover, conservation and reconnect
+under 100 ms one-way delay, 20 ms jitter and 2% loss (Live/75bb1b9bfb21). This
+uses application-level UI events; physical keyboard/mouse operation needs the
+friend playtest. The earlier recovery-test failure remains in Live/67dd9ad271eb.
+
+Matched diagnostic profile: Live/0038b001021a baseline and Live/36722553ef4c
+current, identical checkpoint hashes, one graphics client, one headless peer and
+co-hosted dedicated server. Baseline selects the prior presentation/UI/cache
+paths in the current executable; it is not an archived protocol-10 build. Each
+run warms up 10 seconds and samples 30 seconds with an explicit 2560x1440 HDRP
+render and GPU completion fence. Median/p95 frame times: 10.552/11.738 ms before
+and 10.726/11.958 ms after. Client tick median/p95: 0.096/0.246 ms before and
+0.061/0.200 ms after. Reconciliation median/p95: 0.970/1.038 ms before and
+0.916/0.993 ms after. Relay RTT was 48/64 ms respectively. This measures an idle
+scene and does not establish release FPS, flight performance or capacity.
+
+Server rate: 29.936/29.960 ticks/s; tick median/p95 0.833/4.552 ms before,
+0.869/3.011 ms after. Observed client peak working sets: 966.3/969.5 MiB;
+observed private-byte peaks: 2634.2/2660.7 MiB. Server peak working sets:
+301.6/300.2 MiB. These are short-run process observations, not steady-state
+allocation budgets. Full raw measurements and scope are recorded in
+TestResults/Multiplayer/client-feel-comparison.json. The first delayed profile
+failed when its headless peer timed out (Live/df1e3d99f932); matched performance
+runs used ordinary Relay conditions. Functional delayed inventory testing passed
+separately. No 60 FPS or 100-player acceptance claim is made.
+
+Follow-up protocol-11 graphical ship regression passed in Live/58f3932e748e
+(transport Live/ed97a454ff09): owner/passenger authority, hatch collision, ship-local
+walking, moving parent, walking off/reboarding, takeoff/landing/ramp reboarding,
+pilot HUD and reconnect at 100 ms one-way delay, 20 ms jitter and 2% loss.
+All four conditional compilation modes pass. Client/server archives in
+Builds/Playtest-20261114-164123 pass SHA-256, ZIP CRC and packaged assembly checks;
+the normal client excludes the opt-in session probe.
+
+
+## 2026-11-14 protocol 12: N-key orbit hold and duplicate navigation
+
+Multiplayer now captures N as a pending edge between render and simulation
+ticks, consumes it once, clears it on blocked input/focus loss/epoch reset, and
+uses the shared ship orbit-hold toggle. The server input queue never repeats
+the edge when packets are missing. Hold radius, reference node/plane and HUD
+status are part of the existing ship physics snapshot, restoring the same
+controller during prediction replay and persistence. Legacy saves default to
+hold disabled. Both client and server must update to protocol 12.
+
+Walking compass visibility now excludes piloting in the shared compass itself.
+The online inventory no longer overrides that component's visibility immediately
+before Refresh could re-enable it. Pilot navigation retains the shared flight
+compass. No renderer or terrain allocation strategy changes.
+
+Checks cover one serialized N edge enabling hold, key release, snapshot replay,
+HUD status restoration, second-press cancellation, braking, landed rejection and
+missing-packet edge suppression. The Editor batch suite reaches these checks
+but later hits its existing edit-mode DontDestroyOnLoad restriction in transport
+leave tests; the dedicated standalone suite is the required validation here.
+
+Final protocol-12 validation: 254 standalone simulation checks, 260 domain
+checks and all four conditional compilation modes pass. The two-client Relay
+ship regression passed in Live/d2743c3f859d (transport Live/1fc28e341d46) under
+100 ms one-way delay, 20 ms jitter and 2% loss, including landed ramp reboarding
+and reconnect. The captured pilot view was inspected: one top-centre navigation
+compass and N-toggle help. Physical keyboard interaction still needs playtesting.
+Docking explicitly clears hold so undocking cannot resume stale thruster control.
+
+Matching client/server ZIPs in Builds/Playtest-20261114-171802 pass SHA-256, ZIP
+CRC, protocol marker and assembly identity checks. The normal client excludes
+session diagnostics. Raw delivery evidence is protocol-12-validation.json in
+TestResults/Multiplayer. No new release FPS or capacity claim is made.
+
+
+## 2026-11-14 orbital weather stability (protocol 12 compatible)
+
+Air quadrature now stays fixed as faint clouds cross zero opacity. Pixel-derived
+rays and footprint-filtered cloud noise with continuous mip phase address other
+rendering discontinuities without increasing ray steps or rendering buffers.
+See WEATHER_STABILITY.md for GPU negative controls, both Direct3D backends,
+133 bounds/flight checks, copied saved-view scope, standalone comparison and
+failed diagnostic attempts. The new client is packaged in
+Builds/Playtest-20261114-191031 and is compatible with the existing server/saves.
+
+### 2026-11-15: opted-in multiplayer test clock (protocol 13)
+
+Dedicated test servers can enable shared numpad +/- controls at 1x/2x/4x/8x.
+Normal startup remains 1x with controls disabled. The clock uses additional fixed
+physical steps with matching client prediction and unchanged packet cadence.
+64x was measured and rejected for severe stalls. See
+[MULTIPLAYER_TEST_CLOCK.md](MULTIPLAYER_TEST_CLOCK.md) for launcher instructions,
+native/live checks, frame/tick/memory/bandwidth measurements and limitations.
+
+## Ship recall (2026-11-15)
+
+An authenticated owner on dry ground can request `ship-recall` for their saved
+ship ID from Escape or F4, including after a Home-region respawn and while the
+ship is outside AOI. The server rejects non-owner, dead/airborne callers,
+occupied ships (including disconnected occupants), docked ships, different-body
+ships, duplicate jobs and unpowered propulsion. A bounded CPU landing search
+chooses a supported dry site about 140–800 m from the call location. Failed
+searches are throttled too. The caller does not supply coordinates.
+
+A headless flight job climbs radially, travels around the planet above its relief
+bound and descends to the existing checked landing approach. It uses the fixed
+physical clock, bounded speed/acceleration and swept obstacles, celestial bodies,
+terrain footprint and player clearance. It stops on obstruction or loss of power;
+`ship-recall-cancel` is owner-only. It does not teleport, follow a moving caller,
+cross planets, undock automatically or take occupied ships away. Recall is an
+explicit active-simulation reason outside normal observer interest; it does not
+subscribe distant clients to detailed ship state. Default cruise speed is
+`shipRecallSpeed=1000` m/s, validated between 10 and 10000 m/s. Landing assistance
+uses its existing approach speed and contact rules.
+
+Route stages and destination are part of the existing ship physics checkpoint
+and journal, including cancellation and arrival. Content is `survival-3` on
+protocol 13. Server save version 3 accepts earlier versions 1/2, and older servers
+reject version 3 to avoid interpreting a recall as an ordinary landing assist.
+Back up a world before starting the new server; do not reset or rewrite player
+ownership to solve a Home-region respawn. Improved refusal text identifies the
+other ship/owner and says when the survivor's own ship is still airborne.
+
+Validation: 282 production domain checks, 280 standalone native simulation checks
+and five conditional compilation configurations pass. Native fixtures cover
+recall authorization/rejection, persistence and simulation reconstruction,
+outside-AOI progress, bounded per-tick travel, supported landing, cancellation,
+blocked routes, player clearance and no render-resource allocation. A fixture's
+atmosphere assertion was corrected to use zero ephemeris time so its geometry
+comparison excludes the unrelated moving-body inflation margin. Final native
+result: `TestResults/Multiplayer/ship-recall-native-final.log`.
+
+Interactive Relay recall, changing terrain/obstacles during the full descent,
+long-haul/crowded recall performance and the 60 FPS standalone acceptance remain
+unmeasured. The functional before/after performance comparison uses ordinary
+survival play; it does not establish a cost bound for simultaneous recall jobs.
+
+The ordinary-survival standalone comparison is recorded in
+`TestResults/Multiplayer/ship-recall-validation.json` (before `Live/0f6cbe8fba18`,
+recall build `Live/b0b020fa4f52`). Both fresh worlds use matching seed/config,
+5 s warmup and 15 s samples with an explicit 2560x1440 fenced HDRP render, a
+headless peer and co-hosted server. It is not a release FPS test or an active
+recall workload. Frame median/p95: 10.829/15.374 ms before, 10.656/15.654 ms after.
+Server simulation: 29.961/29.943 Hz; tick median/p95: 1.174/4.376 versus
+1.230/4.951 ms; snapshot median/p95: 0.268/1.950 versus 0.428/2.922 ms.
+Server send/receive rates: 49350/6736 versus 55553/7425 bytes/s. The server metric
+windows include differing admission populations (mean 0.964 versus 1.029), so
+these bandwidth/timing figures are not a controlled steady-population comparison.
+Primary client peak working set/private bytes observed: 1009.4/2698.3 MiB before,
+1010.1/2726.9 MiB after; server 315.4/441.4 versus 316.5/438.2 MiB.
+Both functional session checks passed. No 60 FPS or simultaneous-recall capacity
+pass is claimed.
+
+## Recalled ship suspended above its landed collision (2026-11-15)
+
+The reported long/steep ramp was a client presentation fault. Read-only replay of
+ship #1's saved recall landing against its public planet definition measured
+8.323 m centre clearance, 0.310–0.339 m landing-foot clearance and a 16.965°
+boarding ramp. The server's landed destination was supported. Capture and replay:
+`TestResults/Multiplayer/RecallLandingCapture/analysis.json`. The original world
+was read only and has not been repositioned or repaired by this investigation.
+
+`PrepareShipPoses` smoothed detailed ships from `entityPositions`, but only the
+coarse primitive render branch wrote that dictionary. The detailed craft branch
+returned early, so a promoted ship could blend from the same old airborne proxy
+position every frame indefinitely. Its visible ramp stretched down to terrain
+while authoritative boarding contacts remained at the landed position.
+
+Presentation now commits the current drawn ship point every frame. Unoccupied
+landed ships use the authoritative point and attitude immediately, aligning the
+visible hull/ramp with walking collision. Ship removal from interest clears both
+cached position and attitude, preventing interpolation from an unrelated old
+location on re-entry. No landing-height or authoritative flight change is made.
+
+Six native regression cases cover airborne interpolation, proxy-to-detailed
+convergence, immediate grounded alignment at a low render blend, matching visual
+and authoritative ramp endpoints, interest-exit cleanup and clean re-entry.
+The earlier recall suite verified landing simulation but missed this client
+presentation transition. This correction changes client presentation only; it
+does not establish a new simulation/frame-time/capacity performance pass.
+
+## Flight prediction, 30 km orbit and navigation (2026-11-15)
+
+Content `survival-4` (protocol 13, existing save version 3) requires matching
+client/server updates without changing world identity or ownership. Orbit hold
+engagement uses terrain relief + 20 m and a visual-atmosphere contribution capped
+at 30 km. Once engaged, hold may continue below the engagement altitude while
+acquiring tangential speed, until the actual terrain safety margin; it does not
+switch off from a centimetre of gravitational descent. The local orbit guide
+uses the same engagement rule and remains visible for an engaged hold.
+
+Post-respawn/reboard flight had a separate prediction-layout lifetime bug:
+`peer.privateShip` retained its old receipt while the player left the ship, but
+the client's `latest.pilotedShip` no longer existed on foot. On returning to that
+same ship, the receipt suppressed the resend and prediction ignored the cached
+public layout, falling back to linear extrapolation. Publication now invalidates
+the receipt when no ship is attached; owner prediction also resolves the cached
+layout while a refreshed private layout arrives. Full physics remains private
+to its owner. Recoverable death containers have no movement collider and do not
+create a second seated character.
+
+Render interpolation follows adjacent input sequences instead of assuming server
+and client ticks never realign. Reconciliation rebases previous render samples,
+then smooths camera-local, ship-parent position and ship rotation errors together.
+Explicit authority epochs/control changes clear every correction offset. This
+keeps pilot cameras and walking interiors aligned with their displayed hull at
+accelerated test speeds; it does not weaken server movement validation.
+
+The first matching 8x standalone comparison exposed 16–18 ms reconciliation
+replay spikes. The final client can retain the pending future of a verified
+acknowledgement only when entity/actor/frame/sequence/tick and physical mode
+state match. Kinematic tolerances are 1 mm / 1 mm/s with tightly bounded rotation
+and walking-state checks; non-kinematic physics fields are compared after
+normalizing roundoff, inactive path history and HUD text. Any mismatch, automatic
+flight, foreign/private-physics-redacted ship or authority reset uses normal
+restore/replay. Retention restores the celestial model to pending-input time
+once, rather than leaving it at the acknowledged past time. Diagnostics count
+retained and replayed snapshots. This is a client prediction optimization, never
+a server admission shortcut or extra simulation-time budget.
+
+The online UI Toolkit HUD has a centered, non-interactive crosshair hidden for
+menus/chat/death. Compass marker geometry now refreshes every rendered frame;
+inventory/readout text may remain throttled. An owner-only canonical body-frame
+ship beacon in every core/lean snapshot removes AOI and planet range limits for
+YOUR SHIP without subscribing to its distant physics/layout/inventory. Nearby
+other ships have separate bounded markers. Nearby beacons use the same presented
+ship point as the hull; distant inactive ships use last authoritative position
+and do not extrapolate a frozen simulation. Navigation adds no per-marker world
+GameObjects.
+
+Validation: 308 native checks and 282 production domain checks pass. Matching
+checkpoint hash for accelerated standalone comparisons:
+`F5610F24AF725C26F672A142CC6AB7DBBEA5A1C114F4DAFFA98E4CA4F7B44922`.
+The first baseline attempt `Live/505400c04cf0` failed to acquire the pilot seat
+because the synthetic walker stood just outside the real 3.5 m reach. Only the
+disposable fixture was moved to z=29; passing archived baseline is
+`Live/61ea20551078`. Pre-optimization updated run `Live/918a884169fe` passed,
+with zero hard corrections and a smaller matching prediction error, but retained
+replay stalls; it is not the final performance claim. Neither synthetic flow
+replaces the interactive death -> recall -> reboard playtest. Native tests cover
+receipt invalidation, cached-layout 8x owner/interior prediction, retained-state
+rejection, celestial-clock restoration and 30 km acquisition. The 100-player,
+full gameplay load and release FPS acceptance remain unvalidated/deferred.
+
+Final measured comparison: archived `Live/61ea20551078` versus optimized
+`Live/3b6272035ffd`, from identical checkpoint hash above, at 8x time. Both
+functional sessions passed with zero hard snaps. Frame median/p95 changed from
+7.762/22.963 ms to 7.549/11.146 ms; reconciliation median/p95 from
+14.409/16.192 ms to 0.145/0.149 ms. During the measured final window, 150 verified
+ship snapshots retained prediction and zero required full replay. Maximum
+matching prediction error was 0.000145 m (before 0.194052 m). This is a short
+GPU-fenced diagnostic comparison, not a release FPS or capacity pass.
+
+Server tick median/p95 was 12.970/16.399 ms before and 8.411/18.663 ms after;
+base simulation rate 29.942/29.945 Hz and physical substeps 239.532/239.557 Hz.
+Snapshot p95 1.212/1.046 ms. Send/receive 82064/9952 versus 47521/5284 bytes/s.
+These server windows include different admission populations (mean 1.358 versus
+0.751), so bandwidth/tick differences do not establish a steady-population
+improvement. Primary client peak working set/private bytes: 1124.5/2772.1 MiB
+before and 1130.8/2770.8 MiB after; server 302.6/402.6 versus 302.7/400.1 MiB.
+Full raw results and limitations: `TestResults/Multiplayer/flight-navigation-validation.json`.
+Native final result: `flight-navigation-verified-native.log` (308 passing checks).
+Five conditional compilation configurations and 282 production domain checks pass.

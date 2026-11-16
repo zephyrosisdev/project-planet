@@ -8,7 +8,54 @@ using MassiveArmy.Industrial;
 static class Program {
     static int checks;
     static void Check(bool value,string message){if(!value)throw new Exception(message);checks++;}
+    static void RespawnShipOwnershipChecks(){
+        string path=Path.GetFullPath("TestResults/Multiplayer/respawn-ship-"+Guid.NewGuid().ToString("N")+".xml");
+        long ownerId,guestId,shipId,otherShipId;
+        using(var authority=new IndustrialAuthority(new IndustrialWorld(),path)){
+            var owner=authority.RegisterSurvivor("respawn-pilot","Survivor",new FramePose{body=1,y=10000},"respawn-ships","instance");
+            var guest=authority.RegisterSurvivor("respawn-crew","Survivor",owner.spawn,"respawn-ships","instance");
+            ownerId=owner.actor;guestId=guest.actor;var world=authority.World;
+            var ship=new SurvivalShipState{entity=world.AllocateId(),owner=ownerId,pilot=ownerId,landed=false,pose=new FramePose{body=1,y=82000}};
+            var other=new SurvivalShipState{entity=world.AllocateId(),owner=guestId,pose=owner.spawn};shipId=ship.entity;otherShipId=other.entity;
+            world.multiplayer.ships.Add(ship);world.multiplayer.ships.Add(other);ship.invitedActors.Add(guestId);
+            owner.attachedShip=owner.controlledShip=shipId;authority.Save();authority.RecordPlayerDeath(ownerId);
+            Check(authority.UseRespawnPoint(ownerId,0,owner.spawn)==null,"Home-region respawn restores the original survivor");
+            Check(ship.owner==ownerId&&ship.pilot==0&&owner.attachedShip==0&&owner.controlledShip==0&&!ship.landed&&ship.pose.y==82000,"Death and home respawn release control without transferring ownership or relocating the orbiting ship");
+            Check(SurvivalShipAuthority.BoardingPermission(world,ownerId,ship)==null,"A respawned owner retains boarding permission without inviting themselves");
+            string denied=SurvivalShipAuthority.BoardingPermission(world,ownerId,other);
+            Check(denied!=null&&denied.Contains("Ship #"+otherShipId)&&denied.Contains("survivor #"+guestId)&&denied.Contains("Your ship #"+shipId)&&denied.Contains("airborne"),"An identical starter ship identifies its actual owner and explains that the survivor's ship is still airborne");
+            authority.RecordPlayerDeath(guestId);Check(authority.UseRespawnPoint(guestId,0,guest.spawn)==null&&SurvivalShipAuthority.BoardingPermission(world,guestId,ship)==null,"Passenger invitations survive death and home respawn");
+            authority.Save();
+        }
+        var restored=IndustrialAuthority.Load(path);var recovered=restored.multiplayer.ships.Find(s=>s.entity==shipId);
+        Check(restored.multiplayer.players.Find(p=>p.identity=="respawn-pilot").actor==ownerId&&recovered.owner==ownerId&&SurvivalShipAuthority.BoardingPermission(restored,ownerId,recovered)==null&&SurvivalShipAuthority.BoardingPermission(restored,guestId,recovered)==null,"Restart preserves survivor identity, ship ownership and passenger invitations after respawn");
+    }
+    static void StationChecks(){
+        string path=Path.GetFullPath("TestResults/Multiplayer/station-domain.xml");Directory.CreateDirectory(Path.GetDirectoryName(path));foreach(string suffix in new[]{"",".journal",".bak"})if(File.Exists(path+suffix))File.Delete(path+suffix);
+        var world=new IndustrialWorld{multiplayer=new SurvivalSessionState{worldId="station-domain",simulationSeconds=10}};var actor=world.Register(1,new FramePose{body=1,y=10000,z=-600});actor.inventory=new Inventory{capacity=1000,slotLimit=-1};actor.inventory.Add("docking-station-kit",1);
+        var player=new SurvivalPlayerRecord{actor=1,identity="station-owner",controlledShip=7,attachedShip=7};world.multiplayer.players.Add(player);world.multiplayer.ships.Add(new SurvivalShipState{entity=7,owner=1,pilot=1,landed=false,pose=actor.pose});
+        SurvivalStationState Record()=>new SurvivalStationState{owner=1,body=1,radius=10000,mu=1e8,epoch=10,uy=1,vx=1};
+        Check(IndustrialCatalog.Recipes.ContainsKey("docking-station-kit")&&IndustrialCatalog.StackLimit("docking-station-kit")==1,"Stations have a paid craftable single-slot deployment kit");
+        var station=Record();Check(station.Valid&&station.Position(10).Distance(new FramePose{body=1,y=10000})<1e-8,"Analytic station orbit starts at its canonical deployment point");Check(Math.Abs(station.Position(10+Math.PI*100).y+10000)<1e-6,"Station orbit advances independently of client visibility");
+        using(var store=new IndustrialAuthority(world,path)){
+            store.Save();var bad=Record();bad.vx=2;Check(store.DeploySurvivalStation(1,bad)!=null&&actor.inventory.Count("docking-station-kit")==1,"Invalid orbital axes cannot consume a station kit");
+            bad=Record();bad.owner=2;Check(store.DeploySurvivalStation(1,bad)!=null,"Station deployment binds ownership to the authenticated actor");
+            Check(store.ExecuteSurvivalAction(1,1,()=>store.DeploySurvivalStation(1,station))==null&&station.entity>0&&actor.inventory.Count("docking-station-kit")==0&&world.multiplayer.stations.Count==1,"Paid deployment and stable station identity commit through the existing journal");
+            Check(store.ExecuteSurvivalAction(1,1,()=>store.DeploySurvivalStation(1,Record()))!=null&&world.multiplayer.stations.Count==1,"Replayed station deployment cannot create another structure");
+        }
+        var recovered=IndustrialAuthority.Load(path);Check(recovered.multiplayer.stations.Count==1&&recovered.multiplayer.stations[0].entity==station.entity&&recovered.Actor(1).inventory.Count("docking-station-kit")==0&&recovered.multiplayer.players[0].lastActionSequence==1,"Crash recovery restores the station, payment and action receipt exactly once");
+    }
     static void Main(){
+        Check(!new SurvivalServerConfig().allowTestTimeControls&&new SurvivalServerConfig().testTimeScale==1,"Normal servers default to real-time simulation with test controls disabled");
+        foreach(int scale in new[]{1,2,4,8}){var timeConfig=new SurvivalServerConfig{allowTestTimeControls=true,testTimeScale=scale};timeConfig.Validate();Check(SurvivalServerConfig.ValidTestTimeScale(scale),"Valid bounded test speed "+scale);}
+        foreach(int scale in new[]{0,-1,3,16,32,64,128})Check(!SurvivalServerConfig.ValidTestTimeScale(scale),"Reject invalid test speed "+scale);
+        bool rejectedTestSpeed=false;try{new SurvivalServerConfig{testTimeScale=2}.Validate();}catch(ArgumentException){rejectedTestSpeed=true;}Check(rejectedTestSpeed,"Acceleration requires explicit server opt-in");
+        Check(SurvivalServerConfig.AdjacentTestTimeScale(8,1)==8&&SurvivalServerConfig.AdjacentTestTimeScale(1,-1)==1,"Test speed controls clamp at the ladder limits");
+        var oneShot=new SurvivalInput{sequence=1,x=1,y=1,roll=1,lookX=9,lookY=4,jump=true,toggleAssist=true,toggleGear=true,toggleLock=true,toggleOrbit=true,matchOrbit=true,boost=true,brake=true,cruise=true};
+        Check(oneShot.Substep(0).jump&&oneShot.Substep(0).lookX==9,"First accelerated substep retains one-shot input");var heldSubstep=oneShot.Substep(63);
+        Check(heldSubstep.lookX==0&&heldSubstep.lookY==0&&!heldSubstep.jump&&!heldSubstep.toggleAssist&&!heldSubstep.toggleGear&&!heldSubstep.toggleLock&&!heldSubstep.toggleOrbit&&!heldSubstep.matchOrbit&&heldSubstep.x==1&&heldSubstep.roll==1&&heldSubstep.boost&&heldSubstep.brake&&heldSubstep.cruise,"Extra simulation steps repeat continuous controls without repeating mouse deltas or toggles");
+        StationChecks();
+        RespawnShipOwnershipChecks();
         var chatInput=new MassiveArmy.Networking.SurvivalChatInput();
         Check(!chatInput.Escape(0)&&!chatInput.Blocks(0),"Escape outside chat remains available to the game menu");
         Check(chatInput.Enter(1)==null&&chatInput.Typing&&chatInput.Blocks(2),"Enter opens chat and keeps gameplay blocked while typing");
@@ -19,6 +66,13 @@ static class Program {
         Check(chatInput.CanTransmit(9,true,true,true)&&!chatInput.CanTransmit(9,false,true,true)&&!chatInput.CanTransmit(9,true,false,true)&&!chatInput.CanTransmit(9,true,true,false),"Push-to-talk requires focus, a held key and a joined voice channel");
         chatInput.Enter(10);Check(!chatInput.CanTransmit(11,true,true,true),"Opening text chat suppresses a held push-to-talk key");chatInput.Escape(12);Check(!chatInput.CanTransmit(12,true,true,true)&&chatInput.CanTransmit(13,true,true,true),"Cancelling text cannot unmute voice on the same input frame");
         var config=new SurvivalServerConfig();config.Validate();
+        foreach(string limit in new[]{"walkAcceleration","walkBraking","vehicleSpeed","workVehicleSpeed","vehicleAcceleration","vehicleBraking","shipAssistSpeed","shipBoostSpeed","shipAcceleration","shipBoostAcceleration","shipAssistAcceleration","shipAssistBraking","warpSpeed"}){
+            var field=typeof(SurvivalServerConfig).GetField(limit);
+            foreach(double invalid in new[]{0,-1,double.NaN,double.PositiveInfinity,double.MaxValue}){
+                var invalidConfig=new SurvivalServerConfig();field.SetValue(invalidConfig,invalid);bool rejected=false;try{invalidConfig.Validate();}catch(ArgumentException){rejected=true;}
+                Check(rejected,"Reject unsafe movement configuration: "+limit+" = "+invalid);
+            }
+        }
         string profile=config.AuthenticationProfile();Check(profile.Length==30&&profile.StartsWith("server_",StringComparison.Ordinal),"Server Authentication profile stays within Unity's 30-character limit");Check(profile==config.AuthenticationProfile(),"Server profiles remain stable across restart");config.instanceId="other-instance";Check(profile!=config.AuthenticationProfile(),"Distinct server instances do not share an Authentication profile");config.instanceId="region-1";
         foreach(int invalid in new[]{0,150,200}){config.maxPlayers=invalid;bool rejected=false;try{config.Validate();}catch(ArgumentException){rejected=true;}Check(rejected,"Reject Relay capacity "+invalid);}config.maxPlayers=100;
         var clock=new SurvivalTickClock();int steps=0;for(int i=0;i<60;i++)clock.Advance(1.0/60,30,()=>steps++);Check(steps==30,"One wall second produces 30 simulation ticks");
@@ -28,7 +82,7 @@ static class Program {
         var inbound=new SurvivalMessageBudget();for(int i=0;i<30;i++)inbound.Action(0,30,0);Check(!inbound.Action(0,30,100),"Malformed action packets still consume the pre-parse connection budget");Check(inbound.Action(30,30,100),"Action admission refills only as the server clock advances");for(int i=0;i<4;i++)inbound.Action(30,30,16384);Check(!inbound.Action(30,30,100),"Oversized action throughput is bounded independently of command contents");for(int i=0;i<90;i++)inbound.Input(30,30,0);Check(!inbound.Input(30,30,100)&&inbound.Input(60,30,100),"Malformed input floods cannot bypass the pre-parse packet limit or advance time");
         for(int i=0;i<30;i++)queue.Next();Check(clock.Tick==30,"Input flooding cannot advance time");
         Check(!queue.Enqueue(new SurvivalInput{sequence=1,y=1},0,30),"Reject replay");Check(!queue.Enqueue(new SurvivalInput{sequence=100,x=float.NaN},0,30),"Reject NaN");
-        queue.Clear();queue.Enqueue(new SurvivalInput{sequence=100,jump=true,y=1,lookX=5},30,30);queue.Next();var held=queue.Next();Check(!held.jump&&held.lookX==0,"Do not repeat edge inputs");for(int i=0;i<10;i++)held=queue.Next();Check(held.y==0,"Stop movement after missing inputs");
+        queue.Clear();queue.Enqueue(new SurvivalInput{sequence=100,jump=true,toggleLock=true,toggleOrbit=true,y=1,lookX=5},30,30);queue.Next();var held=queue.Next();Check(!held.jump&&!held.toggleLock&&!held.toggleOrbit&&held.lookX==0,"Do not repeat edge inputs");for(int i=0;i<10;i++)held=queue.Next();Check(held.y==0,"Stop movement after missing inputs");
         var stamped=new SurvivalInterestDelivery();var stamp=new SurvivalInterestDelivery.Fingerprint{kind="ship",data="stable",pose=new FramePose{body=1,x=10,y=10000}};
         stamped.Commit(new[]{stamped.Stage(90,stamp,0,2,10,100)});Check(stamped.IsCurrent(90,stamp),"Unchanged structured fingerprints can skip JSON encoding before scheduling");
         var altered=stamp;altered.pose.x++;Check(!stamped.IsCurrent(90,altered),"Canonical position changes invalidate structured delivery fingerprints");
@@ -79,7 +133,9 @@ static class Program {
         }
         restored=IndustrialAuthority.Load(save);Check(restored.Actor(first).inventory.activeSlot==3&&restored.multiplayer.players[0].lastActionSequence==11,"Durable mutation carries its network receipt even before the final checkpoint");
         using(var authority=new IndustrialAuthority(restored,save))Check(authority.ExecuteSurvivalAction(first,11,()=>throw new Exception("Crash replay executed"))=="Stale network action","Crash/reconnect cannot repeat an applied action");
-        queue.Clear();Check(!queue.Enqueue(new SurvivalInput{sequence=101,epoch=1,y=1},60,30,2),"Old walking epoch cannot feed a driver seat");Check(queue.Enqueue(new SurvivalInput{sequence=101,epoch=2,y=1,z=1,roll=1,boost=true,toggleGear=true},60,30,2),"Rejected epoch does not consume the sequence number");queue.Next();held=queue.Next();Check(!held.toggleGear,"Lost packets cannot repeat gear-toggle edges");for(int i=0;i<10;i++)held=queue.Next();Check(held.z==0&&held.roll==0&&!held.boost&&held.brake,"Stale ship controls clear thrust, roll and boost and apply brake");
+        var flightQueue=new SurvivalInputQueue();flightQueue.Enqueue(new SurvivalInput{sequence=1,y=1,z=1,roll=1,boost=true,brake=true},0,30);flightQueue.Next(false);var releasedFlight=flightQueue.Next(false);for(int i=0;i<8;i++)releasedFlight=flightQueue.Next(false);Check(releasedFlight.x==0&&releasedFlight.y==0&&releasedFlight.z==0&&releasedFlight.roll==0&&!releasedFlight.boost&&!releasedFlight.brake,"Flight input loss releases controls without destroying orbital velocity with an automatic brake");
+        flightQueue.Clear();for(int i=0;i<8;i++)releasedFlight=flightQueue.Next(false);Check(!releasedFlight.brake,"An epoch reset stays neutral while delayed clients receive their new control frame");
+        queue.Clear();Check(!queue.Enqueue(new SurvivalInput{sequence=101,epoch=1,y=1},60,30,2),"Old walking epoch cannot feed a driver seat");Check(queue.Enqueue(new SurvivalInput{sequence=101,epoch=2,y=1,z=1,roll=1,boost=true,toggleGear=true},60,30,2),"Rejected epoch does not consume the sequence number");queue.Next();held=queue.Next();Check(!held.toggleGear,"Lost packets cannot repeat gear-toggle edges");for(int i=0;i<10;i++)held=queue.Next();Check(held.z==0&&held.roll==0&&!held.boost&&held.brake,"Ground-vehicle fail-safe clears stale controls and applies the requested parking brake");
         using(var authority=new IndustrialAuthority(restored,save)){
             var world=authority.World;var player=world.multiplayer.players[0];var other=world.multiplayer.players[1];var actor=world.Actor(player.actor);
             var machine=new IndustrialMachine{id=world.AllocateId(),owner=player.actor,definition="truck",pose=actor.pose};world.machines.Add(machine);authority.Save();

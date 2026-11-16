@@ -5,12 +5,22 @@ using UnityEngine;
 
 namespace MassiveArmy.Networking {
     public sealed partial class SurvivalNetworkSession {
+        readonly Dictionary<long,PlanetSpacecraft> craftViews=new Dictionary<long,PlanetSpacecraft>();
         readonly Dictionary<long,GameObject> entityViews=new Dictionary<long,GameObject>();
         readonly Dictionary<long,Double3> entityPositions=new Dictionary<long,Double3>();
         Material playerMaterial,machineMaterial,depositMaterial,shipMaterial;Mesh proxyCube;
         readonly Dictionary<string,Mesh> combinedShips=new Dictionary<string,Mesh>();
         readonly Dictionary<long,int> renderedShipDoors=new Dictionary<long,int>();
         readonly Dictionary<long,ShipAssembly> renderedShipLayouts=new Dictionary<long,ShipAssembly>();
+        readonly Dictionary<long,(string json,PlanetShipSimulationSnapshot snapshot)> visualShipPhysics=new Dictionary<long,(string,PlanetShipSimulationSnapshot)>();
+        PlanetShipSimulationSnapshot PresentationPhysics(SurvivalShipState ship){
+            if(!string.IsNullOrEmpty(ship.physics)){
+                if(!ClientBaseline&&visualShipPhysics.TryGetValue(ship.entity,out var cached)&&cached.json==ship.physics)return cached.snapshot;
+                var parsed=JsonUtility.FromJson<PlanetShipSimulationSnapshot>(ship.physics);visualShipPhysics[ship.entity]=(ship.physics,parsed);return parsed;
+            }
+            if(!visualShipPhysics.TryGetValue(ship.entity,out var entry)||entry.json!=null)entry=(null,new PlanetShipSimulationSnapshot());
+            var value=entry.snapshot;value.landed=ship.landed;value.gear=true;value.autoFlight=ship.autoFlight;value.pose.linearVelocity=new Double3(ship.velocityX,ship.velocityY,ship.velocityZ);visualShipPhysics[ship.entity]=entry;return value;
+        }
         int shipMeshesBuiltThisFrame;
         Mesh ShipMesh(ShipAssembly layout,SurvivalShipState state){
             var key=new System.Text.StringBuilder();foreach(var module in layout.modules){key.Append(module.definition).Append(':').Append(module.pose.x.ToString("R",System.Globalization.CultureInfo.InvariantCulture)).Append(',').Append(module.pose.y.ToString("R",System.Globalization.CultureInfo.InvariantCulture)).Append(',').Append(module.pose.z.ToString("R",System.Globalization.CultureInfo.InvariantCulture)).Append(',').Append(module.pose.yaw.ToString("R",System.Globalization.CultureInfo.InvariantCulture)).Append(';');}
@@ -23,8 +33,21 @@ namespace MassiveArmy.Networking {
         void RenderEntities(){
             if(clientWorld==null||!clientWorld.Ready)return;
             if(playerMaterial==null){var shader=Shader.Find("HDRP/Lit");playerMaterial=new Material(shader);playerMaterial.SetColor("_BaseColor",Color.cyan);machineMaterial=new Material(shader);machineMaterial.SetColor("_BaseColor",new Color(.35f,.4f,.45f));depositMaterial=new Material(shader);depositMaterial.SetColor("_BaseColor",new Color(.7f,.4f,.15f));}
-            shipMeshesBuiltThisFrame=0;PrepareShipPoses();
+            shipMeshesBuiltThisFrame=0;PrepareShipPoses();if(predicted?.ship==null)clientWorld.SetNetworkCraft(null,false);
             foreach(var pair in visible){var entity=pair.Value;if(entity.kind=="machine"&&clientMachines.TryGetValue(pair.Key/8,out var virtualMachine)&&virtualMachine.integratedLogistics)continue;if(entity.pose.body!=clientWorld.definition.bodyId||(entity.kind=="ship-layout"||entity.kind=="factory-link"||entity.kind=="building"))continue;
+                if(entity.kind=="ship"&&clientShipAssemblies.TryGetValue(pair.Key/8,out var fullLayout)&&clientShips.TryGetValue(pair.Key/8,out var fullState)){
+                    if(!craftViews.TryGetValue(pair.Key,out var craft)){craft=clientWorld.CreateNetworkCraft();craftViews.Add(pair.Key,craft);}
+                    var state=predicted?.ship?.entity==fullState.entity?predicted.ship:fullState;
+                    bool pilot=predicted?.ship?.entity==state.entity&&latest.vitals.controlledShip==state.entity;
+                    if(predicted?.ship?.entity==state.entity)clientWorld.SetNetworkCraft(craft,pilot);
+                    var pose=presentedShips[state.entity];
+                    var physics=PresentationPhysics(state);
+                    craft.PresentNetwork(fullLayout,physics,state.rearOpen,state.innerOpen,pilot,pose.point,pose.rotation);
+                    if(pilot&&!ClientMenuOpen&&!ChatInputCaptured&&Application.isFocused)craft.NetworkNavigationInput();
+                    if(entityViews.Remove(pair.Key,out var obsolete))Destroy(obsolete);
+                    continue;
+                }
+                if(entity.kind=="ship")continue; // Await its bounded layout snapshot; never substitute a solid boarding box.
                 if(!entityViews.TryGetValue(pair.Key,out var go)){
                     go=GameObject.CreatePrimitive(entity.kind=="player"?PrimitiveType.Capsule:PrimitiveType.Cube);go.name="Remote "+entity.kind+" "+pair.Key;go.transform.SetParent(clientWorld.transform);Destroy(go.GetComponent<Collider>());
                     var filter=go.GetComponent<MeshFilter>();if(entity.kind!="player"&&proxyCube==null)proxyCube=filter.sharedMesh;
@@ -42,6 +65,8 @@ namespace MassiveArmy.Networking {
                         }
                     }else{go.GetComponent<MeshFilter>().sharedMesh=proxyCube;go.transform.localScale=new Vector3(52,11,100);go.GetComponent<Renderer>().sharedMaterial=machineMaterial;renderedShipLayouts.Remove(pair.Key);}
                     go.GetComponent<Renderer>().shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
+                }else if(entity.kind=="station"){
+                    var station=JsonUtility.FromJson<SurvivalStationState>(entity.data);var orbital=StationPose(station,StationTime(predicted));target=orbital.position;craftRotation=orbital.rotation;parented=true;go.transform.localScale=Vector3.one;go.GetComponent<MeshFilter>().sharedMesh=StationMesh();
                 }else if(entity.kind=="machine"&&clientMachines.TryGetValue(pair.Key/8,out var machine)){
                     go.transform.localScale=new Vector3((float)machine.Definition.Width,2.5f,(float)machine.Definition.Depth);
                     if(machine.pose.frame!=0&&presentedShips.TryGetValue(machine.pose.frame,out var parent)){target=parent.point+Double3.Rotate(parent.rotation,SurvivalVehicleSimulation.Position(machine.pose));craftRotation=parent.rotation*Quaternion.Euler(0,machine.pose.yaw,0);playerUp=parent.rotation*Vector3.up;parented=true;}
@@ -50,18 +75,21 @@ namespace MassiveArmy.Networking {
                 if(!parented&&(entity.kind=="player"||entity.kind=="ship"||entity.kind=="machine")&&predicted?.ship?.entity!=pair.Key/8&&predicted?.vehicle?.entity!=pair.Key/8&&entityPositions.TryGetValue(pair.Key,out var previous))target=previous+(target-previous)*(1-System.Math.Exp(-15*Time.unscaledDeltaTime));
                 entityPositions[pair.Key]=target;var up=playerUp??PlanetPrecisionPolicy.Direction(target);go.transform.position=clientWorld.RenderBodyPosition(target)+up*(entity.kind=="player"?.9f:entity.kind=="machine"?1.25f:entity.kind=="respawn-point"?.2f:entity.kind=="loot"?.4f:0);go.transform.rotation=craftRotation??Quaternion.FromToRotation(Vector3.up,up)*Quaternion.Euler(0,entity.pose.yaw,0);
             }
+            var lostCraft=new List<long>();foreach(var pair in craftViews)if(!visible.TryGetValue(pair.Key,out var present)||present.kind!="ship"){pair.Value.Dispose();lostCraft.Add(pair.Key);}foreach(long id in lostCraft){craftViews.Remove(id);visualShipPhysics.Remove(id);}
             RenderPlacement();RenderFactoryLinks();RenderBuildings();
             var removed=new List<long>();foreach(var pair in entityViews)if(!visible.ContainsKey(pair.Key)){Destroy(pair.Value);removed.Add(pair.Key);}foreach(long id in removed){entityViews.Remove(id);entityPositions.Remove(id);renderedShipLayouts.Remove(id);renderedShipDoors.Remove(id);}
         }
-        void ClearEntityViews(){ClearParentPresentations();ClearFactoryViews();ClearBuildings();if(placementGhost!=null)Destroy(placementGhost);placementGhost=null;placingMachine=null;placementPose=null;foreach(var view in entityViews.Values)if(view!=null)Destroy(view);entityViews.Clear();entityPositions.Clear();if(playerMaterial!=null)Destroy(playerMaterial);if(machineMaterial!=null)Destroy(machineMaterial);if(depositMaterial!=null)Destroy(depositMaterial);if(shipMaterial!=null)Destroy(shipMaterial);foreach(var mesh in combinedShips.Values)Destroy(mesh);combinedShips.Clear();renderedShipLayouts.Clear();renderedShipDoors.Clear();proxyCube=null;}
-        void OnGUI(){
+        void ClearEntityViews(){visualShipPhysics.Clear();clientWorld?.SetNetworkCraft(null,false);foreach(var craft in craftViews.Values)craft.Dispose();craftViews.Clear();clientStations.Clear();if(stationMesh!=null)Destroy(stationMesh);stationMesh=null;ClearParentPresentations();ClearFactoryViews();ClearBuildings();if(placementGhost!=null)Destroy(placementGhost);placementGhost=null;placingMachine=null;placementPose=null;foreach(var view in entityViews.Values)if(view!=null)Destroy(view);entityViews.Clear();entityPositions.Clear();if(playerMaterial!=null)Destroy(playerMaterial);if(machineMaterial!=null)Destroy(machineMaterial);if(depositMaterial!=null)Destroy(depositMaterial);if(shipMaterial!=null)Destroy(shipMaterial);foreach(var mesh in combinedShips.Values)Destroy(mesh);combinedShips.Clear();renderedShipLayouts.Clear();renderedShipDoors.Clear();proxyCube=null;}
+        void DrawNetworkToolkit(){
             if(HeadlessProbeClient||!Online||latest?.self==null)return;
-            GUI.Box(new Rect(12,12,550,90),"SURVIVAL ONLINE · "+Status+"\nHealth "+latest.self.health.ToString("0")+" · O₂ "+latest.vitals.oxygen.ToString("0")+" · Food "+latest.vitals.hunger.ToString("0")+" · Water "+latest.vitals.thirst.ToString("0")+"\nEnter text chat · Hold "+Bindings.pushToTalk+" proximity voice · Escape menu");
-            string controls=predicted?.vehicle!=null?"DRIVER � W/S drive � A/D steer � Space brake � F exit":predicted?.ship!=null?(latest.vitals.controlledShip!=0?"PILOT · WASD thrust · R/C vertical · Q/E roll · Space land/takeoff · "+Bindings.pilotAssist+" assist · G gear · B brake · F leave seat":"ABOARD · WASD walk · Space jump · F hatch/pilot seat · E disembark"):predicted?.vehicle!=null?"DRIVER · W/S drive · A/D steer · Space brake · F exit":"WASD walk · G gather · F board/drive · I inventory · F4 industry";
-            GUI.Label(new Rect(12,104,Screen.width-24,30),string.IsNullOrEmpty(latest.motion.notice)?controls:latest.motion.notice);
-            if(placingMachine!=null)GUI.Label(new Rect(12,136,800,30),"PLACE "+placingMachine+" · LMB place · R rotate · RMB cancel");
-            if(predicted?.ship==null){foreach(var ship in clientShips.Values)if(ship.owner==ActorId){GUI.Label(new Rect(12,166,800,30),"Your ship boarding ramp: "+latest.self.pose.Distance(ShipEntry(ship)).ToString("0")+" m");break;}}
-            bool enabled=GUI.enabled;GUI.enabled=enabled&&!ChatInputCaptured;GameplayGUI();GUI.enabled=enabled;
+            networkUi.Begin();
+            networkUi.Box(new Rect(12,12,550,90),"SURVIVAL ONLINE · "+Status+" · "+TestTimeLabel+"\nHealth "+latest.self.health.ToString("0")+" · O₂ "+latest.vitals.oxygen.ToString("0")+" · Food "+latest.vitals.hunger.ToString("0")+" · Water "+latest.vitals.thirst.ToString("0")+"\nEnter text chat · Hold "+Bindings.pushToTalk+" proximity voice · Escape menu");
+            string controls=predicted?.vehicle!=null?"DRIVER · W/S drive · A/D steer · Space brake · F exit":predicted?.ship!=null?(latest.vitals.controlledShip!=0?"PILOT · WASD thrust · R/C vertical · Q/E roll · Space land/takeoff · "+Bindings.pilotAssist+" assist · G gear · B brake · J dock/undock · F leave seat":"ABOARD · WASD walk · Space jump · F hatch/pilot seat · walk down ramp to disembark"):"WASD walk · G gather · F doors/drive · I inventory · F4 industry";
+            networkUi.Label(new Rect(12,104,networkUi.ViewWidth-24,30),string.IsNullOrEmpty(latest.motion.notice)?controls:latest.motion.notice);
+            if(placingMachine!=null)networkUi.Label(new Rect(12,136,800,30),"PLACE "+placingMachine+" · LMB place · R rotate · RMB cancel");
+            if(predicted?.ship==null){foreach(var ship in clientShips.Values)if(ship.owner==ActorId){networkUi.Label(new Rect(12,166,800,30),"Your ship boarding ramp: "+latest.self.pose.Distance(ClientShipEntry(ship)).ToString("0")+" m");break;}}
+            StationGuidance();
+            bool enabled=networkUi.Enabled;networkUi.Enabled=enabled&&!ChatInputCaptured;GameplayGUI();networkUi.Enabled=enabled;networkUi.End();
         }
     }
 }

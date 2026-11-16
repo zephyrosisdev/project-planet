@@ -47,6 +47,24 @@ namespace MassiveArmy.Networking {
                 var freefall=JsonUtility.FromJson<PlanetShipSimulationSnapshot>(JsonUtility.ToJson(expected));freefall.assist=false;freefall.pose.linearVelocity=default;second.RestoreSimulation(freefall);
                 for(int i=0;i<60;i++)second.StepSimulation(dt,Vector3.zero,Vector3.zero,false,false,false,false,false);
                 Check(second.CaptureSimulation().pose.linearVelocity.y<-18,"Unassisted network flight uses planetary gravity");
+                var orbitStart=new PlanetShipSimulationSnapshot{pose=new SpacePose{position=new Double3(0,definition.radius+Math.Max(definition.atmosphereHeight,definition.ReliefBound)+5000,0),rotation=Quaternion.identity},assist=true};
+                first.RestoreSimulation(orbitStart);
+                var orbitInput=JsonUtility.FromJson<SurvivalInput>(JsonUtility.ToJson(new SurvivalInput{sequence=1,toggleOrbit=true}));
+                first.StepSimulation(dt,Vector3.zero,Vector3.zero,false,false,false,false,false,toggleOrbit:orbitInput.toggleOrbit);
+                var orbitCheckpoint=JsonUtility.FromJson<PlanetShipSimulationSnapshot>(JsonUtility.ToJson(first.CaptureSimulation()));
+                Check(orbitCheckpoint.orbitHold&&orbitCheckpoint.orbitAssistActive&&!orbitCheckpoint.assist,"One serialized N-key edge enables bounded orbital hold and replaces terrain flight assist");
+                second.RestoreSimulation(orbitCheckpoint);
+                Check(second.OrbitalVelocityHoldEnabled&&second.OrbitalVelocityAssistActive&&second.OrbitalVelocityAssistStatus.Contains("HOLD ALT"),"Reconciliation and rendered ship restore retain orbital hold and its HUD status");
+                for(int i=0;i<30;i++){first.StepSimulation(dt,Vector3.zero,Vector3.zero,false,false,false,false,false);second.StepSimulation(dt,Vector3.zero,Vector3.zero,false,false,false,false,false);}
+                var orbitExpected=first.CaptureSimulation();var orbitReplay=second.CaptureSimulation();
+                Check(orbitReplay.orbitHold&&(orbitExpected.pose.position-orbitReplay.pose.position).Magnitude<1e-7&&(orbitExpected.pose.linearVelocity-orbitReplay.pose.linearVelocity).Magnitude<1e-7,"Latched orbit hold survives key release and snapshot replay reproduces position and velocity");
+                second.StepSimulation(dt,Vector3.zero,Vector3.zero,false,false,false,false,false,toggleOrbit:true);
+                Check(!second.OrbitalVelocityHoldEnabled,"A second N-key edge switches orbital hold off");
+                second.RestoreSimulation(orbitCheckpoint);second.StepSimulation(dt,Vector3.zero,Vector3.zero,true,false,false,false,false);
+                Check(!second.OrbitalVelocityHoldEnabled,"Braking cancels latched orbital hold");
+                orbitStart.landed=true;second.RestoreSimulation(orbitStart);second.StepSimulation(dt,Vector3.zero,Vector3.zero,false,false,false,false,false,toggleOrbit:true);
+                Check(!second.OrbitalVelocityHoldEnabled&&second.Landed,"N cannot launch or enable orbital hold on a landed ship");
+                var orbitQueue=new SurvivalInputQueue();orbitQueue.Enqueue(orbitInput,0,30);Check(orbitQueue.Next().toggleOrbit&&!orbitQueue.Next().toggleOrbit,"A missing packet cannot repeat an orbital-hold toggle edge");
                 var surface=new PlanetSurface(definition);vehicle=new SurvivalVehicleSimulation("truck",surface);replayVehicle=new SurvivalVehicleSimulation("truck",surface);
                 var state=new SurvivalVehicleState{entity=100,pose=new FramePose{body=1,y=10000.025},maximumSpeed=10,fueled=true};
                 for(int i=0;i<30;i++)vehicle.Step(state,new SurvivalInput{y=1,x=.3f},dt,Array.Empty<IndustrialMachine>());
@@ -56,9 +74,13 @@ namespace MassiveArmy.Networking {
                 Check(new Double3(state.velocityX,state.velocityY,state.velocityZ).Magnitude<=10.1,"Truck movement remains inside its configured speed limit");
                 for(int i=0;i<90;i++)vehicle.Step(state,new SurvivalInput{brake=true},dt,Array.Empty<IndustrialMachine>());
                 Check(new Double3(state.velocityX,state.velocityY,state.velocityZ).Magnitude<.1,"Neutral/brake input stops an unoccupied ground vehicle");
-                bool poleWalking=true;foreach(var axis in new[]{Vector3.up,Vector3.down,Vector3.right,Vector3.left,Vector3.forward,Vector3.back}){var p=new Double3(axis)*10000.05;var motion=new SurvivalMotion{pose=new FramePose{body=1,x=p.x,y=p.y,z=p.z},grounded=true,forwardZ=1};var before=motion.pose;SurvivalMovement.Step(motion,new SurvivalInput{sequence=1,y=1},surface,1f/30,7);poleWalking&=motion.pose.Distance(before)>.2&&Math.Abs(Vector3.Dot(SurvivalMovement.Forward(motion),PlanetPrecisionPolicy.Direction(new Double3(motion.pose.x,motion.pose.y,motion.pose.z))))<.001;}
+                bool poleWalking=true;foreach(var axis in new[]{Vector3.up,Vector3.down,Vector3.right,Vector3.left,Vector3.forward,Vector3.back}){var p=new Double3(axis)*10000.05;var motion=new SurvivalMotion{pose=new FramePose{body=1,x=p.x,y=p.y,z=p.z},grounded=true,forwardZ=1};var before=motion.pose;SurvivalMovement.Step(motion,new SurvivalInput{sequence=1,y=1},surface,1f/30,7);poleWalking&=motion.pose.Distance(before)>.04&&motion.pose.Distance(before)<.05&&Math.Abs(Vector3.Dot(SurvivalMovement.Forward(motion),PlanetPrecisionPolicy.Direction(new Double3(motion.pose.x,motion.pose.y,motion.pose.z))))<.001;}
                 Check(poleWalking,"Canonical walking has a valid tangent and moves at every spherical axis, including the forward/back poles");
-                var lowRate=new SurvivalMotion{pose=new FramePose{body=1,y=10000},grounded=true,forwardZ=1};SurvivalMovement.Step(lowRate,new SurvivalInput{sequence=1,y=1},surface,.1f,7);Check(lowRate.pose.z>.69&&lowRate.pose.z<.71,"The supported 10 Hz configuration advances walking with a server-owned fixed duration");
+                var lowRate=new SurvivalMotion{pose=new FramePose{body=1,y=10000},grounded=true,forwardZ=1};SurvivalMovement.Step(lowRate,new SurvivalInput{sequence=1,y=1},surface,.1f,7);Check(lowRate.pose.z>.399&&lowRate.pose.z<.401,"The supported 10 Hz configuration advances walking by acceleration times the squared fixed duration");
+                var accelerating=new SurvivalMotion();var velocity=SurvivalMovement.WalkingVelocity(accelerating,Vector3.forward*7,Vector3.up,.1f,40,60);
+                Check(Math.Abs(velocity.z-4)<1e-5,"Walking accelerates within the server profile rather than instantly reaching full speed");
+                velocity=SurvivalMovement.WalkingVelocity(accelerating,Vector3.zero,Vector3.up,1f/30,40,60);
+                Check(Math.Abs(velocity.z-2)<1e-5,"Walking braking uses its independent server-controlled deceleration limit");
                 var corrected=new SurvivalMotion{epoch=7,pose=new FramePose{body=1,x=100,y=10000},grounded=true};var pending=new[]{new SurvivalInput{sequence=40,epoch=7,y=1},new SurvivalInput{sequence=41,epoch=7,y=1}};
                 var expectedWalking=corrected.Copy();SurvivalMovement.Step(expectedWalking,pending[0],surface,dt,7);var firstWalking=expectedWalking.Copy();SurvivalMovement.Step(expectedWalking,pending[1],surface,dt,7);
                 var history=new Dictionary<uint,SurvivalMotion>{{40,new SurvivalMotion{epoch=7,pose=new FramePose{body=1,y=10000}}}};
@@ -108,9 +130,14 @@ namespace MassiveArmy.Networking {
                 SurvivalNetworkSession.RunBuildingChecks(Check);
                 SurvivalNetworkSession.RunLeaveChecks(Check);
                 SurvivalUniverseChecks.Run(Check);
+                SurvivalNetworkSession.RunWorldPresetChecks(Check);
                 SurvivalNetworkSession.RunCombatChecks(Check);
+                SurvivalNetworkSession.RunClientPresentationChecks(Check);
+                SurvivalNetworkSession.RunCraftingPresentationChecks(Check);
                 SurvivalNetworkSession.RunShipWalkingChecks(Check);
                 SurvivalNetworkSession.RunRegionChecks(Check);
+                SurvivalNetworkSession.RunStationChecks(Check);
+                SurvivalNetworkSession.RunShipRecallChecks(Check);
                 SurvivalNetworkSession.RunProbeNavigationChecks(Check);
                 var loadBot=new SurvivalLoadProbe.Bot{report=new SurvivalLoadProbe.BotReport{index=2},count=8};var neutral=loadBot.Controls(new SurvivalInput{sequence=1,epoch=1});
                 Check(neutral.Valid&&neutral.y==0&&neutral.brake&&!loadBot.headingSent,"Scripted load clients remain stationary until the common occupied measurement window");loadBot.windowStart=1;var moving=loadBot.Controls(new SurvivalInput{sequence=2,epoch=1});

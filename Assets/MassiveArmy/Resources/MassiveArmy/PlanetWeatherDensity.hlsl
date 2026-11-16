@@ -5,9 +5,17 @@ float _WeatherNativeDouble;float _WeatherDetailNoiseLod,_WeatherNoiseSizeScale;f
 // Quintic interpolation removes the visible grid/derivative breaks when a cell
 // spans kilometres, without adding texture fetches or increasing the volume.
 float WeatherNoiseAt(float3 p,float lod){
+ #ifdef WEATHER_POINT_NOISE
  float mip=exp2(floor(lod));float3 grid=p/mip-.5,cell=floor(grid),f=frac(grid);
  f=f*f*f*(f*(f*6-15)+10);
  return _WeatherNoise.SampleLevel(sampler_WeatherNoise,(cell+f+.5)*mip/64,lod);
+ #else
+ // Preserve close-up quintic detail, then fade its coordinate warp continuously
+ // into the mip-filtered field. Changing floor(lod) must not jump the noise phase.
+ float3 grid=p-.5,cell=floor(grid),f=frac(grid);f=f*f*f*(f*(f*6-15)+10);
+ float3 filtered=lerp(cell+f+.5,p,saturate(lod));
+ return _WeatherNoise.SampleLevel(sampler_WeatherNoise,filtered/64,lod);
+ #endif
 }
 float Noise(float3 p){return WeatherNoiseAt(p,_WeatherNoiseLod);}
 float3 WeatherPoint(float3 p){return float3(p.x*_WeatherWind.y-p.z*_WeatherWind.x,p.y,p.x*_WeatherWind.x+p.z*_WeatherWind.y);}
@@ -37,8 +45,11 @@ float CloudVerticalFiltered(float layer,float3 shape,float halfWidth){
  float span=max(.01,shape.z-shape.y),local=(layer-shape.y)/span,w=max(.00001,halfWidth/span);
  return saturate((CloudVerticalIntegral(local+w)-CloudVerticalIntegral(local-w))/(2*w));
 }
-float CloudErosion(float3 detail){
- float lod=max(_WeatherNoiseLod,_WeatherDetailNoiseLod);
+float CloudErosion(float3 detail,float footprintLod){
+ float lod=max(max(_WeatherNoiseLod,_WeatherDetailNoiseLod),max(0,footprintLod));
+ #ifdef WEATHER_POINT_NOISE
+ lod=max(_WeatherNoiseLod,_WeatherDetailNoiseLod);
+ #endif
  float erosion=WeatherNoiseAt(detail,lod)*.65+WeatherNoiseAt(detail*2.1,lod)*.35;
  // Optional fine octave bank. Fade count and amplitude before dropping distant
  // samples; keep the original two base fetches and the default third octave.
@@ -51,7 +62,11 @@ float CloudErosion(float3 detail){
    float coordinateMagnitude=max(1,max(abs(detail.x),max(abs(detail.y),abs(detail.z))));
    if(frequency*coordinateMagnitude>1048576)break; // Avoid meaningless float sub-texel octaves.
    float weight=amplitude*saturate(available-octave);
-   fine+=WeatherNoiseAt(detail*frequency+float3(17.1,3.7,29.3)*(octave+1),lod)*weight;total+=weight;
+   float octaveLod=max(lod,footprintLod+log2(max(1,frequency)));
+   #ifdef WEATHER_POINT_NOISE
+   octaveLod=lod;
+   #endif
+   fine+=WeatherNoiseAt(detail*frequency+float3(17.1,3.7,29.3)*(octave+1),octaveLod)*weight;total+=weight;
    amplitude*=clamp(_WeatherOctaves.y,.1,.85);frequency*=clamp(_WeatherOctaves.z,1.2,4);
   }
   erosion=lerp(erosion,fine/max(.00001,total),saturate(_WeatherNoiseTuning.y)*(1-_WeatherDetailNoiseLod));
@@ -67,25 +82,28 @@ float3 CloudDetailPoint(float3 p,float interior){
  return moving*_WeatherRadius*max(.1,_WeatherNoiseFrequency)/(350*max(.05,_WeatherNoiseSizeScale))*(1-saturate(interior)*_WeatherDetailMotion.z)+float3(_WeatherWind.z,_WeatherWind.w,0);
 }
 float CloudInterior(float vertical,float cover){return saturate(vertical)*smoothstep(.35,.85,cover);}
-float CloudSampleDensity(float3 p,float vertical,float cover,float detailWeight){
+float CloudSampleDensity(float3 p,float vertical,float cover,float detailWeight,float footprintLod){
  float interior=CloudInterior(vertical,cover);
- float erosion=CloudErosion(CloudDetailPoint(p,interior));
+ float erosion=CloudErosion(CloudDetailPoint(p,interior),footprintLod);
  return saturate(cover-erosion*saturate(_WeatherNoiseTuning.x)*detailWeight)*vertical*(1+interior*_WeatherDetailMotion.w);
 }
+float CloudSampleDensity(float3 p,float vertical,float cover,float detailWeight){return CloudSampleDensity(p,vertical,cover,detailWeight,-16);}
+float CloudFootprintLod(float metres){return log2(max(1e-6,metres*max(.1,_WeatherNoiseFrequency)/(350*max(.05,_WeatherNoiseSizeScale))));}
 float WeatherLayer(float3 p){
  #ifdef PLANET_GPU_DOUBLE
  if(_WeatherNativeDouble>.5){double square=dot((double3)p,(double3)p),inverse=(double)rsqrt((float)square);inverse*=1.5-.5*square*inverse*inverse;inverse*=1.5-.5*square*inverse*inverse;return (float)((square*inverse-1-(double)_WeatherAtmosphere.z)/(double)_WeatherAtmosphere.w);}
  #endif
  return (length(p)-1-_WeatherAtmosphere.z)/_WeatherAtmosphere.w;
 }
-float CloudDensity(float3 p){
+float CloudDensity(float3 p,float footprintLod){
  float layer=WeatherLayer(p);
  if(layer<=0||layer>=1)return 0;
  float3 shape=CloudShape(normalize(p));float vertical=CloudVertical(layer,shape);
  if(vertical<=0)return 0;
  float cover=shape.x;if(cover<.001)return 0;
- return CloudSampleDensity(p,vertical,cover,1);
+ return CloudSampleDensity(p,vertical,cover,1,footprintLod);
 }
+float CloudDensity(float3 p){return CloudDensity(p,-16);}
 bool WeatherRayShell(float3 centre,float eyeAltitude,float3 ray,float shellAltitude,out float2 range){
  #ifdef PLANET_GPU_DOUBLE
  if(_WeatherNativeDouble>.5){double alongD=dot((double3)ray,(double3)centre),cD=((double)eyeAltitude-shellAltitude)*(2+(double)eyeAltitude+shellAltitude),disc=alongD*alongD-cD;range=0;if(disc<0)return false;double inverse=(double)rsqrt(max(1e-30,(float)disc));inverse*=1.5-.5*disc*inverse*inverse;inverse*=1.5-.5*disc*inverse*inverse;double root=disc*inverse;range=float2((float)(alongD-root),(float)(alongD+root));return range.y>0;}

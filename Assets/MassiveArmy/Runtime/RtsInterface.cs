@@ -55,8 +55,7 @@ namespace MassiveArmy
         public void StartFlatValidationBattle(int capacity=50000,bool swarm=false,bool spectator=false)=>StartBuildingMatch(capacity,swarm,spectator,true);
         void StartBuildingMatch(int capacity,bool swarm,bool spectator=false,bool flatValidation=false)
         {
-            if(State=="loading")return;settings.baseBuilding=true;settings.swarmMode=swarm;settings.spectatorMode=spectator;settings.activeUnits=32;settings.capacity=Mathf.Clamp(capacity+settings.ambientZombies,256,1000000);settings.ScaleWorld();settings.Validate();
-            if(flatValidation)activeLoad=StartCoroutine(LoadBattle());else StartPlanetMatch();
+            throw new System.NotSupportedException("RTS, swarm and army test modes have been retired. Use Survival.");
         }
         void SendOrder(Vector2 p,ArmyOrder order,Vector2 mouse,FormationLayout? layout=null)
         {

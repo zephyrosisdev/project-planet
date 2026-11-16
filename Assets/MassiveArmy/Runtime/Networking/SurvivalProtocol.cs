@@ -51,17 +51,20 @@ namespace MassiveArmy.Networking {
         [NonSerialized] internal FramePose? fingerprintPose;
         [NonSerialized] internal long requiredParent;
     }
+    [Serializable] internal struct SurvivalShipNavigation {public long entity;public FramePose pose;}
     [Serializable] internal sealed class SurvivalSnapshot {
+        public int testTimeScale=1;
         public bool privateDetails=true;public SurvivalChunk chunk;public long cancelTransfer;
         public long tick;public double simulationSeconds;public SurvivalMotion motion;public IndustrialActor self;public SurvivalPlayerRecord vitals;
         public ShipAssembly pilotedShip;
         public long industryTick;public List<RespawnPoint> respawnPoints=new List<RespawnPoint>();
         public long ownedShip;public List<SurvivalShipInvite> shipInvites=new List<SurvivalShipInvite>();
+        public SurvivalShipNavigation shipNavigation;
         public List<SurvivalIncomingInvitation> incomingInvitations=new List<SurvivalIncomingInvitation>();
         public List<SurvivalEntity> changed=new List<SurvivalEntity>();public List<long> removed=new List<long>();
         // Unity JSON can materialize an absent inline class as a zero-valued object.
         // Zero is never a valid craft/owner identity; reject those phantom references.
-        internal int NormalizeReferences(){int count=0;if(chunk!=null&&chunk.transfer==0)chunk=null;if(motion?.vehicle!=null&&motion.vehicle.entity<=0){motion.vehicle=null;count++;}if(motion?.ship!=null&&motion.ship.entity<=0){motion.ship=null;count++;}if(pilotedShip!=null&&pilotedShip.owner<=0){pilotedShip=null;count++;}return count;}
+        internal int NormalizeReferences(){int count=0;if(chunk!=null&&chunk.transfer==0)chunk=null;if(motion?.vehicle!=null&&motion.vehicle.entity<=0){motion.vehicle=null;count++;}if(motion?.ship!=null&&motion.ship.entity<=0){motion.ship=null;count++;}if(pilotedShip!=null&&pilotedShip.owner<=0){pilotedShip=null;count++;}if(self?.craft!=null&&self.craft.id==0&&string.IsNullOrEmpty(self.craft.recipe)){self.craft=null;count++;}return count;}
     }
     [Serializable] internal sealed class SurvivalShipInvite {public long actor;public string name;}
     [Serializable] internal sealed class SurvivalIncomingInvitation {public long ship;public string ownerName;}

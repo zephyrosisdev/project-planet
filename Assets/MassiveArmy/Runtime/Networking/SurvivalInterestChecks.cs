@@ -24,12 +24,16 @@ namespace MassiveArmy.Networking {
                 var ship=new SurvivalShipState{entity=700,owner=2,pose=new FramePose{body=1,x=180,y=10000},physics="PRIVATE-PHYSICS"};ship.invitedActors.Add(12345);
                 world.multiplayer.ships.Add(ship);world.ships.Add(new ShipAssembly{id=700,owner=2});
                 var distant=new SurvivalShipState{entity=701,owner=3,pose=new FramePose{body=1,x=300,y=10000},physics="PRIVATE-DISTANT"};world.multiplayer.ships.Add(distant);world.ships.Add(new ShipAssembly{id=701,owner=3});
+                var ownerBeacon=new SurvivalShipState{entity=702,owner=1,pose=new FramePose{body=2,x=3000000000.125,y=20000},physics="PRIVATE-OWNER-FLIGHT"};world.multiplayer.ships.Add(ownerBeacon);world.ships.Add(new ShipAssembly{id=702,owner=1});
                 SurvivalSnapshot Capture(bool refill=true){
                     if(refill)foreach(var peer in session.peers.Values)peer.tokens=65536;
                     session.clock.Advance(1.0/30,30,()=>{});SurvivalSnapshot captured=null;
                     session.Publish((client,packet,payload)=>{if(client==1)captured=JsonUtility.FromJson<SurvivalSnapshot>(Encoding.UTF8.GetString(payload));return payload.Length+4;});return captured;
                 }
-                var first=Capture();
+                session.peers[1].privateShip=702;session.peers[1].privateShipRevision=0;var first=Capture();
+                check(session.peers[1].privateShip==0&&session.peers[1].privateShipRevision==-1,"Leaving a ship clears the private layout receipt so reboarding after death or disembarking resends prediction data");
+                check(first.shipNavigation.entity==702&&first.shipNavigation.pose.body==2&&first.shipNavigation.pose.x==3000000000.125&&!first.changed.Exists(e=>e.id==5621||e.id==5622),"The owner receives a precise canonical ship beacon across planets and beyond AOI without detailed ship or layout subscription");
+                check(!JsonUtility.ToJson(first.shipNavigation).Contains("physics")&&Envelope(first).shipNavigation.entity==702&&LeanSnapshot(first).shipNavigation.pose.x==first.shipNavigation.pose.x,"Global owner ship navigation contains location only and survives normal/lean snapshot streaming");
                 check(first.changed.Exists(e=>e.id==17)&&!first.changed.Exists(e=>e.id==25||e.id==33),"Published packets filter distant surface players and other planetary bodies");
                 var foreignWire=JsonUtility.FromJson<IndustrialMachine>(first.changed.Find(e=>e.id==4002).data);var ownedWire=JsonUtility.FromJson<IndustrialMachine>(first.changed.Find(e=>e.id==4010).data);
                 check(foreignWire.input.Used==0&&ownedWire.input.Count("iron-bar")==9,"Published machine inventories are private to an owner in interaction reach");

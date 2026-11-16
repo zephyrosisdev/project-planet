@@ -5,10 +5,19 @@ namespace MassiveArmy.Planetary {
     public sealed partial class PlanetDevelopment {
         // Set before Start: a network client never instantiates the offline authority/save adapters.
         public bool NetworkPresentation;
+        internal bool NetworkPiloting;
+        internal void ConfigureNetworkUniverse(PlanetSystemDefinition settings,GalaxyModel galaxy,PlanetDefinition[] bodies){
+            systemSizeMultiplier=settings.RuntimeSizeMultiplier;SystemRuntime=gameObject.AddComponent<PlanetSystemRuntime>();SystemRuntime.InitializeNetwork(this,settings,galaxy,bodies);
+        }
+        internal PlanetSpacecraft CreateNetworkCraft()=>new PlanetSpacecraft(this,surface,origin,view,transform,false);
+        internal void SetNetworkCraft(PlanetSpacecraft craft,bool piloting){spacecraft=craft;NetworkPiloting=piloting;}
         Double3 networkFeet;bool networkViewReady;
         internal Double3 NetworkPresentedFeet=>networkFeet;
-        internal void PresentNetworkObserver(SurvivalMotion state,bool snap){
+        internal void PresentNetworkObserver(SurvivalMotion state,bool snap,bool interpolated=false){
             if(!Ready||player==null||state.pose.body!=definition.bodyId)return;
+            // Anchor the camera and draw terrain against the same celestial sample.
+            // SystemRuntime does not advance a separate client simulation clock.
+            var canonical=System.Array.Find(SystemRuntime.Bodies,b=>b.bodyId==definition.bodyId);definition.position=canonical.position;definition.velocity=canonical.velocity;
             if(state.vehicle!=null&&state.ship!=null&&state.vehicle.pose.frame==state.ship.entity){
                 var vehicle=SurvivalShipInteriorModel.World(state.ship,state.vehicle.pose);networkFeet=new Double3(vehicle.x,vehicle.y,vehicle.z);networkViewReady=true;player.ApplyNetworkVehicleView(networkFeet,SurvivalShipInteriorModel.Rotation(state.ship)*SurvivalVehicleSimulation.Rotation(state.vehicle),state.vehicleDefinition,state.pitch,state.viewYaw);return;
             }
@@ -17,7 +26,7 @@ namespace MassiveArmy.Planetary {
                 player.ApplyNetworkInteriorView(networkFeet,SurvivalShipInteriorModel.Rotation(state.ship),SurvivalMovement.Forward(state),state.pitch);return;
             }
             var target=new Double3(state.pose.x,state.pose.y,state.pose.z);
-            if(snap||!networkViewReady){networkFeet=target;networkViewReady=true;}
+            if(interpolated||snap||!networkViewReady){networkFeet=target;networkViewReady=true;}
             else networkFeet+= (target-networkFeet)*(1-System.Math.Exp(-25*Time.unscaledDeltaTime));
             if(state.ship!=null)player.ApplyNetworkShipView(networkFeet,new Quaternion(state.ship.rotationX,state.ship.rotationY,state.ship.rotationZ,state.ship.rotationW),SurvivalNetworkSession.Active?.Latest?.pilotedShip,SurvivalNetworkSession.Active?.Latest?.vitals.shipSeat??-1,state.pitch,state.viewYaw);
             else if(state.vehicle!=null)player.ApplyNetworkVehicleView(networkFeet,SurvivalVehicleSimulation.Rotation(state.vehicle),state.vehicleDefinition,state.pitch,state.viewYaw);

@@ -15,6 +15,7 @@ namespace MassiveArmy.Networking {
         }
         static Dictionary<string,Entry> profiles;
         internal readonly Dictionary<long,SurvivalInterestDelivery.Fingerprint> machineSignatures=new Dictionary<long,SurvivalInterestDelivery.Fingerprint>();internal readonly HashSet<long> liveMachineIds=new HashSet<long>();internal readonly System.Collections.Generic.HashSet<long> machineIds=new System.Collections.Generic.HashSet<long>();internal readonly SurvivalContacts contacts=new SurvivalContacts();internal readonly List<Fitting> fittings=new List<Fitting>();
+        readonly Quaternion rampRotation;readonly FramePose rampPose;internal readonly bool rampActive;internal readonly float rampFootY;
         internal readonly ShipAssembly assembly;internal readonly long revision;internal readonly int body;internal readonly bool rearOpen,innerOpen;long nextShape;
         internal static ColonyPrototypeSolid[] Solids(string id){
             if(profiles==null){var source=Resources.Load<TextAsset>("MassiveArmy/ShipArt/ModularShipCatalogue");if(source==null)throw new InvalidOperationException("Ship collision catalogue is missing");Catalogue data;
@@ -22,7 +23,7 @@ namespace MassiveArmy.Networking {
                 profiles=new Dictionary<string,Entry>();foreach(var entry in data.assets)profiles.Add(entry.id,entry);
             }return profiles.TryGetValue(id,out var profile)?profile.solids:throw new InvalidOperationException("Unknown ship collision profile");
         }
-        internal SurvivalShipInteriorModel(ShipAssembly assembly,SurvivalShipState ship){
+        internal SurvivalShipInteriorModel(ShipAssembly assembly,SurvivalShipState ship,PlanetSurface surface=null){
             this.assembly=assembly;revision=assembly.revision;body=ship.pose.body;rearOpen=ship.rearOpen;innerOpen=ship.innerOpen;
             foreach(var module in assembly.modules){
                 var source=Solids(module.definition);var solids=new BuildSolid[source.Length];for(int i=0;i<source.Length;i++)solids[i]=source[i].Shape();var q=Quaternion.Euler(0,module.pose.yaw,0);var at=new Vector3((float)module.pose.x,(float)module.pose.y,(float)module.pose.z);Put(at,q,solids);
@@ -41,6 +42,13 @@ namespace MassiveArmy.Networking {
             Box(new Vector3(0,4.25f,10),new Vector3(18.5f,3.5f,.5f),Quaternion.identity);
             foreach(int side in new[]{-1,1})Box(new Vector3(side*17.5f,1,10),new Vector3(16.5f,10,.5f),Quaternion.identity);
             Hatch(-38.25f,25.5f,rearOpen,1.2f);Hatch(-31,8,innerOpen,.4f);
+            rampRotation=Rotation(ship);rampPose=ship.pose;rampActive=ship.landed;
+            if(rampActive){
+                rampFootY=-8;
+                if(surface!=null){var at=World(ship,ShipModules.P(0,0,-52));var foot=surface.ProjectToSurface(SurvivalVehicleSimulation.Position(at),.05);var local=Local(ship,new FramePose{body=ship.pose.body,x=foot.x,y=foot.y,z=foot.z});rampFootY=(float)local.y;}
+                float bottom=Math.Min(rampFootY,-4)-.4f;
+                contacts.Put(new SurvivalContacts.Shape{id=++nextShape,body=body,origin=new Double3(0,bottom,0),rotation=Quaternion.identity,solids=Array.Empty<BuildSolid>(),ramps=new[]{new SurvivalContacts.Ramp(-6,6,-52,-38,rampFootY-bottom,-4-bottom)},radius=80});
+            }
         }
         static Vector3 Point(ShipModuleRecord module,FramePose local){var p=ShipModules.Transform(module.pose,local);return new Vector3((float)p.x,(float)p.y,(float)p.z);}
         void Put(Vector3 at,Quaternion rotation,BuildSolid[] solids){
@@ -55,12 +63,17 @@ namespace MassiveArmy.Networking {
             foreach(float offset in new[]{-aftStandOff,.4f})Box(new Vector3(-6.55f,-2.55f,z+offset),new Vector3(.6f,.9f,.18f),Quaternion.identity);
             if(aftStandOff>.4f)Box(new Vector3(-6.55f,-2.55f,z-(aftStandOff+.25f)*.5f),new Vector3(.24f,.45f,aftStandOff-.25f),Quaternion.identity);
         }
-        internal bool Matches(ShipAssembly layout,SurvivalShipState ship)=>ReferenceEquals(assembly,layout)&&revision==layout.revision&&body==ship.pose.body&&rearOpen==ship.rearOpen&&innerOpen==ship.innerOpen;
+        internal bool Matches(ShipAssembly layout,SurvivalShipState ship)=>ReferenceEquals(assembly,layout)&&revision==layout.revision&&body==ship.pose.body&&rearOpen==ship.rearOpen&&innerOpen==ship.innerOpen&&rampActive==ship.landed&&(!rampActive||(rampPose.Distance(ship.pose)<.02&&Quaternion.Angle(rampRotation,Rotation(ship))<.01f));
         internal static bool Contains(ShipAssembly layout,FramePose local,float padding=.4f){
             foreach(var module in layout.modules){var d=ShipModules.Definitions[module.definition];if(!d.room)continue;var relative=Quaternion.Euler(0,-module.pose.yaw,0)*new Vector3((float)(local.x-module.pose.x),(float)(local.y-module.pose.y),(float)(local.z-module.pose.z));
                 if(Math.Abs(relative.x)<d.width*.5+padding&&Math.Abs(relative.z)<d.depth*.5+padding&&relative.y>-d.height*.5-padding&&relative.y<d.height*.5+padding)return true;
             }return false;
         }
+        internal bool ContainsWalking(FramePose local)=>Contains(assembly,local)||rampActive&&Math.Abs(local.x)<6.4&&local.z>=-53&&local.z<=-37.5&&local.y>=Math.Min(rampFootY,-4)-1&&local.y<2;
+        internal float RampHeight(double z)=>Mathf.LerpUnclamped(rampFootY,-4,(float)((z+52)/14));
+        internal bool NearRampSupport(FramePose local)=>rampActive&&Math.Abs(local.x)<6.4&&local.z>=-53.5&&local.z<=-37.5&&local.y>=RampHeight(local.z)-.36&&local.y<=RampHeight(local.z)+.8;
+        internal bool AtRampFoot(FramePose local)=>NearRampSupport(local);
+        internal FramePose RampEntry(SurvivalShipState ship)=>World(ship,ShipModules.P(0,rampFootY+.05,-52));
         internal bool Pressurized(FramePose local)=>Contains(assembly,local,0)&&(local.z<-31?!rearOpen:!rearOpen||!innerOpen);
         internal static Quaternion Rotation(SurvivalShipState ship)=>new Quaternion(ship.rotationX,ship.rotationY,ship.rotationZ,ship.rotationW).normalized;
         internal static FramePose World(SurvivalShipState ship,FramePose local){var at=new Double3(ship.pose.x,ship.pose.y,ship.pose.z)+Double3.Rotate(Rotation(ship),new Double3(local.x,local.y,local.z));return new FramePose{body=ship.pose.body,x=at.x,y=at.y,z=at.z,yaw=local.yaw};}

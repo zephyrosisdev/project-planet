@@ -29,6 +29,9 @@ namespace MassiveArmy.Networking {
                 bool refused=false;try{SurvivalUniverse.Restore(world.universe,"wrong-world",73129);}catch(InvalidDataException){refused=true;}
                 check(refused,"Universe restore rejects an incompatible persistent world identity");
                 check(original.Surface(target)!=null&&original.Surface(target)==original.Surface(target)&&original.Surface(target)!=original.Surface(1),"Independent occupied planets share cached CPU terrain queries without sharing surfaces");
+                var home=original.Definition(1);double envelope=home.radius+Math.Max(home.ReliefBound+6000,home.hasAtmosphere?home.atmosphereHeight:0);
+                var above=new Double3(0,envelope+10000,0);var below=new Double3(0,home.radius+1000,0);
+                check(original.SweepCelestials(1,above,below,0,out _)<1&&original.SweepCelestials(1,above,below,0,out _,true)==1,"Recall can descend through its own planet's atmosphere while ordinary warp retains the atmospheric stop boundary");
                 check(meshes==Resources.FindObjectsOfTypeAll<Mesh>().Length&&materials==Resources.FindObjectsOfTypeAll<Material>().Length&&cameras==Resources.FindObjectsOfTypeAll<Camera>().Length,"Universe scheduling, persistence and CPU surfaces allocate no render resources");
             }finally{authority?.Dispose();client?.Dispose();restored?.Dispose();original?.Dispose();}
         }

@@ -16,6 +16,11 @@ namespace MassiveArmy.Networking {
                 var world=IndustrialAuthority.Load(config.savePath);var owner=world.Actor(spec.owner);var passenger=world.Actor(spec.passenger);var ship=world.multiplayer?.ships.Find(s=>s.owner==spec.owner);
                 if(owner==null||passenger==null||ship==null||!ship.landed||world.Ship(spec.owner)==null)throw new InvalidOperationException("Fixture needs two registered characters and the owner's landed ship");
                 foreach(long actor in new[]{spec.owner,spec.passenger}){var player=world.multiplayer.players.Find(p=>p.actor==actor);player.attachedShip=player.controlledShip=player.controlledEntity=player.pendingVehicleExit=0;player.interiorWalking=false;player.shipSeat=-1;world.Actor(actor).pose=ShipEntry(ship);}
+                var savedUniverse=SurvivalUniverse.Restore(world.universe,config.worldId,config.seed);
+                try{var model=new SurvivalShipInteriorModel(world.Ship(ship.owner),ship,savedUniverse.Surface(ship.pose.body));
+                    world.Actor(spec.owner).pose=SurvivalShipInteriorModel.World(ship,ShipModules.P(-2,model.rampFootY+.05,-52));
+                    world.Actor(spec.passenger).pose=SurvivalShipInteriorModel.World(ship,ShipModules.P(2,model.rampFootY+.05,-52));
+                }finally{savedUniverse.Dispose();}
                 ship.pilot=0;ship.rearOpen=ship.innerOpen=false;if(!ship.invitedActors.Contains(spec.passenger))ship.invitedActors.Add(spec.passenger);spec.ship=ship.entity;
                 using(var authority=new IndustrialAuthority(world,config.savePath))authority.Save();spec.seeded=true;spec.error="";return true;
             }catch(Exception error){if(spec!=null)spec.error=error.Message;Debug.LogError("Interior fixture: "+error.Message);return false;}

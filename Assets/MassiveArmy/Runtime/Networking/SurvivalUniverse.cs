@@ -17,6 +17,7 @@ namespace MassiveArmy.Networking {
             internal static Parameters From(PlanetSystemDefinition d)=>new Parameters{seed=d.seed,planetCount=d.planetCount,radiusRange=d.radiusRange,spacing=d.spacing,scale=d.RuntimeSizeMultiplier,activationAltitude=d.activationAltitude,sleepHysteresis=d.sleepHysteresis,preparationDistance=d.preparationDistance,detailActivationAltitude=d.detailActivationAltitude,detailActivationRadius=d.detailActivationRadius,preparationRadius=d.preparationRadius};
             internal PlanetSystemDefinition Create(){var d=ScriptableObject.CreateInstance<PlanetSystemDefinition>();d.seed=seed;d.planetCount=planetCount;d.radiusRange=radiusRange;d.spacing=spacing;d.RuntimeSizeMultiplier=scale;d.activationAltitude=activationAltitude;d.sleepHysteresis=sleepHysteresis;d.preparationDistance=preparationDistance;d.detailActivationAltitude=detailActivationAltitude;d.detailActivationRadius=detailActivationRadius;d.preparationRadius=preparationRadius;return d;}
         }
+        internal PlanetSystemDefinition Settings=>settings;
         internal readonly SurvivalUniverseState State;internal readonly GalaxyModel Galaxy;internal readonly PlanetDefinition[] Bodies;
         readonly PlanetSystemDefinition settings;readonly Dictionary<int,PlanetDefinition> definitions=new Dictionary<int,PlanetDefinition>();readonly Dictionary<int,PlanetSurface> surfaces=new Dictionary<int,PlanetSurface>();
         readonly CelestialState[] sweepStates;bool disposed;
@@ -40,6 +41,13 @@ namespace MassiveArmy.Networking {
             var template=Resources.Load<PlanetSystemDefinition>("MassiveArmy/Planets/DefaultSystem");if(template==null)throw new InvalidOperationException("Default planetary system is missing");
             var settings=template.CreateScaledCopy(scale);var state=new SurvivalUniverseState{worldId=world,seed=seed,homeBody=home.bodyId,systemJson=JsonUtility.ToJson(Parameters.From(settings)),galaxyJson=settings.galaxy==null?null:JsonUtility.ToJson(settings.galaxy)};
             var universe=new SurvivalUniverse(state,settings,home,false);foreach(var body in universe.Bodies)state.regions.Add(new SurvivalRegionOwnership{body=body.bodyId,instance=instance});return universe;
+        }
+        internal static SurvivalUniverse CreateFromPreset(string world,string instance,int seed,SurvivalWorldPresetData preset,float scaleOverride=0){
+            if(string.IsNullOrWhiteSpace(world)||string.IsNullOrWhiteSpace(instance)||preset==null)throw new ArgumentException("World, instance and preset are required");
+            preset.Validate();var settings=preset.CreateSystem(scaleOverride);PlanetDefinition home=null;
+            try{home=preset.CreateHome(seed,settings.RuntimeSizeMultiplier);var state=new SurvivalUniverseState{worldId=world,seed=seed,homeBody=1,presetJson=JsonUtility.ToJson(preset),systemJson=JsonUtility.ToJson(Parameters.From(settings)),galaxyJson=settings.galaxy==null?null:JsonUtility.ToJson(settings.galaxy)};
+                var model=new SurvivalUniverse(state,settings,home,false);foreach(var body in model.Bodies)state.regions.Add(new SurvivalRegionOwnership{body=body.bodyId,instance=instance});return model;
+            }catch{ArmyLifetime.Destroy(home);ArmyLifetime.Destroy(settings.galaxy);ArmyLifetime.Destroy(settings);throw;}
         }
         internal static SurvivalUniverse Restore(SurvivalUniverseState state,string world,int seed){
             if(state==null||state.version!=1||state.generator!="kepler-1"||state.worldId!=world||state.seed!=seed||state.bodies==null||state.bodies.Count<1||state.bodies.Count>1536)throw new InvalidDataException("Saved universe identity, version or generator is incompatible");
@@ -83,10 +91,10 @@ namespace MassiveArmy.Networking {
         }
         // Warp uses a continuous sphere sweep, including moving celestial sources.
         // Padding by source travel is conservative across the fixed server step.
-        internal double SweepCelestials(int current,Double3 from,Double3 to,double dt,out int target){
+        internal double SweepCelestials(int current,Double3 from,Double3 to,double dt,out int target,bool ignoreCurrent=false){
             target=current;if(Galaxy==null)return 1;int reference=Galaxy.NodeFor(Definition(current));var origin=Galaxy.Current[reference].position;var start=origin+from;var delta=to-from;double distance=delta.Magnitude;if(distance<1e-9)return 1;var direction=delta*(1/distance);double fraction=1;
             Galaxy.Evaluate(Galaxy.Time+dt,sweepStates);
-            for(int i=0;i<Galaxy.Nodes.Length;i++){var node=Galaxy.Nodes[i];if(node.radius<=0||node.kind==CelestialKind.Barycentre)continue;var centre=Galaxy.Current[i].position;double radius=node.radius+Math.Max(6000,(sweepStates[i].position-centre).Magnitude*2);if(node.planet>=0){var body=Bodies[node.planet];radius=body.radius+Math.Max(body.ReliefBound+6000,body.hasAtmosphere?body.atmosphereHeight:0)+(sweepStates[i].position-centre).Magnitude*2;}
+            for(int i=0;i<Galaxy.Nodes.Length;i++){var node=Galaxy.Nodes[i];if(node.radius<=0||node.kind==CelestialKind.Barycentre||ignoreCurrent&&node.planet>=0&&Bodies[node.planet].bodyId==current)continue;var centre=Galaxy.Current[i].position;double radius=node.radius+Math.Max(6000,(sweepStates[i].position-centre).Magnitude*2);if(node.planet>=0){var body=Bodies[node.planet];radius=body.radius+Math.Max(body.ReliefBound+6000,body.hasAtmosphere?body.atmosphereHeight:0)+(sweepStates[i].position-centre).Magnitude*2;}
                 var relative=start-centre;if(relative.Magnitude<=radius+2)continue;
                 if(PlanetSpacecraft.CruiseSphereEntry(relative,direction,distance,radius,out double entry)){double next=Math.Max(0,(entry-1)/distance);if(next<fraction){fraction=next;if(node.planet>=0)target=Bodies[node.planet].bodyId;}}
             }return fraction;

@@ -79,29 +79,29 @@ namespace MassiveArmy.Networking {
             foreach(var entity in snapshot.changed)if(entity.kind=="factory-link"){clientFactoryLinks[entity.id]=JsonUtility.FromJson<SurvivalFactoryLink>(entity.data);factoryMeshDirty=true;}
         }
         void FactoryRouteGUI(){
-            if(factorySource==0)return;GUILayout.Label("ROUTE "+factoryKind+" from #"+factorySource+" · "+factoryAnchors.Count+" points");
-            GUILayout.Label("Walk to the destination; finish within 12 m. Optional supports use your current position.");
-            factoryLift=GUILayout.HorizontalSlider(factoryLift,.5f,8);GUILayout.BeginHorizontal();
-            if(GUILayout.Button("Add point at feet +"+factoryLift.ToString("0.0")+" m")){
+            if(factorySource==0)return;networkUi.Label("ROUTE "+factoryKind+" from #"+factorySource+" · "+factoryAnchors.Count+" points");
+            networkUi.Label("Walk to the destination; finish within 12 m. Optional supports use your current position.");
+            factoryLift=networkUi.HorizontalSlider(factoryLift,.5f,8);networkUi.BeginHorizontal();
+            if(networkUi.Button("Add point at feet +"+factoryLift.ToString("0.0")+" m")){
                 int maximum=factoryKind=="belt"?16:8;if(factoryAnchors.Count>=maximum)Status="Routing point limit reached";else{var pose=predicted?.interior==true?predicted.pose:latest.self.pose;var p=SurvivalVehicleSimulation.Position(pose);p+=new Double3(pose.frame!=0?Vector3.up:PlanetPrecisionPolicy.Direction(p))*factoryLift;pose.x=p.x;pose.y=p.y;pose.z=p.z;factoryAnchors.Add(pose);}
             }
-            if(GUILayout.Button("UNDO")&&factoryAnchors.Count>0)factoryAnchors.RemoveAt(factoryAnchors.Count-1);
-            if(GUILayout.Button("CANCEL")){factorySource=0;factoryAnchors.Clear();}GUILayout.EndHorizontal();
+            if(networkUi.Button("UNDO")&&factoryAnchors.Count>0)factoryAnchors.RemoveAt(factoryAnchors.Count-1);
+            if(networkUi.Button("CANCEL")){factorySource=0;factoryAnchors.Clear();}networkUi.EndHorizontal();
         }
         void FactoryMachineControlsGUI(IndustrialMachine machine){
             if(machine.Definition.Vehicle||machine.integratedLogistics)return;
-            GUILayout.BeginHorizontal();
+            networkUi.BeginHorizontal();
             void Source(string kind){factorySource=machine.id;factoryKind=kind;factoryAnchors.Clear();}
-            if(machine.Definition.PowerProvider&&GUILayout.Button("POWER OUTPUT"))Source("power");
-            if((machine.definition=="pump"||machine.definition=="water-reservoir")&&GUILayout.Button("WATER OUTPUT"))Source("water");
-            if(GUILayout.Button("BELT OUTPUT"))Source("belt");GUILayout.EndHorizontal();
-            if(factorySource!=0&&factorySource!=machine.id&&GUILayout.Button("Connect "+factoryKind+" from #"+factorySource+" to #"+machine.id)){
+            if(machine.Definition.PowerProvider&&networkUi.Button("POWER OUTPUT"))Source("power");
+            if((machine.definition=="pump"||machine.definition=="water-reservoir")&&networkUi.Button("WATER OUTPUT"))Source("water");
+            if(networkUi.Button("BELT OUTPUT"))Source("belt");networkUi.EndHorizontal();
+            if(factorySource!=0&&factorySource!=machine.id&&networkUi.Button("Connect "+factoryKind+" from #"+factorySource+" to #"+machine.id)){
                 Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind=factoryKind,source=factorySource,target=machine.id,route=new List<FramePose>(factoryAnchors)}});factorySource=0;factoryAnchors.Clear();
             }
-            GUILayout.BeginHorizontal();
-            if(machine.powerSource!=0&&GUILayout.Button("Remove power"))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="remove-power",target=machine.id}});
-            if(machine.waterTarget!=0&&GUILayout.Button("Remove water"))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="remove-water",target=machine.id}});GUILayout.EndHorizontal();
-            foreach(var link in clientFactoryLinks.Values)if(link.kind=="belt"&&(link.source==machine.id||link.target==machine.id)&&GUILayout.Button("Recover conveyor #"+link.entity))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="remove-belt",target=link.entity}});
+            networkUi.BeginHorizontal();
+            if(machine.powerSource!=0&&networkUi.Button("Remove power"))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="remove-power",target=machine.id}});
+            if(machine.waterTarget!=0&&networkUi.Button("Remove water"))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="remove-water",target=machine.id}});networkUi.EndHorizontal();
+            foreach(var link in clientFactoryLinks.Values)if(link.kind=="belt"&&(link.source==machine.id||link.target==machine.id)&&networkUi.Button("Recover conveyor #"+link.entity))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="remove-belt",target=link.entity}});
         }
         void RenderFactoryLinks(){
             if(factoryMeshDirty){

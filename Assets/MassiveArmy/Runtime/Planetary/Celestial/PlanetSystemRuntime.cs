@@ -10,7 +10,9 @@ namespace MassiveArmy.Planetary
         public GalaxyModel Galaxy {get;private set;}
         public CivilisationRuntime Civilisation {get;private set;}
         internal MassiveArmy.Industrial.IndustrialAuthority Industry;
-        GalaxySkyRenderer sky;bool ownsScaledSettings;
+        GalaxySkyRenderer sky;bool ownsScaledSettings,networkPresentation;
+        MassiveArmy.Networking.SurvivalUniverse presetUniverse;
+        internal MassiveArmy.Industrial.SurvivalUniverseState PresetState=>presetUniverse?.State;
         internal GalaxySkyRenderer SkyForValidation=>sky;
         internal bool IsPreparedForValidation(int index)=>worlds[index]!=null&&worlds[index].Ready;
         internal PlanetDevelopment WorldForColonyValidation(int index)=>worlds[index];
@@ -63,8 +65,27 @@ namespace MassiveArmy.Planetary
             if(Galaxy!=null&&!home.IsSurvival){var config=Resources.Load<CivilisationSettings>("MassiveArmy/Civilisation/DefaultCivilisation");if(config!=null&&config.enabledInGame)Civilisation=new CivilisationRuntime(this,config);}
             worlds=new PlanetDevelopment[Bodies.Length];failed=new bool[Bodies.Length];worlds[0]=home;ResidentWorldCount=1;RefreshDistantBodies();
         }
+        internal void InitializeShared(PlanetDevelopment home,MassiveArmy.Networking.SurvivalUniverse model){
+            presetUniverse=model;root=ActiveWorld=home;SunRotation=home.LightingForValidation.Sun.transform.rotation;Settings=model.Settings;Galaxy=model.Galaxy;Bodies=model.Bodies;
+            if(Galaxy!=null){sky=new GalaxySkyRenderer(Galaxy);DistantTerrain.MaximumCount=Settings.galaxy?.terrainPreviewBudget??4;}
+            worlds=new PlanetDevelopment[Bodies.Length];failed=new bool[Bodies.Length];worlds[0]=home;ResidentWorldCount=1;RefreshDistantBodies();
+        }
+        // Borrow the server manifest's definitions. No offline simulation, authority,
+        // planet preparation or local clock is created on a multiplayer client.
+        internal void InitializeNetwork(PlanetDevelopment home,PlanetSystemDefinition settings,GalaxyModel galaxy,PlanetDefinition[] bodies){
+            networkPresentation=true;root=ActiveWorld=home;Settings=settings;Galaxy=galaxy;Bodies=bodies;
+            worlds=new PlanetDevelopment[bodies.Length];failed=new bool[bodies.Length];
+            int index=Array.FindIndex(bodies,b=>b.bodyId==home.definition.bodyId);if(index<0)throw new InvalidOperationException("Unknown network planet");
+            worlds[index]=home;ResidentWorldCount=1;if(galaxy!=null){sky=new GalaxySkyRenderer(galaxy);DistantTerrain.MaximumCount=settings.galaxy?.terrainPreviewBudget??4;}RefreshDistantBodies();
+        }
+        internal void NetworkTime(double seconds){if(!networkPresentation)return;WeatherTime=seconds;}
         void RefreshDistantBodies(){for(int i=0;i<worlds.Length;i++)if(worlds[i]!=null){var far=new PlanetDefinition[Bodies.Length-1];int k=0;for(int j=0;j<Bodies.Length;j++)if(j!=i)far[k++]=Bodies[j];worlds[i].distantBodies=far;}}
         void Update(){
+            if(networkPresentation){
+                if(ActiveWorld==null||!ActiveWorld.Ready)return;
+                var body=Array.Find(Bodies,b=>b.bodyId==ActiveWorld.definition.bodyId);
+                ActiveWorld.definition.position=body.position;ActiveWorld.definition.velocity=body.velocity;WeatherTime=Galaxy?.Time??WeatherTime;UpdateStarlight();return;
+            }
             UpdateRemoteView();
             if(ActiveWorld!=null&&ActiveWorld.Ready&&!ActiveWorld.Paused)WeatherTime+=Math.Min(Time.deltaTime,.05)*ActiveWorld.SimulationSpeed;
             if(Galaxy==null||ActiveWorld==null||!ActiveWorld.Ready)return;
@@ -90,7 +111,7 @@ namespace MassiveArmy.Planetary
             if(second>=0)ActiveWorld.LightingForValidation.SetCompanion((Galaxy.Current[second].position-observer).Float.normalized,Galaxy.Nodes[second].colour,Galaxy.Settings.secondaryStarlight?(float)(next/Math.Max(1e-30,best)):0);
         }
         void LateUpdate(){
-            if(IsRemoteView)return;
+            if(networkPresentation||IsRemoteView)return;
             if(ActiveWorld==null||!ActiveWorld.Ready||ActiveWorld.Paused||!ActiveWorld.IsPiloting)return;
             if(ActiveWorld.LocalPlayerDead)return;
             if(arrivalTarget>=0){if(worlds[arrivalTarget]!=null&&worlds[arrivalTarget].Ready)EnterPlanet(arrivalTarget);return;}
@@ -127,6 +148,7 @@ namespace MassiveArmy.Planetary
             }
         }
         void OnGUI(){
+            if(networkPresentation)return; // Multiplayer uses the retained navigation HUD.
             if(ActiveWorld==null||!ActiveWorld.Ready||!ActiveWorld.IsPiloting)return;
             GUI.color=new Color(.5f,1,.72f);var observer=ActiveWorld.ObserverPosition;
             GUI.Label(new Rect(12,100,280,25),ActiveWorld.definition.displayName+" / "+(ActiveWorld.SimulationActive?"LOCAL SIMULATION":"SURFACE ASLEEP"));
@@ -145,7 +167,7 @@ namespace MassiveArmy.Planetary
             if(PreparationError.Length>0)GUI.Label(new Rect(12,310,390,70),PreparationError);
             GUI.color=Color.white;
         }
-        void OnDestroy(){Industry?.Save();Industry?.Dispose();if(ownsScaledSettings){ArmyLifetime.Destroy(Settings.galaxy);ArmyLifetime.Destroy(Settings);}sky?.Dispose();DistantTerrain.Dispose();if(Bodies==null)return;for(int i=1;i<Bodies.Length;i++)if(worlds[i]==null||Bodies[i]!=worlds[i].definition)ArmyLifetime.Destroy(Bodies[i]);}
+        void OnDestroy(){Industry?.Save();Industry?.Dispose();if(ownsScaledSettings){ArmyLifetime.Destroy(Settings.galaxy);ArmyLifetime.Destroy(Settings);}sky?.Dispose();DistantTerrain.Dispose();if(presetUniverse!=null){presetUniverse.Dispose();presetUniverse=null;return;}if(Bodies==null||networkPresentation)return;for(int i=1;i<Bodies.Length;i++)if(worlds[i]==null||Bodies[i]!=worlds[i].definition)ArmyLifetime.Destroy(Bodies[i]);}
     }
 }
 

@@ -38,7 +38,8 @@ namespace MassiveArmy.Planetary {
         public PlanetIndustry(PlanetDevelopment world,PlanetSurface surface){
             this.world=world;this.surface=surface;
             if(world.SystemRuntime?.Industry!=null)Authority=world.SystemRuntime.Industry;
-            else {string path=Path.Combine(Application.persistentDataPath,"Survival",world.terrainSeed.ToString(),"industry.xml");Authority=new IndustrialAuthority(IndustrialAuthority.Load(path),path);ownsAuthority=world.SystemRuntime==null;if(world.SystemRuntime!=null)world.SystemRuntime.Industry=Authority;}
+            else {string path=world.OfflineIndustryPath;Authority=new IndustrialAuthority(IndustrialAuthority.Load(path),path);ownsAuthority=world.SystemRuntime==null;if(world.SystemRuntime!=null)world.SystemRuntime.Industry=Authority;}
+            if(Authority.World.universe==null&&world.SystemRuntime?.PresetState!=null)Authority.InitializeSurvivalUniverse(world.SystemRuntime.PresetState);
             var p=ObserverPosition();actor=Authority.World.Register(1,Pose(p));actor.pose=Pose(p);Authority.EnableMiningWorkflow();world.PlayerForValidation.Inventory.Bind(Authority,1,world.PersonalItems);Authority.World.InventoryPoseResolver=pose=>world.TryResolveRespawnPose(pose,out _,out _)?(FramePose?)world.RespawnBodyPose(pose):null;
             if(surface!=null)Authority.ReprojectSurfaceDeposits(world.definition.bodyId,pose=>SurfaceDepositPose(surface,pose));
             SpreadLegacyDeposits();

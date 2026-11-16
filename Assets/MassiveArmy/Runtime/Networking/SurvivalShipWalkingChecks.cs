@@ -7,21 +7,32 @@ using UnityEngine;
 namespace MassiveArmy.Networking {
     public sealed partial class SurvivalNetworkSession {
         internal static void RunShipWalkingChecks(Action<bool,string> check){
+            RunRampReboardingChecks(check);
             int meshes=Resources.FindObjectsOfTypeAll<Mesh>().Length,materials=Resources.FindObjectsOfTypeAll<Material>().Length,cameras=Resources.FindObjectsOfTypeAll<Camera>().Length;
-            var go=new GameObject("Ship-local walking authority fixture");var session=go.AddComponent<SurvivalNetworkSession>();IndustrialAuthority authority=null;var terrain=ServerDefinition(73129);session.surfaces.Add(1,new PlanetSurface(terrain));
+            var go=new GameObject("Ship-local walking authority fixture");var session=go.AddComponent<SurvivalNetworkSession>();IndustrialAuthority authority=null;var terrain=ServerDefinition(73129);terrain.radius=10000;terrain.terrainHeight=0;terrain.stampTerrain=false;terrain.oceanHeight=-35;session.surfaces.Add(1,new PlanetSurface(terrain));
             const string path="TestResults/Multiplayer/ship-walking-native.xml";
             try{
                 foreach(string suffix in new[]{"",".journal",".bak"})if(File.Exists(path+suffix))File.Delete(path+suffix);
-                var world=new IndustrialWorld{multiplayer=new SurvivalSessionState{worldId="ship-walking-native"}};var owner=world.Register(1,new FramePose{body=1,y=10020});var guest=world.Register(2,owner.pose);var layout=ShipModules.Starter(1);world.ships.Add(layout);
-                var q=Quaternion.Euler(15,20,35);var ship=new SurvivalShipState{entity=layout.id,owner=1,pose=new FramePose{body=1,y=10020},rotationX=q.x,rotationY=q.y,rotationZ=q.z,rotationW=q.w};world.multiplayer.ships.Add(ship);
+                var world=new IndustrialWorld{multiplayer=new SurvivalSessionState{worldId="ship-walking-native"}};var owner=world.Register(1,new FramePose{body=1,y=10008});var guest=world.Register(2,owner.pose);var layout=ShipModules.Starter(1);world.ships.Add(layout);
+                var q=Quaternion.Euler(0,20,0);var ship=new SurvivalShipState{entity=layout.id,owner=1,pose=new FramePose{body=1,y=10008},rotationX=q.x,rotationY=q.y,rotationZ=q.z,rotationW=q.w};world.multiplayer.ships.Add(ship);
                 var record=new SurvivalPlayerRecord{actor=1,identity="walking-owner"};var passenger=new SurvivalPlayerRecord{actor=2,identity="walking-guest"};world.multiplayer.players.Add(record);world.multiplayer.players.Add(passenger);
                 var peer=new Peer{record=record,motion=new SurvivalMotion{actor=1,pose=owner.pose,forwardZ=1}};var crew=new Peer{record=passenger,motion=new SurvivalMotion{actor=2,pose=guest.pose,forwardZ=1}};
                 authority=new IndustrialAuthority(world,path);session.authority=authority;session.Config=new SurvivalServerConfig();session.peers[1]=peer;session.peers[2]=crew;session.connectedActors.Add(1);session.connectedActors.Add(2);
-                owner.pose=guest.pose=ShipEntry(ship);
+                var facing=q*Vector3.forward;peer.motion.forwardX=crew.motion.forwardX=facing.x;peer.motion.forwardY=crew.motion.forwardY=facing.y;peer.motion.forwardZ=crew.motion.forwardZ=facing.z;
+                var ramp=session.Interior(ship,layout);var ownerFoot=ShipModules.P(0,ramp.rampFootY+.05,-52);var guestFoot=ShipModules.P(2,ramp.rampFootY+.05,-52);
+                owner.pose=SurvivalShipInteriorModel.World(ship,ownerFoot);guest.pose=SurvivalShipInteriorModel.World(ship,guestFoot);var beforeBoard=owner.pose;
                 check(session.BoardPassenger(crew,ship.entity)!=null&&session.BoardPassenger(peer,ship.entity)==null,"Boarding requires invitation while the owner can enter their own ship as a walker");
                 check(peer.motion.interior&&peer.motion.pose.frame==ship.entity&&owner.pose.frame==0&&owner.pose.Distance(Actor(session,peer.motion))<1e-7,"Controlled walking uses a stable ship frame while industrial authority retains canonical body coordinates");
                 SurvivalShipAuthority.Invite(world,1,ship.entity,2,true);
                 check(session.BoardPassenger(crew,ship.entity)==null&&crew.motion.interior&&guest.pose.Distance(owner.pose)>=.75&&session.EnterPilot(crew,ship.entity)!=null,"An invited passenger receives clear walking space and cannot obtain pilot authority");
+                check(owner.pose.Distance(beforeBoard)<1e-7&&peer.motion.pose.z<-50,"Walk-on boarding preserves canonical feet at the physical ramp instead of teleporting into the airlock");
+                check(session.RestoreInterior(peer,ship)&&owner.pose.Distance(beforeBoard)<.5,"Reconnect at the sloped boarding ramp restores supported feet without an airlock teleport or disconnect");
+                check(!session.SealForTakeoff(ship),"Takeoff cannot retract a ramp beneath an attached walking passenger, even with the rear hatch closed");
+                var onRamp=peer.motion.Copy();for(int i=0;i<80;i++)SurvivalShipInteriorModel.Step(onRamp,new SurvivalInput{sequence=(uint)(i+1),y=1},1f/30,7,ramp);
+                check(onRamp.pose.z>-40&&onRamp.pose.z<-38&&onRamp.pose.y>-5.5,"CPU boarding ramp supports a walker up to the closed exterior hatch");
+                session.BeginInterior(peer,ship,new FramePose{body=1,frame=ship.entity,x=-5.8,y=-3.95,z=-39});owner.pose=session.ActorPose(peer.motion);
+                check(session.ToggleShipDoor(peer,ship.entity,0)==null&&ship.rearOpen,"An authorized walker opens the rear hatch from its physical exterior control");
+                session.BeginInterior(peer,ship,new FramePose{body=1,frame=ship.entity,y=-3.95,z=-35});owner.pose=session.ActorPose(peer.motion);
                 var start=peer.motion.Copy();for(int i=0;i<40;i++){session.StepInterior(peer,ship,new SurvivalInput{sequence=(uint)(i+1),y=1},1f/30);owner.pose=session.ActorPose(peer.motion);}
                 check(peer.motion.pose.z<-31.4&&peer.motion.pose.z>-33&&Math.Abs(peer.motion.pose.y+3.95)<.03,"Authored CPU floors support a walker and the closed inner hatch stops passage in a rotated ship");
                 var stopped=peer.motion.Copy();check(session.ToggleShipDoor(peer,ship.entity,1)==null,"A nearby authorized walker can open the inner hatch");
@@ -57,8 +68,9 @@ namespace MassiveArmy.Networking {
                 string truckError=session.ExecuteNetworkIndustrial(peer,new IndustrialCommand{kind="place",definition="truck",pose=machinePose});check(truckError==null,"A crafted truck can be deployed on clear owned ship deck: "+truckError);
                 var truck=world.machines.Find(m=>m.definition=="truck");truck.progress=100;epoch=peer.motion.epoch;
                 check(session.EnterDriver(peer,truck.id)==null&&peer.motion.vehicle!=null&&!peer.motion.interior&&record.attachedShip==ship.entity&&record.controlledShip==0&&peer.motion.epoch>epoch,"Entering an owned deck vehicle transfers walking controls while retaining the ship parent");
-                var vehicleStart=peer.motion.vehicle.pose;for(int i=0;i<30;i++)session.clock.Advance(1.0/30,30,()=>session.DriveServer(peer,new SurvivalInput{sequence=(uint)(300+i),y=1},1f/30));
+                var vehicleStart=peer.motion.vehicle.pose;for(int i=0;i<30;i++)session.clock.Advance(1.0/30,30,()=>{session.simulationStep++;session.DriveServer(peer,new SurvivalInput{sequence=(uint)(300+i),y=1},1f/30);});
                 check(peer.motion.vehicle.pose.Distance(vehicleStart)>.5&&Math.Abs(peer.motion.vehicle.pose.y+4)<.3&&session.CorrectionDistance(peer.motion)==session.Config.vehicleSnap,"Deck driving uses shared CPU floor contacts, fixed gravity and the vehicle correction profile: distance="+peer.motion.vehicle.pose.Distance(vehicleStart)+", y="+peer.motion.vehicle.pose.y);
+                var substepPose=peer.motion.vehicle.pose;session.DriveServer(peer,new SurvivalInput{sequence=400,y=1},1f/30);check(peer.motion.vehicle.pose.Distance(substepPose)<1e-10,"Duplicate vehicle simulation is rejected within one physical substep");session.simulationStep++;session.DriveServer(peer,new SurvivalInput{sequence=400,y=1},1f/30);check(peer.motion.vehicle.pose.Distance(substepPose)>1e-5,"The next physical substep can advance a vehicle without advancing the transport tick");
                 var driven=peer.motion.vehicle.pose;ship.pose.x+=1000;session.StepServerShips(1f/30);
                 check(peer.motion.vehicle.pose.Distance(driven)==0&&owner.pose.Distance(SurvivalShipInteriorModel.World(ship,VehicleSeatLocal(peer.motion.vehicle)))<1e-7,"Parent motion carries the driver and vehicle without rewriting local driving coordinates");
                 check(session.ExitDriver(peer)==null&&peer.motion.interior&&peer.motion.vehicle==null&&record.controlledEntity==0&&record.interiorWalking&&record.attachedShip==ship.entity,"Leaving a deck vehicle selects supported ship-local walking space and releases its driver lease");
@@ -66,6 +78,37 @@ namespace MassiveArmy.Networking {
                 check(saved.multiplayer.players[0].interiorWalking&&saved.multiplayer.players[0].interiorPose.frame==ship.entity&&saved.multiplayer.ships[0].rearOpen,"Player-local coordinates and authoritative hatch states survive the existing checkpoint store");
                 check(meshes==Resources.FindObjectsOfTypeAll<Mesh>().Length&&materials==Resources.FindObjectsOfTypeAll<Material>().Length&&cameras==Resources.FindObjectsOfTypeAll<Camera>().Length,"Ship-local collision, handoff and persistence allocate no render resources");
             }finally{session.authority=null;authority?.Dispose();DestroyImmediate(terrain);DestroyImmediate(go);}
+        }
+        static void RunRampReboardingChecks(Action<bool,string> check){
+            var go=new GameObject("Landed ramp approach regression");var session=go.AddComponent<SurvivalNetworkSession>();var terrain=ServerDefinition(73129);
+            terrain.radius=10000;terrain.terrainHeight=0;terrain.stampTerrain=false;terrain.oceanHeight=-35;var surface=new PlanetSurface(terrain);
+            var world=new IndustrialWorld{multiplayer=new SurvivalSessionState()};var store=new IndustrialAuthority(world);
+            try{
+                session.authority=store;session.Config=new SurvivalServerConfig();session.surfaces.Add(1,surface);
+                var layout=ShipModules.Starter(1);world.ships.Add(layout);var ship=new SurvivalShipState{entity=layout.id,owner=1,landed=true,pose=new FramePose{body=1,y=10018}};world.multiplayer.ships.Add(ship);
+                var actor=world.Register(1,new FramePose{body=1,y=10000});var record=new SurvivalPlayerRecord{actor=1};world.multiplayer.players.Add(record);
+                var peer=new Peer{record=record,motion=new SurvivalMotion{actor=1,grounded=true,forwardZ=1}};session.peers.Add(1,peer);session.clientShips.Add(ship.entity,ship);session.clientShipAssemblies.Add(ship.entity,layout);
+                var before=session.Interior(ship,layout);var q=Quaternion.Euler(4,35,0);ship.rotationX=q.x;ship.rotationY=q.y;ship.rotationZ=q.z;ship.rotationW=q.w;
+                var model=session.Interior(ship,layout);check(!ReferenceEquals(before,model)&&Math.Abs(before.rampFootY-model.rampFootY)>1,"Landing attitude changes invalidate ramp collision even when ship position is unchanged");
+                var start=SurvivalShipInteriorModel.World(ship,ShipModules.P(5.7,0,-59));var foot=surface.ProjectToSurface(SurvivalVehicleSimulation.Position(start),.05);peer.motion.pose=actor.pose=new FramePose{body=1,x=foot.x,y=foot.y,z=foot.z};
+                var forward=SurvivalMovement.Tangent(q*Vector3.forward,PlanetPrecisionPolicy.Direction(foot));peer.motion.forwardX=forward.x;peer.motion.forwardY=forward.y;peer.motion.forwardZ=forward.z;
+                var prediction=peer.motion.Copy();bool boarded=false;double predictionError=0;uint sequence=0;
+                void Walk(float control){
+                    var input=new SurvivalInput{sequence=++sequence,y=control};
+                    if(peer.record.attachedShip==0)session.StepWalking(peer.motion,input,surface,1f/30,7,true);else session.StepInterior(peer,ship,input,1f/30);
+                    actor.pose=session.ActorPose(peer.motion);if(record.attachedShip==0)session.TryWalkAboard(peer);
+                    if(prediction.interior)session.PredictInterior(prediction,input,1f/30);else session.StepWalking(prediction,input,surface,1f/30,7,false);
+                    if(prediction.epoch!=peer.motion.epoch)prediction=peer.motion.Copy();
+                    var predictedWorld=prediction.interior?SurvivalShipInteriorModel.World(ship,prediction.pose):prediction.pose;predictionError=Math.Max(predictionError,predictedWorld.Distance(actor.pose));
+                }
+                for(int i=0;i<200;i++){Walk(1);boarded|=record.attachedShip==ship.entity;var local=SurvivalShipInteriorModel.Local(ship,actor.pose);if(boarded&&local.z> -40)break;}
+                check(boarded&&peer.motion.interior&&peer.motion.pose.z> -40&&peer.motion.pose.y> -6,"An off-centre ground walker climbs a newly landed elevated/tilted ramp without falling through or needing the old fixed-height entry point");
+                check(predictionError<.02,"Exterior ramp support agrees between local prediction and server before the attachment acknowledgement");
+                for(int i=0;i<220;i++){Walk(-1);if(record.attachedShip==0&&SurvivalShipInteriorModel.Local(ship,actor.pose).z< -58)break;}
+                check(record.attachedShip==0&&peer.motion.ship==null,"Walking down the landed ramp releases the ship frame onto terrain");
+                for(int i=0;i<220;i++){Walk(1);if(record.attachedShip==ship.entity&&peer.motion.pose.z> -40)break;}
+                check(record.attachedShip==ship.entity&&peer.motion.interior&&peer.motion.pose.z> -40,"The same survivor can turn around and reboard through the physical ramp after disembarking");
+            }finally{session.authority=null;store.Dispose();DestroyImmediate(terrain);DestroyImmediate(go);}
         }
         static FramePose Actor(SurvivalNetworkSession session,SurvivalMotion motion)=>session.ActorPose(motion);
     }

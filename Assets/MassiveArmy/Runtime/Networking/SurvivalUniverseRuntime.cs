@@ -7,7 +7,9 @@ namespace MassiveArmy.Networking {
 #if UNITY_EDITOR || UNITY_SERVER
         void InitializeUniverse(){
             var state=authority.World.universe;
-            universe=state==null?SurvivalUniverse.Create(Config.worldId,Config.instanceId,Config.seed,ServerDefinition(Config.seed)):SurvivalUniverse.Restore(state,Config.worldId,Config.seed);
+            if(state==null)universe=SurvivalUniverse.CreateFromPreset(Config.worldId,Config.instanceId,Config.seed,Planetary.SurvivalWorldPreset.Load(Config.worldPresetPath),Config.systemSizeMultiplier);
+            else {universe=SurvivalUniverse.Restore(state,Config.worldId,Config.seed);UnityEngine.Debug.Log("Loading saved planet definitions and scale; new-world preset overrides do not resize this save.");}
+            Config.systemSizeMultiplier=universe.Settings.RuntimeSizeMultiplier;
             if(state==null)authority.InitializeSurvivalUniverse(universe.State);
             if(authority.World.multiplayer.simulationSeconds==0&&clock.Tick>0)authority.World.multiplayer.simulationSeconds=clock.Tick/30.0;
             universe.Advance(authority.World.multiplayer.simulationSeconds);

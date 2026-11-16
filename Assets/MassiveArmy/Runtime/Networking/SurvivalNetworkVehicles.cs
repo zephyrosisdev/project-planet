@@ -27,11 +27,12 @@ namespace MassiveArmy.Networking {
             var forward=SurvivalVehicleSimulation.Rotation(state)*Vector3.forward;motion.forwardX=forward.x;motion.forwardY=forward.y;motion.forwardZ=forward.z;motion.sequence=input.sequence;
         }
         void PredictMotion(SurvivalMotion motion,SurvivalInput input,float dt){
-            // A held/missing server input can advance its clock without advancing
-            // the acknowledged sequence. Distance snaps require matching time.
-            motion.tick++;if(universe!=null&&latest!=null)universe.Advance(latest.simulationSeconds+Math.Max(0,motion.tick-latest.tick)/(double)Config.tickRate);
-            var definition=ClientSimulationDefinition;var surface=new PlanetSurface(definition);
-            if(motion.ship!=null){var state=motion.ship;bool pilot=latest.vitals.controlledShip==state.entity;if(state.owner==ActorId&&latest.pilotedShip!=null)SimulateShip(state,latest.pilotedShip,definition,pilot?input:default,dt);else {state.pose.x+=state.velocityX*dt;state.pose.y+=state.velocityY*dt;state.pose.z+=state.velocityZ*dt;}if(motion.vehicle!=null){VehicleSimulation(motion.vehicle,motion.vehicleDefinition,surface).Step(motion.vehicle,input,dt,clientMachines.Values);FollowVehicle(motion,motion.vehicle,input);}else if(motion.interior)PredictInterior(motion,input,dt);else FollowShip(motion,state,input,pilot);}
+            motion.tick++;double end=StationTime(motion),start=end-Config.testTimeScale*dt;
+            for(int substep=0;substep<Config.testTimeScale;substep++){double time=start+(substep+1)*dt;universe?.Advance(time);PredictMotionStep(motion,input.Substep(substep),dt,time);}
+        }
+        void PredictMotionStep(SurvivalMotion motion,SurvivalInput input,float dt,double time){
+            var definition=ClientSimulationDefinition;var canonical=universe?.Definition(definition.bodyId);if(canonical!=null){definition.position=canonical.position;definition.velocity=canonical.velocity;}var surface=new PlanetSurface(definition);
+            if(motion.ship!=null){var state=motion.ship;bool pilot=latest.vitals.controlledShip==state.entity;var layout=latest.pilotedShip;if(layout==null||layout.id!=state.entity)clientShipAssemblies.TryGetValue(state.entity,out layout);if(state.owner==ActorId&&layout!=null&&!string.IsNullOrEmpty(state.physics))SimulateShip(state,layout,definition,pilot?input:default,dt,time);else {state.pose.x+=state.velocityX*dt;state.pose.y+=state.velocityY*dt;state.pose.z+=state.velocityZ*dt;}if(motion.vehicle!=null){VehicleSimulation(motion.vehicle,motion.vehicleDefinition,surface).Step(motion.vehicle,input,dt,clientMachines.Values);FollowVehicle(motion,motion.vehicle,input);}else if(motion.interior)PredictInterior(motion,input,dt);else FollowShip(motion,state,input,pilot);}
             else if(motion.vehicle!=null){VehicleSimulation(motion.vehicle,motion.vehicleDefinition,surface).Step(motion.vehicle,input,dt,clientMachines.Values);FollowVehicle(motion,motion.vehicle,input);}
             else StepWalking(motion,input,surface,dt,latest.self.dose>=50?4:latest.self.dose>=25?6:Config.walkSpeed,false);
         }
@@ -39,7 +40,7 @@ namespace MassiveArmy.Networking {
             var state=authority.World.multiplayer.vehicles.Find(v=>v.entity==peer.record.controlledEntity&&v.driver==peer.record.actor);
             var machine=state==null?null:authority.World.Machine(state.entity);
             if(machine==null){SurvivalVehicleAuthority.Release(authority.World,peer.record);peer.motion.vehicle=null;peer.motion.epoch++;peer.input.Clear();return;}
-            if(!vehicleTickBudget.TryAdvance(clock.Tick,state.entity))return;
+            if(!vehicleTickBudget.TryAdvance(simulationStep,state.entity))return;
             if(!authority.World.creativeMode&&machine.enabled&&machine.integrity>0&&machine.progress==0&&!input.brake&&(input.x!=0||input.y!=0)){
                 var actor=authority.World.Actor(peer.record.actor);authority.Execute(actor.id,new IndustrialCommand{sequence=actor.lastSequence+1,kind="vehicle-fuel",target=machine.id});
             }
@@ -51,7 +52,7 @@ namespace MassiveArmy.Networking {
         void StepUnoccupiedVehicles(float dt){
             foreach(var state in authority.World.multiplayer.vehicles){if(state.driver!=0)continue;var machine=authority.World.Machine(state.entity);if(machine==null||machine.haul?.active==true)continue;
                 if(Math.Abs(state.velocityX)+Math.Abs(state.velocityY)+Math.Abs(state.velocityZ)<.001&&state.grounded)continue;
-                if(!vehicleTickBudget.TryAdvance(clock.Tick,state.entity))continue;
+                if(!vehicleTickBudget.TryAdvance(simulationStep,state.entity))continue;
                 state.fueled=false;VehicleSimulation(state,machine.definition,surfaces[state.pose.body]).Step(state,new SurvivalInput{brake=true},dt,authority.World.machines);machine.pose=state.pose;
             }
         }

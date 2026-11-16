@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Unity.Services.Vivox;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UIElements;
+using Cursor=UnityEngine.Cursor;
 
 namespace MassiveArmy.Networking {
     [DefaultExecutionOrder(-300)]
@@ -55,14 +57,14 @@ namespace MassiveArmy.Networking {
         void Line(string message){history.Enqueue(message.Length>512?message.Substring(0,512):message);while(history.Count>8)history.Dequeue();}
         void Update(){
             if(stopped)return;var keys=Keyboard.current;
-            if(keys!=null&&Application.isFocused){
+            if(keys!=null&&Application.isFocused&&!session.CraftingTextCaptured){
                 if(keys.enterKey.wasPressedThisFrame||keys.numpadEnterKey.wasPressedThisFrame){
                     bool wasTyping=input.Typing;string message=input.Enter(Time.frameCount);
                     if(wasTyping){RestoreInputCursor();if(message!=null)_ = SendText(message);}
                     else{focusInput=true;Mute();previousCursorLock=Cursor.lockState;previousCursorVisible=Cursor.visible;Cursor.lockState=CursorLockMode.None;Cursor.visible=true;}
                 }else if(keys.escapeKey.wasPressedThisFrame&&input.Escape(Time.frameCount))RestoreInputCursor();
             }
-            if(!TextReady)return;
+            TickChat();if(!TextReady)return;
             if(!changingVoice&&session.Latest?.motion!=null&&(!VoiceReady||voiceBody!=session.Latest.motion.pose.body)&&Time.realtimeSinceStartupAsDouble>=nextVoiceAttempt)_ = UpdateVoice();
             bool speak=input.CanTransmit(Time.frameCount,Application.isFocused&&!session.NetworkMenuOpen,keys!=null&&keys[SurvivalNetworkSession.Bindings.pushToTalk].isPressed,VoiceReady);
             if(speak!=held){held=speak;if(!speak)try{VivoxService.Instance.MuteInputDevice();}catch(Exception){} _ = UpdateTransmission();}
@@ -89,7 +91,7 @@ namespace MassiveArmy.Networking {
             catch(Exception e){Line("Message not sent: "+e.Message);return false;}
             finally{serviceGate.Release();}
         }
-        void RestoreInputCursor(){GUIUtility.keyboardControl=0;Cursor.lockState=previousCursorLock;Cursor.visible=previousCursorVisible;}
+        void RestoreInputCursor(){entry?.Blur();Cursor.lockState=previousCursorLock;Cursor.visible=previousCursorVisible;}
         public void Mute(){MuteImmediate();if(initialized&&!stopped)_ = UpdateTransmission();}
         public Task StopAsync(){if(stopTask!=null)return stopTask;stopped=true;MuteImmediate();TextReady=VoiceReady=false;if(input.Typing)RestoreInputCursor();input.Clear();try{VivoxService.Instance.ChannelMessageReceived-=Message;}catch(Exception){}stopTask=Cleanup();return stopTask;}
         async Task Cleanup(){
@@ -101,11 +103,18 @@ namespace MassiveArmy.Networking {
             }}finally{serviceGate.Release();}
         }
         void OnApplicationFocus(bool focused){if(!focused)Mute();}
-        void OnDestroy(){_ = StopAsync();}
-        void OnGUI(){
-            if(stopped)return;float width=Mathf.Min(660,Screen.width-32),height=history.Count*22;
-            GUI.Box(new Rect(16,Screen.height-75-height,width,height+8),"");int row=0;foreach(var line in history)GUI.Label(new Rect(24,Screen.height-71-height+row++*22,width-16,22),line);
-            if(!input.Typing)return;GUI.SetNextControlName("survival-chat-input");input.Text=GUI.TextField(new Rect(16,Screen.height-57,width,32),input.Text,256);if(focusInput){GUI.FocusControl("survival-chat-input");focusInput=false;}
+        void OnDestroy(){toolkit?.Dispose();toolkit=null;_ = StopAsync();}
+        RtsUiController toolkit;Label messages;TextField entry;
+        void BuildChat(VisualElement root){
+            root.Clear();root.pickingMode=PickingMode.Ignore;
+            var box=new VisualElement{pickingMode=PickingMode.Ignore};box.style.position=Position.Absolute;box.style.left=16;box.style.bottom=220;box.style.width=Length.Percent(40);box.style.maxWidth=660;box.style.paddingLeft=12;box.style.paddingRight=12;box.style.paddingTop=8;box.style.paddingBottom=8;box.style.backgroundColor=new Color(.025f,.055f,.085f,.88f);root.Add(box);
+            messages=new Label{pickingMode=PickingMode.Ignore};messages.style.color=Color.white;messages.style.whiteSpace=WhiteSpace.Normal;messages.style.fontSize=15;box.Add(messages);
+            entry=new TextField{maxLength=256};entry.style.fontSize=16;entry.style.minHeight=32;box.Add(entry);
+            entry.RegisterValueChangedCallback(e=>input.Text=e.newValue);
+            entry.RegisterCallback<KeyDownEvent>(e=>{if(e.keyCode==KeyCode.Return||e.keyCode==KeyCode.KeypadEnter||e.keyCode==KeyCode.Escape)e.StopImmediatePropagation();},TrickleDown.TrickleDown);
+            RefreshChat();
         }
+        void RefreshChat(){if(messages==null)return;messages.text=string.Join("\n",history);entry.style.display=input.Typing?DisplayStyle.Flex:DisplayStyle.None;if(entry.value!=input.Text)entry.SetValueWithoutNotify(input.Text);if(focusInput&&input.Typing){focusInput=false;entry.schedule.Execute(()=>entry.Focus());}}
+        void TickChat(){if(toolkit==null){toolkit=new RtsUiController(transform,BuildChat,RefreshChat,()=>true);toolkit.SetSortOrder(50);toolkit.Attach();}toolkit.Tick();}
     }
 }

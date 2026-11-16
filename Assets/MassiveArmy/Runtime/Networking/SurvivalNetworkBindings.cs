@@ -26,12 +26,12 @@ namespace MassiveArmy.Networking {
         string bindingNotice="";
         void SetSurvivalKeys(Key talk,Key assist){if(Bindings.TrySet(talk,assist,out bindingNotice)){Bindings.Save();bindingNotice="Saved survival keys.";}}
         void SurvivalBindingsGUI(){
-            GUILayout.Label("Push-to-talk");int talk=Array.IndexOf(KeyBindings.Choices,Bindings.pushToTalk);
-            int selected=GUILayout.SelectionGrid(talk,KeyBindings.Labels,7);if(selected!=talk&&selected>=0)SetSurvivalKeys(KeyBindings.Choices[selected],Bindings.pilotAssist);
-            GUILayout.Label("Pilot assist (single player and multiplayer)");int assist=Array.IndexOf(KeyBindings.Choices,Bindings.pilotAssist);
-            selected=GUILayout.SelectionGrid(assist,KeyBindings.Labels,7);if(selected!=assist&&selected>=0)SetSurvivalKeys(Bindings.pushToTalk,KeyBindings.Choices[selected]);
-            if(GUILayout.Button("RESET VOICE V / ASSIST U"))SetSurvivalKeys(Key.V,Key.U);
-            if(!string.IsNullOrEmpty(bindingNotice))GUILayout.Label(bindingNotice);
+            networkUi.Label("Push-to-talk");int talk=Array.IndexOf(KeyBindings.Choices,Bindings.pushToTalk);
+            int selected=networkUi.SelectionGrid(talk,KeyBindings.Labels,7);if(selected!=talk&&selected>=0)SetSurvivalKeys(KeyBindings.Choices[selected],Bindings.pilotAssist);
+            networkUi.Label("Pilot assist (single player and multiplayer)");int assist=Array.IndexOf(KeyBindings.Choices,Bindings.pilotAssist);
+            selected=networkUi.SelectionGrid(assist,KeyBindings.Labels,7);if(selected!=assist&&selected>=0)SetSurvivalKeys(Bindings.pushToTalk,KeyBindings.Choices[selected]);
+            if(networkUi.Button("RESET VOICE V / ASSIST U"))SetSurvivalKeys(Key.V,Key.U);
+            if(!string.IsNullOrEmpty(bindingNotice))networkUi.Label(bindingNotice);
         }
     }
 }

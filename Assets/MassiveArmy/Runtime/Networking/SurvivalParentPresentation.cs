@@ -16,13 +16,17 @@ namespace MassiveArmy.Networking {
                 var proxy=JsonUtility.FromJson<SurvivalPlayerProxy>(entity.data);var entry=new PlayerPresentation{proxy=proxy};entry.parented=proxy.TryParentPose(out entry.local);entry.local.body=entity.pose.body;clientPlayers[entity.id]=entry;
             }
         }
-        void PrepareShipPoses(){
-            presentedShips.Clear();float blend=(float)(1-Math.Exp(-15*Time.unscaledDeltaTime));
+        void PrepareShipPoses()=>PrepareShipPoses((float)(1-Math.Exp(-15*Time.unscaledDeltaTime)));
+        void PrepareShipPoses(float blend){
+            presentedShips.Clear();
             foreach(var entity in visible.Values)if(entity.kind=="ship"||entity.kind=="ship-proxy"){
-                long id=entity.id/8;bool occupied=predicted?.ship?.entity==id;var state=occupied?predicted.ship:clientShips.GetValueOrDefault(id);if(state==null)continue;
+                long id=entity.id/8;bool occupied=predicted?.ship?.entity==id;var state=occupied?(VisualMotion?.ship??predicted.ship):clientShips.GetValueOrDefault(id);if(state==null)continue;
                 var point=occupied&&!predicted.interior&&predicted.vehicle==null?clientWorld.NetworkPresentedFeet:SurvivalVehicleSimulation.Position(state.pose);var rotation=ShipRotation(state);
-                if(!occupied){if(entityPositions.TryGetValue(entity.id,out var before))point=before+(point-before)*blend;if(shipPresentationRotations.TryGetValue(id,out var previous))rotation=Quaternion.Slerp(previous,rotation,blend);}
-                presentedShips[id]=(point,rotation);shipPresentationRotations[id]=rotation;
+                // A landed ship's rendered ramp must meet the authoritative walking
+                // contacts immediately. Airborne interpolation advances from the last
+                // presented pose, including after proxy -> detailed model promotion.
+                if(!occupied&&!state.landed){if(entityPositions.TryGetValue(entity.id,out var before))point=before+(point-before)*blend;if(shipPresentationRotations.TryGetValue(id,out var previous))rotation=Quaternion.Slerp(previous,rotation,blend);}
+                presentedShips[id]=(point,rotation);shipPresentationRotations[id]=rotation;entityPositions[entity.id]=point;
             }
         }
         bool ParentPlayerPose(long id,out Double3 point,out Vector3 up,out Quaternion rotation){

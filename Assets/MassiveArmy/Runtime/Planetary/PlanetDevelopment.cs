@@ -17,7 +17,7 @@ namespace MassiveArmy.Planetary
     {
 
         public bool deformTerrainOnNuke=true;
-        public PlanetGameMode sessionMode;public int requestedCapacity,ambientZombies=0,terrainSeed=73129;
+        public PlanetGameMode sessionMode=PlanetGameMode.Survival;public int requestedCapacity,ambientZombies=0,terrainSeed=73129;
 
         public bool IsSurvival=>sessionMode==PlanetGameMode.Survival;
         internal string SurvivalNotice="";
@@ -58,7 +58,7 @@ namespace MassiveArmy.Planetary
         internal PlanetFirstPersonController PlayerForValidation=>player;int shipInteraction=-1;internal bool AutomaticPlayerStep=true;
         public string InteractionPrompt=>IndustrialDriving?"F - LEAVE INDUSTRIAL VEHICLE":IndustrialInteractionPrompt.Length>0?IndustrialInteractionPrompt:PersonalPrompt.Length>0?PersonalPrompt:VehicleInteractionPrompt.Length>0?VehicleInteractionPrompt:IsPiloting?"F - LEAVE PILOT SEAT":IsFirstPerson&&StationInteractionPrompt().Length>0?StationInteractionPrompt():IsFirstPerson&&spacecraft!=null?spacecraft.InteractionPrompt(shipInteraction):"";
 
-        public bool IsPiloting=>modes!=null&&modes.Mode==PlayerControlMode.Spacecraft;
+        public bool IsPiloting=>NetworkPresentation?NetworkPiloting:modes!=null&&modes.Mode==PlayerControlMode.Spacecraft;
 
         internal PlanetLighting LightingForValidation=>lighting;
 
@@ -85,8 +85,8 @@ namespace MassiveArmy.Planetary
         public bool streamedTerrain;
 
         [Header("System size experiment (restart Play to apply)")]
-        [Tooltip("Scales every planet/star radius and celestial separation. 1 = normal, 10 = ten times larger, 100 = one hundred times larger. Keeps local terrain relief, vehicles, army capacity and surface gravity unchanged. High scales are experimental.")]
-        [Range(1,1000)] public float systemSizeMultiplier=1;
+        [Tooltip("For a shared world preset, 0 inherits its authored scale. Positive values override scale for a new world only. Local terrain relief, vehicles and surface gravity are unchanged. High scales are experimental.")]
+        [Range(0,1000)] public float systemSizeMultiplier=0;
         [ContextMenu("System size/Normal (1x)")] void NormalSystemSize()=>systemSizeMultiplier=1;
         [ContextMenu("System size/Large (10x)")] void LargeSystemSize()=>systemSizeMultiplier=10;
         [ContextMenu("System size/Huge (100x)")] void HugeSystemSize()=>systemSizeMultiplier=100;
@@ -261,8 +261,10 @@ namespace MassiveArmy.Planetary
 
             if(System.Array.IndexOf(launchArgs,"-planet-interest-validation")>=0){currentRtsContent=true;sessionMode=PlanetGameMode.AiTest;ambientZombies=0;requestedCapacity=1048576;configuredRadius=2000;streamedTerrain=true;}
 
+            sessionMode=PlanetGameMode.Survival; // RTS and army test modes are retired, including old serialized scenes.
             if(IsSurvival){StrategyEnabled=false;currentRtsContent=false;unitCount=0;ambientZombies=0;requestedCapacity=0;spawnStartingTank=false;}
             oceanProperties=new MaterialPropertyBlock();landProperties=new MaterialPropertyBlock();
+            PrepareSharedWorld(launchArgs);
 
             // Compact validation fixtures deliberately use their original generated definition.
             if(configuredRadius==0&&(System.Array.IndexOf(launchArgs,"-planet-fixture")>=0||System.Array.IndexOf(launchArgs,"-planet-benchmark")>=0||System.Array.IndexOf(launchArgs,"-planet-smoke")>=0||System.Array.IndexOf(launchArgs,"-planet-ai-validation")>=0))definition=null;
@@ -277,11 +279,11 @@ namespace MassiveArmy.Planetary
 
             if(radiusArg>=0&&radiusArg+1<launchArgs.Length&&float.TryParse(launchArgs[radiusArg+1],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out float requestedRadius))configuredRadius=Mathf.Clamp(requestedRadius,100,PlanetDefinition.TargetRadius*1000);
 
-            if(configuredRadius>0){if(!ownsDefinition){definition=Instantiate(definition);ownsDefinition=true;}definition.radius=configuredRadius;definition.gravitationalParameter=9.81*definition.radius*definition.radius;navigationResolution=Mathf.Clamp(Mathf.CeilToInt(definition.radius/15.625f),32,128);}
+            if(configuredRadius>0){if(!ownsDefinition){definition=Instantiate(definition);ownsDefinition=true;}bool changed=definition.radius!=configuredRadius;definition.radius=configuredRadius;if(changed)definition.gravitationalParameter=9.81*definition.radius*definition.radius;navigationResolution=Mathf.Clamp(Mathf.CeilToInt(definition.radius/15.625f),32,128);}
 
-            if(SystemRuntime==null&&!NetworkPresentation){
+            if(SystemRuntime==null&&!NetworkPresentation&&!sharedPresetPrepared){
                 systemDefinition=systemDefinition!=null?systemDefinition:Resources.Load<PlanetSystemDefinition>("MassiveArmy/Planets/DefaultSystem");
-                if(systemSizeMultiplier==1&&systemDefinition!=null)systemSizeMultiplier=systemDefinition.sizeMultiplier;
+                if(systemSizeMultiplier<=1&&systemDefinition!=null)systemSizeMultiplier=systemDefinition.sizeMultiplier;
                 int scaleArg=System.Array.IndexOf(launchArgs,"-planet-size-multiplier");
                 if(scaleArg>=0&&scaleArg+1<launchArgs.Length&&float.TryParse(launchArgs[scaleArg+1],System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out float requestedScale))systemSizeMultiplier=requestedScale;
                 systemSizeMultiplier=float.IsNaN(systemSizeMultiplier)||float.IsInfinity(systemSizeMultiplier)?1:Mathf.Clamp(systemSizeMultiplier,1,1000);
@@ -289,7 +291,7 @@ namespace MassiveArmy.Planetary
                 Debug.Log($"Planet system size: {systemSizeMultiplier:0.##}x; home radius {definition.radius/1000:0.##} km; diameter {definition.radius/500:0.##} km. Army capacity {requestedCapacity} unchanged.");
             }
             var startingHome=new Vector3(1,.12f,1.3f).normalized;
-            if(configuredRadius>=PlanetDefinition.RegionalNavigationRadius&&System.Array.IndexOf(launchArgs,"-planet-interest-validation")<0&&System.Array.IndexOf(launchArgs,"-planet-crowd-validation")<0){if(SystemRuntime==null&&!NetworkPresentation){definition.terrainHeight=definition.radius>=20000?1800:240;definition.oceanHeight=-35;}if(definition.radius>=20000&&SystemRuntime==null&&!NetworkPresentation)definition.atmosphereHeight=Mathf.Max(10000,definition.atmosphereHeight);var home=startingHome;
+            if(configuredRadius>=PlanetDefinition.RegionalNavigationRadius&&System.Array.IndexOf(launchArgs,"-planet-interest-validation")<0&&System.Array.IndexOf(launchArgs,"-planet-crowd-validation")<0){if(SystemRuntime==null&&!NetworkPresentation&&!sharedPresetPrepared){definition.terrainHeight=definition.radius>=20000?1800:240;definition.oceanHeight=-35;}if(definition.radius>=20000&&SystemRuntime==null&&!NetworkPresentation&&!sharedPresetPrepared)definition.atmosphereHeight=Mathf.Max(10000,definition.atmosphereHeight);var home=startingHome;
                 if(definition.radius>=20000){
                     if(AlliedStart)home=PlanetStartingRegion.SelectCoastal(definition,startingHome);
                     else if(DeferredInitialization){bool found=false;foreach(var candidate in PlanetStartingRegion.Candidates(definition,startingHome)){if(PlanetStartingRegion.ConnectedPlain(definition,candidate)){home=candidate;found=true;break;}yield return null;}if(!found)throw new System.InvalidOperationException("No connected dry starting region found");}
@@ -374,7 +376,7 @@ namespace MassiveArmy.Planetary
             if(System.Array.IndexOf(args,"-planet-system-baseline")>=0){validationDistantBody=ScriptableObject.CreateInstance<PlanetDefinition>();validationDistantBody.bodyId=2;validationDistantBody.radius=10000000;validationDistantBody.position=definition.position.Add(new Double3(-40000000,10000000,-20000000));distantBodies=new[]{validationDistantBody};}
             if(!NetworkPresentation&&SystemRuntime==null&&(distantBodies==null||distantBodies.Length==0)&&System.Array.IndexOf(args,"-planet-single-body")<0){
                 systemDefinition=systemDefinition!=null?systemDefinition:Resources.Load<PlanetSystemDefinition>("MassiveArmy/Planets/DefaultSystem");
-                if(systemDefinition!=null){SystemRuntime=gameObject.AddComponent<PlanetSystemRuntime>();SystemRuntime.Initialize(this,systemDefinition);}
+                if(pendingPresetUniverse!=null)InitializeSharedSystem();else if(systemDefinition!=null){SystemRuntime=gameObject.AddComponent<PlanetSystemRuntime>();SystemRuntime.Initialize(this,systemDefinition);}
             }
             if(distantBodies==null)distantBodies=System.Array.Empty<PlanetDefinition>();
 
@@ -645,7 +647,7 @@ namespace MassiveArmy.Planetary
             if(value&&Ready){Base?.FlushConstructionCosts();lighting=new PlanetLighting(view,transform,rig.FocusDirection);if(SystemRuntime!=null){lighting.Sun.transform.rotation=SystemRuntime.SunRotation;lighting.Update();}}
         }
 
-        void OnDestroy(){shipyard?.Dispose();DisposeInventoryUi();DisposeRespawn();industry?.Dispose();DisposeProductionProbe();DisposePersonalGameplay();groundVehicles?.Dispose();weatherRenderer?.Dispose();Orbitals?.Dispose();settlementRenderer?.Dispose();headquartersHud?.Dispose();spacecraft?.Dispose();terrainRenderer?.Dispose();flightHudRenderer?.Dispose();lighting?.Dispose();encounter?.Dispose();resourceDecals?.Dispose();placementProbe?.Dispose();hud?.Dispose();Base?.Dispose();catalogRenderer?.Dispose();archetypes?.Dispose();traits?.Dispose();buildingFootprints?.Dispose();commands?.Dispose();player?.Dispose();streamed?.Dispose();cbt?.Dispose();scaledRenderer?.Dispose();navigation?.Dispose();costs?.Dispose();units?.Dispose();arguments?.Dispose();biomeColours?.Dispose();ArmyLifetime.Destroy(movement);TerrainSurfaceLibrary.Unbind(terrainMaterial);ArmyLifetime.Destroy(terrainMaterial);ArmyLifetime.Destroy(unitMaterial);ArmyLifetime.Destroy(tank);ArmyLifetime.Destroy(validationDistantBody);if(ownsDefinition)ArmyLifetime.Destroy(definition);if(view!=null)ArmyLifetime.Destroy(view.gameObject);}
+        void OnDestroy(){DisposePendingWorldPreset();shipyard?.Dispose();DisposeInventoryUi();DisposeRespawn();industry?.Dispose();DisposeProductionProbe();DisposePersonalGameplay();groundVehicles?.Dispose();weatherRenderer?.Dispose();Orbitals?.Dispose();settlementRenderer?.Dispose();headquartersHud?.Dispose();if(!NetworkPresentation)spacecraft?.Dispose();terrainRenderer?.Dispose();flightHudRenderer?.Dispose();lighting?.Dispose();encounter?.Dispose();resourceDecals?.Dispose();placementProbe?.Dispose();hud?.Dispose();Base?.Dispose();catalogRenderer?.Dispose();archetypes?.Dispose();traits?.Dispose();buildingFootprints?.Dispose();commands?.Dispose();player?.Dispose();streamed?.Dispose();cbt?.Dispose();scaledRenderer?.Dispose();navigation?.Dispose();costs?.Dispose();units?.Dispose();arguments?.Dispose();biomeColours?.Dispose();ArmyLifetime.Destroy(movement);TerrainSurfaceLibrary.Unbind(terrainMaterial);ArmyLifetime.Destroy(terrainMaterial);ArmyLifetime.Destroy(unitMaterial);ArmyLifetime.Destroy(tank);ArmyLifetime.Destroy(validationDistantBody);if(ownsDefinition)ArmyLifetime.Destroy(definition);if(view!=null)ArmyLifetime.Destroy(view.gameObject);}
 
     }
 

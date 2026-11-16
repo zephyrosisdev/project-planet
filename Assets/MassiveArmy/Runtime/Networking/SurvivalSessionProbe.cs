@@ -11,8 +11,10 @@ namespace MassiveArmy.Networking {
     // This does not supply a server-side admission bypass or privileged gameplay commands.
     internal sealed partial class SurvivalSessionProbe:MonoBehaviour {
         [Serializable] sealed class Report {
+            public bool testClockRejected,testClockAccelerated,testClockRestored;
             public string status="STARTING",scope="Standalone authenticated session probe; not full survival, Vivox, capacity, frame-time or army acceptance",error="",profile,relayCode;
-            public bool dedicated,headlessClient,canonicalDefinitionMatches,remotePlayerSeen,reconnected,cleanupRequested;public long actor,firstTick,lastTick;public int snapshots,matchingPredictionSamples,hardCorrections;
+            public int presentationBodies,presentationDistantBodies;public bool toolkitPresentation,pilotHudPresentation;
+            public int inventoryStepNow;public bool inventorySlotsVerified;public bool dedicated,headlessClient,canonicalDefinitionMatches,remotePlayerSeen,reconnected,cleanupRequested;public long actor,firstTick,lastTick;public int snapshots,matchingPredictionSamples,hardCorrections;
             public double movementMetres,movementMaximumMetres,maxMatchingPredictionError;public bool separatedRegions;public int body;
             public uint lastAcknowledgedInput,lastSentInput;public int historyEntries,samplesWithHistory,epochMismatches,tickMismatches,frameMismatches,nonFiniteHistorySamples,emptyReferencesNormalized;
             public bool chatRequired,textBefore,voiceBefore,mutedBefore,peerTextBefore,ownTextAcknowledgedBefore,textAfter,voiceAfter,mutedAfter,peerTextAfter,ownTextAcknowledgedAfter,gameplayConnectedOnChatFailure;
@@ -26,7 +28,8 @@ namespace MassiveArmy.Networking {
             public bool buildingCreated,buildingRestored,buildingRecovered,buildingConserved,buildingPrivacy,buildingReconnect,buildingRendered,buildingRenderCleared;public int buildingAccepted,buildingRejections,buildingStepNow;
             public bool shipyardCreated,shipyardRestored,shipyardRecovered,shipyardConserved,shipyardPrivacy;public int shipyardAccepted,shipyardRejections;
             public bool transportSimulationActive;public int simulatedDelayMs,simulatedJitterMs;public float simulatedLossPercent;
-            public bool interiorRequired,interiorBoarded,interiorWalked,interiorHatchBlocked,interiorPilot,interiorPilotDenied,interiorParentMoved,interiorReconnect,interiorCanonical;public int interiorStepNow;
+            public bool dockRequired,dockMoored,dockUndocked,dockAcquired,dockReconnect,dockPassengerDenied;public int dockStep;
+            public bool interiorRequired,interiorBoarded,interiorWalked,interiorReboarded,interiorLandedReboarded,interiorHatchBlocked,interiorPilot,interiorPilotDenied,interiorParentMoved,interiorReconnect,interiorCanonical;public int interiorStepNow;public FramePose interiorReconnectBefore,interiorReconnectAfter;
             public bool combatRequired,combatKilled,combatRevived,combatRecovered,combatReplay,combatReconnect;public int combatShots,combatStepNow;
             public int snapshotFailures,visibleMachines,factoryStepNow,shipStepNow;public string lastSnapshotError,lastSessionStatus;
         }
@@ -60,7 +63,7 @@ namespace MassiveArmy.Networking {
             report.chatRequired=Array.IndexOf(Environment.GetCommandLineArgs(),"-survival-probe-chat")>=0;
             if(report.chatRequired)report.scope+=" Includes Vivox text delivery, positional channel membership and muted capture before/after reconnect. Audible voice and physical keyboard input remain unverified.";
             if(report.chatRequired&&report.headlessClient){_ = Finish(false,"Chat probe requires graphics-enabled clients");return;}
-            if(!StartFactoryProbe()||!StartInteriorProbe()||!StartCombatProbe())return;
+            if(!StartFactoryProbe()||!StartInteriorProbe()||!StartCombatProbe()||!StartDockProbe())return;
             profile=Argument("-survival-probe-profile");code=Argument("-survival-probe-code");report.profile=profile;
             if(string.IsNullOrWhiteSpace(profile)||!profile.StartsWith("probe_",StringComparison.Ordinal)||string.IsNullOrWhiteSpace(code))_ = Finish(false,"Probe needs a disposable probe_ profile and Relay code");
         }
@@ -78,6 +81,12 @@ namespace MassiveArmy.Networking {
             if(!connecting){if(!report.headlessClient)app=FindAnyObjectByType<BattleApp>();if(report.headlessClient||app?.View!=null){connecting=true;_ = Connect();}return;}
             if(phase!=3&&session!=null&&(session.Status.StartsWith("Disconnected:",StringComparison.Ordinal)||session.Status=="Connection timed out")){_ = Finish(false,session.Status);return;}
             if(session?.Latest?.self==null||!session.ClientSimulationReady)return;
+            if(!report.headlessClient){
+                var world=session.ClientWorld;report.presentationBodies=world.SystemRuntime?.Bodies?.Length??0;report.presentationDistantBodies=world.distantBodies?.Length??0;
+                report.toolkitPresentation|=session.NetworkToolkitReady;
+                if(world.IsPiloting&&world.ShipForValidation?.PilotRootForValidation!=null){report.pilotHudPresentation=true;ObservePresentationCapture(true);}
+                if(report.toolkitPresentation)ObservePresentationCapture(false);
+            }
             if(!report.canonicalDefinitionMatches){
                 var supplied=JsonUtility.FromJson<CanonicalDefinition>(session.ProbeWorldDefinition);var actual=session.ClientSimulationDefinition;
                 if(supplied==null||supplied.bodyId!=actual.bodyId||supplied.terrainSeed!=actual.terrainSeed||supplied.radius!=actual.radius||supplied.terrainHeight!=actual.terrainHeight||supplied.oceanHeight!=actual.oceanHeight||supplied.stampTerrain!=actual.stampTerrain||Math.Abs(supplied.gravitationalParameter-actual.gravitationalParameter)>Math.Max(1,Math.Abs(supplied.gravitationalParameter))*1e-12){_ = Finish(false,"Client initialization changed the server's canonical planet definition");return;}report.canonicalDefinitionMatches=true;
@@ -85,6 +94,8 @@ namespace MassiveArmy.Networking {
             var snapshot=session.Latest;report.body=snapshot.self.pose.body;if(report.separatedRegions&&report.remotePlayerSeen){_ = Finish(false,"A player from a different planet leaked into local interest");return;}if(report.actor==0){report.actor=snapshot.self.id;report.firstTick=snapshot.tick;phaseStarted=Time.realtimeSinceStartupAsDouble;}
             if(report.chatRequired)ObserveChat();
             foreach(var entity in session.Visible.Values)if(entity.kind=="player")report.remotePlayerSeen=true;
+            if(PerformanceRequested){UpdatePerformanceProbe();return;}
+            if(report.dockRequired){UpdateDockProbe();return;}
             if(report.combatRequired){UpdateCombatProbe();return;}
             if(report.interiorRequired){UpdateInteriorProbe();return;}
             if(report.factoryRequired){UpdateFactoryProbe();return;}
@@ -95,6 +106,7 @@ namespace MassiveArmy.Networking {
                 if(report.movementMetres<3||report.movementMetres>report.movementMaximumMetres){_ = Finish(false,"Authoritative walking distance outside the expected fixed-clock bound");return;}
                 if(report.matchingPredictionSamples<10){_ = Finish(false,"Too few acknowledged prediction samples");return;}
                 if(report.chatRequired&&!CheckChat(false))return;
+                if(!InventoryProbeReady())return;
                 lastPose=snapshot.self.pose;phase=3;_ = Reconnect();
             }
             if(phase==4){
@@ -111,6 +123,8 @@ namespace MassiveArmy.Networking {
             catch(Exception e){_ = Finish(false,e.Message);}
         }
         internal SurvivalInput Controls(SurvivalInput input){
+            if(PerformanceRequested){input.x=input.y=input.z=input.roll=input.lookX=input.lookY=0;input.jump=input.boost=false;return input;}
+            if(report.dockRequired)return DockControls(input);
             if(report.combatRequired){input.x=input.y=0;return input;}
             input.x=0;input.y=!report.factoryRequired&&phase==1?1:0;input.z=input.roll=input.lookX=input.lookY=0;input.jump=input.boost=input.toggleAssist=input.toggleGear=false;input.brake=false;return report.interiorRequired?InteriorControls(input):report.factoryRequired?FactoryControls(input):input;
         }
@@ -151,7 +165,12 @@ namespace MassiveArmy.Networking {
         internal void SnapshotFailure(string error){report.snapshotFailures++;report.lastSnapshotError=error;if(report.snapshotFailures==1)Debug.LogWarning("Diagnostic snapshot rejection: "+error);}
         internal void LargeSnapshotApplied(SurvivalSnapshot snapshot){report.largeSnapshots++;if(snapshot.privateDetails)report.largestPrivateRespawnCount=Math.Max(report.largestPrivateRespawnCount,snapshot.respawnPoints.Count);}
         async Task Finish(bool success,string error){
-            if(finishing)return;finishing=true;if(report.factoryRequired&&factoryStartPose.HasValue&&session?.Latest?.self!=null)report.movementMetres=factoryStartPose.Value.Distance(session.Latest.self.pose);StopFactoryProbe();StopInteriorProbe();StopCombatProbe();report.error=error??"";report.status=success?"PASS":"FAIL";
+            if(finishing)return;
+            if(success&&!report.dedicated&&!report.headlessClient&&(report.presentationBodies<2||report.presentationDistantBodies!=report.presentationBodies-1||!report.toolkitPresentation)){success=false;error="Network solar-system or UI Toolkit presentation was missing";}
+            if(success&&report.interiorRequired&&InteriorOwner&&!report.headlessClient&&!report.pilotHudPresentation){success=false;error="Pilot trajectory HUD did not initialize";}
+            if(success&&report.interiorRequired&&InteriorOwner&&!report.interiorLandedReboarded){success=false;error="Interior test did not land, disembark and reboard through the ramp";}
+            finishing=true;if(report.factoryRequired&&factoryStartPose.HasValue&&session?.Latest?.self!=null)report.movementMetres=factoryStartPose.Value.Distance(session.Latest.self.pose);StopFactoryProbe();StopInteriorProbe();StopCombatProbe();StopDockProbe();report.error=error??"";report.status=success?"PASS":"FAIL";
+            DisposePerformanceProbe();
             if(!ReferenceEquals(observedChat,null))observedChat.TextReceived-=ChatMessage;
             try{if(session!=null){report.cleanupRequested=true;await session.Disconnect(false);}}
             catch(Exception e){report.status="FAIL";report.error+=" Cleanup: "+e.Message;}

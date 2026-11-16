@@ -16,6 +16,7 @@ Shader "MassiveArmy/Planet weather" {
  float4 _WeatherFullSize,_WeatherHalfSize,_WeatherView,_WeatherBounds,_WeatherAtmosphere,_WeatherCloud,_WeatherWind,_WeatherDepthProjection;
  float3 _WeatherRight,_WeatherUp,_WeatherForward,_WeatherCentre,_WeatherSun,_WeatherAirColour,_WeatherCloudColour;
  float4 _WeatherAdaptiveDetail,_WeatherLocalAnchor,_WeatherLocalRotation;
+ float _WeatherDiagnosticStage,_WeatherDiagnosticCloudAlpha;float3 _WeatherNoiseProbePoint;
  float _WeatherRadius,_WeatherLocal,_WeatherNoiseLod,_WeatherEyeAltitude;
  Texture3D<float> _WeatherLightCache;SamplerState sampler_WeatherLightCache;
  float4 _WeatherLighting,_WeatherCloudLod,_WeatherLightEffects,_WeatherLightSize;float _WeatherPrecisionEnabled;float3 _WeatherSunColour;
@@ -42,11 +43,19 @@ Shader "MassiveArmy/Planet weather" {
   float depth=abs(_WeatherDepthProjection.y/denominator);
   return isfinite(depth)?min(depth,1e20):1e20;
  }
- float NearDepth(int2 halfPixel){
+ // The low-resolution integration represents a full-resolution depth footprint.
+ // Comparing only its nearest corner against a steep planet face can reject all
+ // four upsample taps and abruptly remove both cloud light and air extinction.
+ void DepthFootprint(int2 halfPixel,out float nearest,out float farthest){
   float2 ratio=_WeatherFullSize.xy/max(1,_WeatherHalfSize.xy);int2 p=(int2)floor(halfPixel*ratio),last=(int2)ceil((halfPixel+1)*ratio)-1,limit=int2(_WeatherFullSize.xy)-1;
-  float nearest=1e20;
-  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++)nearest=min(nearest,Eye(_WeatherLocalDepth.Load(int3(min(p+int2(x,y)*max(int2(0,0),last-p),limit),0))));
-  return nearest;
+  nearest=1e20;farthest=0;
+  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++){float d=Eye(_WeatherLocalDepth.Load(int3(min(p+int2(x,y)*max(int2(0,0),last-p),limit),0)));nearest=min(nearest,d);farthest=max(farthest,d);}
+ }
+ float NearDepth(int2 halfPixel){float nearest,farthest;DepthFootprint(halfPixel,nearest,farthest);return nearest;}
+ float DepthWeight(int2 halfPixel,float current){
+  float nearest,farthest;DepthFootprint(halfPixel,nearest,farthest);
+  float difference=max(nearest-current,current-farthest);
+  return exp(-max(0,difference)/max(.5,current*.01));
  }
  float CopyDepth(V i):SV_Target{return SceneDepth(int2(i.position.xy));}
  float2 RoomRange(float3 inverseRay,float3 low,float3 high){
@@ -159,12 +168,19 @@ Shader "MassiveArmy/Planet weather" {
    float3 localShape=CloudShape(normalize(p));
    float halfWidth=abs(dot(normalize(p),ray))*step*.5/max(1e-8,_WeatherAtmosphere.w);
    float vertical=CloudVerticalFiltered(layer,localShape,halfWidth);
-   float cover=localShape.x;if(cover<.001||vertical<.001)continue;float density=CloudSampleDensity(p,vertical,cover,_WeatherCloud.z);
+   float cover=localShape.x;if(cover<.001||vertical<.001)continue;// Use the existing mip chain to integrate sub-pixel/sub-step detail.
+   // A large on-screen planet must not force metre-scale erosion to mip zero.
+   float footprint=max(step*_WeatherRadius,2*t*_WeatherRadius*_WeatherView.y/max(1,_WeatherHalfSize.y));
+   float density=CloudSampleDensity(p,vertical,cover,_WeatherCloud.z,CloudFootprintLod(footprint));
    [branch]if(_WeatherAdaptiveDetail.x>0){
     float3 relative=ray*(t*_WeatherRadius);float sn=_WeatherLocalRotation.x,cs=_WeatherLocalRotation.y;
     float3 rotated=float3(relative.x*cs-relative.z*sn,relative.y,relative.x*sn+relative.z*cs);
     float3 local=(_WeatherLocalAnchor.xyz+rotated)/max(1,_WeatherAdaptiveDetail.y);
-    float erosion=WeatherNoiseAt(local,0)*.6+WeatherNoiseAt(local*2+17.3,0)*.4;
+    float localLod=max(0,log2(max(1e-6,footprint/max(1,_WeatherAdaptiveDetail.y)))),localSecondLod=localLod+1;
+    #ifdef WEATHER_POINT_NOISE
+    localLod=localSecondLod=0;
+    #endif
+    float erosion=WeatherNoiseAt(local,localLod)*.6+WeatherNoiseAt(local*2+17.3,localSecondLod)*.4;
     float localDensity=saturate(cover-erosion*saturate(_WeatherNoiseTuning.x))*vertical*(1+CloudInterior(vertical,cover)*_WeatherDetailMotion.w);
     density=lerp(density,localDensity,_WeatherAdaptiveDetail.x);
    }
@@ -172,10 +188,31 @@ Shader "MassiveArmy/Planet weather" {
   }
   return NightCloud(lerp(farCloud,float4(colour,1-transmission),_WeatherCloud.z),middlePoint);
  }
+ SplitAirIntegral AtmosphereSplit(float3 ray,float start,float end,int samples,float split){
+  if(_AirScattering.x>.5)return ScatterAirSplit(ray,start,end,samples,split);
+  SplitAirIntegral a;a.front=EmptyAir();a.back=EmptyAir();if(end<=start)return a;
+  float step=(end-start)/samples,scale=max(.00001,_WeatherAtmosphere.x*.18);
+  [loop]for(int i=0;i<samples;i++){float3 p=ray*(start+(i+.5)*step)-_WeatherCentre;float altitude=max(0,length(p)-1),density=exp(-altitude/scale);
+   float day=Day(p),mu=dot(ray,_WeatherSun);float3 lit=_WeatherAirColour*(.018+day*(.65+.35*mu*mu))+float3(1,.73,.42)*day*pow(saturate(mu),24)*.35;
+   float extinction=density/scale*_WeatherAtmosphere.y*.32,frontLength=clamp(split-(start+i*step),0,step);
+   AccumulateAir(a.front,extinction,extinction*lit*3,frontLength);AccumulateAir(a.back,extinction,extinction*lit*3,step-frontLength);
+  }return a;
+ }
  struct WeatherIntegral {float4 light:SV_Target0;float4 transmission:SV_Target1;};
  WeatherIntegral WeatherOutput(float3 light,float3 transmission){WeatherIntegral result;result.light=float4(max(0,light),1-dot(saturate(transmission),float3(.2126,.7152,.0722)));result.transmission=float4(saturate(transmission),1);return result;}
  WeatherIntegral Integrate(V i){
-  float3 ray=normalize(_WeatherForward+_WeatherRight*(i.ndc.x*_WeatherView.x*_WeatherView.y)+_WeatherUp*(i.ndc.y*_WeatherView.y*_WeatherView.z));
+  #ifdef WEATHER_DIAGNOSTIC
+  if(_WeatherDiagnosticStage==1)return WeatherOutput(float3(1,0,0),.5);
+  if(_WeatherDiagnosticStage==3)return WeatherOutput(WeatherNoiseAt(_WeatherNoiseProbePoint,_WeatherDetailNoiseLod).xxx,.5);
+  #endif
+  // Derive the ray from its pixel, not interpolated bounds-quad coordinates.
+  // Moving/changing the quad must not perturb the ray or the cloud noise phase.
+  float2 integrationSize=_WeatherHalfSize.x>0?_WeatherHalfSize.xy:_WeatherFullSize.xy;
+  float2 ndc=i.position.xy/max(1,integrationSize)*2-1;
+  #if UNITY_UV_STARTS_AT_TOP
+  ndc.y=-ndc.y;
+  #endif
+  float3 ray=normalize(_WeatherForward+_WeatherRight*(ndc.x*_WeatherView.x*_WeatherView.y)+_WeatherUp*(ndc.y*_WeatherView.y*_WeatherView.z));
   float2 atmosphere;if(!SphereAltitude(ray,max(_WeatherAtmosphere.x,_WeatherAtmosphere.z+_WeatherAtmosphere.w),atmosphere))return WeatherOutput(0,1);float start=max(CabinExit(ray)/_WeatherRadius,max(0,atmosphere.x)),end=atmosphere.y;
   // Use the actual integration-to-camera ratio: Ultra is full resolution,
   // High is 3/4 and overrides can vary. A fixed x2 samples unrelated depth.
@@ -184,9 +221,18 @@ Shader "MassiveArmy/Planet weather" {
   float rawLocal=_WeatherLocalDepth.Load(int3(pixel,0));float stop=NearDepth(int2(i.position.xy))/forward;
   {float raw=SceneDepth(pixel);if(HasDepth(raw)&&abs(raw-rawLocal)>1e-10){float scaled=Eye(raw)/forward;float physical=scaled<10000?10000*scaled/max(.0001,10000-scaled):1e20;stop=min(stop,physical);}}
   float shadow=GroundCloudShadow(ray,stop);
-  end=min(end,stop/_WeatherRadius);float2 ground;if(SphereAltitude(ray,0,ground)&&ground.x>0)end=min(end,ground.x);if(end<=start)return WeatherOutput(0,1-shadow);
+  end=min(end,stop/_WeatherRadius);float2 ground;if(SphereAltitude(ray,0,ground)&&ground.x>0)end=min(end,ground.x);
+  #ifdef WEATHER_DIAGNOSTIC
+  if(_WeatherDiagnosticStage==2)return WeatherOutput(float3(start,end,stop/_WeatherRadius),.5);
+  #endif
+  if(end<=start)return WeatherOutput(0,1-shadow);
   uint key=(uint)pixel.x*1973u+(uint)pixel.y*9277u+89173u;key^=key>>16;key*=0x7feb352du;key^=key>>15;float jitter=(key&65535u)/65536.0;
   float4 cloud=Clouds(ray,start,end,jitter);AirIntegral result;float2 cloudRange;
+  #ifdef WEATHER_DIAGNOSTIC
+  if(_WeatherDiagnosticStage==4)cloud=float4(0,0,0,_WeatherDiagnosticCloudAlpha);
+  #endif
+  #ifdef WEATHER_POINT_NOISE
+  // Diagnostic baseline: the previous opacity-dependent sample layout.
   // Air between the eye and a cloud must composite in front of that cloud.
   // The former cloud-over-all-air blend reversed this order. Split the same
   // six air samples around the first cloud entry; retain twelve cloud samples.
@@ -197,6 +243,13 @@ Shader "MassiveArmy/Planet weather" {
    result.light=front.light+front.transmission*(cloud.rgb+back.light*(1-cloud.a));
    result.transmission=front.transmission*back.transmission*(1-cloud.a);
   }else result=Atmosphere(ray,start,end,6);
+  #else
+  // Cloud composition may partition optical depth, never the sample locations.
+  float split=end;if(cloud.a>0&&SphereAltitude(ray,_WeatherAtmosphere.z+_WeatherAtmosphere.w,cloudRange))split=clamp(cloudRange.x,start,end);
+  SplitAirIntegral air=AtmosphereSplit(ray,start,end,6,split);
+  result.light=air.front.light+air.front.transmission*(cloud.rgb+air.back.light*(1-cloud.a));
+  result.transmission=air.front.transmission*air.back.transmission*(1-cloud.a);
+  #endif
   // The soft shadow attenuates the opaque scene before atmospheric scattering.
   result.transmission*=1-shadow;
   // Invalid reconstruction must leave the opaque scene intact. A single NaN
@@ -206,18 +259,36 @@ Shader "MassiveArmy/Planet weather" {
  }
  float4 Composite(V i):SV_Target{
   int2 pixel=int2(i.position.xy);float current=Eye(_WeatherLocalDepth.Load(int3(pixel,0)));float2 hp=(pixel+.5)*_WeatherHalfSize.xy/_WeatherFullSize.xy-.5;int2 base=(int2)floor(hp);float2 f=frac(hp);float4 colour=0;float total=0;
-  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++){int2 at=clamp(base+int2(x,y),int2(0,0),int2(_WeatherHalfSize.xy)-1);float d=NearDepth(at);
-   float weight=(x?f.x:1-f.x)*(y?f.y:1-f.y)*exp(-abs(d-current)/max(.5,current*.01));colour+=_WeatherIntegrated.Load(int3(at,0))*weight;total+=weight;
+  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++){int2 at=clamp(base+int2(x,y),int2(0,0),int2(_WeatherHalfSize.xy)-1);
+   float weight=(x?f.x:1-f.x)*(y?f.y:1-f.y)*DepthWeight(at,current);colour+=_WeatherIntegrated.Load(int3(at,0))*weight;total+=weight;
   // Never fall back to a background-cloud sample on a thin foreground silhouette.
   }if(total<=1e-5||!isfinite(total)||!all(isfinite(colour)))return 0;
   return float4(max(0,colour.rgb/total),saturate(colour.a/total));
  }
  float4 CompositeTransmission(V i):SV_Target{
   int2 pixel=int2(i.position.xy);float current=Eye(_WeatherLocalDepth.Load(int3(pixel,0)));float2 hp=(pixel+.5)*_WeatherHalfSize.xy/_WeatherFullSize.xy-.5;int2 base=(int2)floor(hp);float2 f=frac(hp);float3 transmission=0;float total=0;
-  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++){int2 at=clamp(base+int2(x,y),int2(0,0),int2(_WeatherHalfSize.xy)-1);float d=NearDepth(at);
-   float weight=(x?f.x:1-f.x)*(y?f.y:1-f.y)*exp(-abs(d-current)/max(.5,current*.01));transmission+=_WeatherTransmission.Load(int3(at,0)).rgb*weight;total+=weight;
+  [unroll]for(int y=0;y<2;y++)[unroll]for(int x=0;x<2;x++){int2 at=clamp(base+int2(x,y),int2(0,0),int2(_WeatherHalfSize.xy)-1);
+   float weight=(x?f.x:1-f.x)*(y?f.y:1-f.y)*DepthWeight(at,current);transmission+=_WeatherTransmission.Load(int3(at,0)).rgb*weight;total+=weight;
   }if(total<=1e-5||!isfinite(total)||!all(isfinite(transmission)))return 1;
   return float4(saturate(transmission/total),1);
+ }
+ float4 TraceGrid(V i):SV_Target{
+  int2 at=min(int2(i.position.xy*(_WeatherHalfSize.xy/float2(64,36))),int2(_WeatherHalfSize.xy)-1);
+  int2 depthAt=min(int2(i.position.xy*(_WeatherFullSize.xy/float2(64,36))),int2(_WeatherFullSize.xy)-1);
+  float4 weather=_WeatherIntegrated.Load(int3(at,0));return float4(weather.a,HasDepth(_WeatherLocalDepth.Load(int3(depthAt,0)))?1:0,dot(weather.rgb,float3(.2126,.7152,.0722)),1);
+ }
+ float4 TraceRay(V i):SV_Target{
+  float2 ndc=(floor(_WeatherHalfSize.xy*.5)+.5)/_WeatherHalfSize.xy*2-1;
+  #if UNITY_UV_STARTS_AT_TOP
+  ndc.y=-ndc.y;
+  #endif
+  float3 ray=normalize(_WeatherForward+_WeatherRight*(ndc.x*_WeatherView.x*_WeatherView.y)+_WeatherUp*(ndc.y*_WeatherView.y*_WeatherView.z));
+  int2 pixel=int2(_WeatherFullSize.xy*.5);float stop=NearDepth(int2(_WeatherHalfSize.xy*.5))/max(.001,dot(ray,_WeatherForward));
+  float rawLocal=_WeatherLocalDepth.Load(int3(pixel,0)),raw=SceneDepth(pixel);
+  if(HasDepth(raw)&&abs(raw-rawLocal)>1e-10){float scaled=Eye(raw)/max(.001,dot(ray,_WeatherForward));stop=min(stop,scaled<10000?10000*scaled/max(.0001,10000-scaled):1e20);}
+  float2 range;if(!SphereAltitude(ray,max(_WeatherAtmosphere.x,_WeatherAtmosphere.z+_WeatherAtmosphere.w),range))return -1;
+  float start=max(CabinExit(ray)/_WeatherRadius,max(0,range.x)),end=min(range.y,stop/_WeatherRadius);float2 ground;if(SphereAltitude(ray,0,ground)&&ground.x>0)end=min(end,ground.x);
+  return float4(start,end,stop/_WeatherRadius,CabinExit(ray)/_WeatherRadius);
  }
  ENDHLSL
  Pass {Cull Off ZWrite Off ZTest Always
@@ -233,6 +304,8 @@ Shader "MassiveArmy/Planet weather" {
  #pragma target 5.0
  #pragma vertex Body
  #pragma fragment Integrate
+ #pragma multi_compile_local _ WEATHER_DIAGNOSTIC
+ #pragma multi_compile_local _ WEATHER_POINT_NOISE
  #pragma multi_compile_local _ WEATHER_DEPTH_ARRAY
  ENDHLSL
  }
@@ -257,6 +330,21 @@ Shader "MassiveArmy/Planet weather" {
  #pragma target 5.0
  #pragma vertex Full
  #pragma fragment Composite
+ ENDHLSL
+ }
+ Pass {Cull Off ZWrite Off ZTest Always
+ HLSLPROGRAM
+ #pragma target 5.0
+ #pragma vertex Full
+ #pragma fragment TraceGrid
+ ENDHLSL
+ }
+ Pass {Cull Off ZWrite Off ZTest Always
+ HLSLPROGRAM
+ #pragma target 5.0
+ #pragma vertex Full
+ #pragma fragment TraceRay
+ #pragma multi_compile_local _ WEATHER_DEPTH_ARRAY
  ENDHLSL
  }
  }}

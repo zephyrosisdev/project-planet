@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace MassiveArmy.Networking {
     public sealed partial class SurvivalNetworkSession {
-        sealed class ShipSimulation {public PlanetSpacecraft ship;public string restored;public int body;}
+        sealed class ShipSimulation {public PlanetSpacecraft ship;public string restored;public int body;public double queryTime;public float queryElapsed;}
         readonly Dictionary<long,ShipSimulation> shipSimulations=new Dictionary<long,ShipSimulation>();
         readonly Dictionary<long,SurvivalShipState> clientShips=new Dictionary<long,SurvivalShipState>();
         readonly Dictionary<long,ShipAssembly> clientShipAssemblies=new Dictionary<long,ShipAssembly>();
@@ -17,12 +17,13 @@ namespace MassiveArmy.Networking {
             var ship=authority.World.multiplayer.ships.Find(s=>s.entity==entity);var actor=authority.World.Actor(peer.record.actor);
             if(ship==null||actor.health<=0)return "Ship unavailable";
             if(peer.record.attachedShip!=0||peer.record.controlledEntity!=0||peer.record.controlledShip!=0)return "Leave the current seat first";
-            if(ship.owner!=actor.id&&!ship.invitedActors.Contains(actor.id))return "The ship owner must invite you aboard";
-            if(!ship.landed||ship.autoFlight||actor.pose.Distance(ShipEntry(ship))>12)return "Move within 12 m of the landed ship's boarding ramp";
-            if(!ChooseInteriorFeet(ship,actor.id,ShipModules.P(0,-4,-35),out var feet))return "The boarding airlock is occupied";
-            if(ship.owner!=actor.id){string error=SurvivalShipAuthority.BoardPassenger(authority.World,peer.record,entity,ShipEntry(ship),connectedActors);if(error!=null)return error;}
+            string access=SurvivalShipAuthority.BoardingPermission(authority.World,actor.id,ship);if(access!=null)return access;
+            if(!ship.landed||ship.autoFlight)return "Land the ship before boarding";
+            var feet=SurvivalShipInteriorModel.Local(ship,actor.pose);var model=Interior(ship,authority.World.Ship(ship.owner));var clearance=feet;clearance.y=Math.Max(clearance.y,model.RampHeight(feet.z)+.05+.35*Math.Abs((-4-model.rampFootY)/14));if(!model.AtRampFoot(feet)||!ClearInteriorFeet(ship,model,actor.id,clearance))return "Walk onto the foot of the boarding ramp";
+            if(ship.owner!=actor.id){string error=SurvivalShipAuthority.BoardPassenger(authority.World,peer.record,entity,actor.pose,connectedActors);if(error!=null)return error;}
             else peer.record.shipSeat=-1;
-            BeginInterior(peer,ship,feet);return null;
+            var heading=Quaternion.Inverse(ShipRotation(ship))*SurvivalMovement.Forward(peer.motion);feet.yaw=Mathf.Atan2(heading.x,heading.z)*Mathf.Rad2Deg;float pitch=peer.motion.pitch;
+            BeginInterior(peer,ship,feet);peer.motion.pitch=pitch;return null;
         }
         bool RestorePassengerBerth(SurvivalPlayerRecord record){
             var ship=authority.World.multiplayer.ships.Find(s=>s.entity==record.attachedShip);
@@ -34,13 +35,13 @@ namespace MassiveArmy.Networking {
             foreach(long actor in ship.invitedActors){var player=authority.World.multiplayer.players.Find(p=>p.actor==actor);if(player!=null)invites.Add(new SurvivalShipInvite{actor=actor,name=player.name});}return invites;
         }
         void ShipInvitationsGUI(){
-            foreach(var invitation in latest.incomingInvitations)GUILayout.Label("Passenger invitation: "+invitation.ownerName+" · board at their ship ramp with F");
+            foreach(var invitation in latest.incomingInvitations)networkUi.Label("Passenger invitation: "+invitation.ownerName+" · board at their ship ramp with F");
             if(latest.ownedShip==0)return;
-            GUILayout.Label("SHIP PASSENGERS · you retain pilot control");
-            foreach(var invite in latest.shipInvites)if(GUILayout.Button("Revoke invitation: "+invite.name))Submit(new SurvivalAction{kind="ship-revoke",entity=latest.ownedShip,count=invite.actor});
+            networkUi.Label("SHIP PASSENGERS · you retain pilot control");
+            foreach(var invite in latest.shipInvites)if(networkUi.Button("Revoke invitation: "+invite.name))Submit(new SurvivalAction{kind="ship-revoke",entity=latest.ownedShip,count=invite.actor});
             foreach(var entity in visible.Values)if(entity.kind=="player"){
                 var player=JsonUtility.FromJson<SurvivalPlayerProxy>(entity.data);if(player.actor==ActorId||latest.shipInvites.Exists(p=>p.actor==player.actor))continue;
-                if(GUILayout.Button("Invite "+player.name+" · "+latest.self.pose.Distance(entity.pose).ToString("0")+" m"))Submit(new SurvivalAction{kind="ship-invite",entity=latest.ownedShip,count=player.actor});
+                if(networkUi.Button("Invite "+player.name+" · "+latest.self.pose.Distance(entity.pose).ToString("0")+" m"))Submit(new SurvivalAction{kind="ship-invite",entity=latest.ownedShip,count=player.actor});
             }
         }
         List<SurvivalIncomingInvitation> IncomingInvitations(long actor){
@@ -53,24 +54,27 @@ namespace MassiveArmy.Networking {
             string json=JsonUtility.ToJson(copy);publicShipLayouts[ship.entity]=(assembly.revision,json);return json;
         }
         void ReceiveShipStates(SurvivalSnapshot snapshot){
-            foreach(long id in snapshot.removed){if(id%8==5)clientShips.Remove(id/8);if(id%8==6)clientShipAssemblies.Remove(id/8);}
+            ReceiveStations(snapshot);
+            foreach(long id in snapshot.removed){if(id%8==5){clientShips.Remove(id/8);entityPositions.Remove(id);shipPresentationRotations.Remove(id/8);}if(id%8==6)clientShipAssemblies.Remove(id/8);}
             foreach(var entity in snapshot.changed){if(entity.kind=="ship"||entity.kind=="ship-proxy")clientShips[entity.id/8]=JsonUtility.FromJson<SurvivalShipState>(entity.data);else if(entity.kind=="ship-layout")clientShipAssemblies[entity.id/8]=JsonUtility.FromJson<ShipAssembly>(entity.data);}
             if(snapshot.pilotedShip==null&&snapshot.motion.ship!=null&&latest?.motion.ship?.entity==snapshot.motion.ship.entity)snapshot.pilotedShip=latest.pilotedShip;
             if(snapshot.pilotedShip!=null&&snapshot.motion.ship!=null)clientShipAssemblies[snapshot.motion.ship.entity]=snapshot.pilotedShip;
         }
         static Quaternion ShipRotation(SurvivalShipState state)=>new Quaternion(state.rotationX,state.rotationY,state.rotationZ,state.rotationW).normalized;
+        FramePose ClientShipEntry(SurvivalShipState ship)=>ship.landed&&clientShipAssemblies.TryGetValue(ship.entity,out var layout)?Interior(ship,layout).RampEntry(ship):ShipEntry(ship);
         static FramePose ShipEntry(SurvivalShipState ship){var p=SurvivalVehicleSimulation.Position(ship.pose)+Double3.Rotate(ShipRotation(ship),new Double3(0,-8,-52));return new FramePose{body=ship.pose.body,x=p.x,y=p.y,z=p.z};}
         ShipSimulation GetShipSimulation(SurvivalShipState state,ShipAssembly modules,PlanetDefinition definition){
             if(shipSimulations.TryGetValue(state.entity,out var previous)&&previous.body!=definition.bodyId){previous.ship.Dispose();shipSimulations.Remove(state.entity);}
             if(!shipSimulations.TryGetValue(state.entity,out var simulation)){
-                simulation=new ShipSimulation{body=definition.bodyId,ship=new PlanetSpacecraft(definition,modules,(from,to,q)=>ShipPathClear(state.entity,state.pose.body,from,to,state.collisionRadius),universe?.Galaxy,universe?.Bodies,(from,to,dt)=>universe==null?1:universe.SweepCelestials(state.pose.body,from,to,dt,out _),new PlanetShipSimulationLimits{assistSpeed=(float)Config.shipAssistSpeed,assistBoost=(float)Config.shipBoostSpeed,acceleration=(float)Config.shipAcceleration,boostAcceleration=(float)Config.shipBoostAcceleration,assistAcceleration=(float)Config.shipAssistAcceleration,assistBraking=(float)Config.shipAssistBraking,warpSpeed=Config.warpSpeed})};shipSimulations.Add(state.entity,simulation);
+                simulation=new ShipSimulation{body=definition.bodyId};var created=simulation;
+                simulation.ship=new PlanetSpacecraft(definition,modules,(from,to,q)=>ShipPathClear(state.entity,state.pose.body,from,to,state.collisionRadius,created.queryTime,created.queryElapsed)&&(!state.recalling||RecallPathClear(state,from,to,created.queryElapsed)),universe?.Galaxy,universe?.Bodies,(from,to,dt)=>universe==null?1:universe.SweepCelestials(state.pose.body,from,to,dt,out _),new PlanetShipSimulationLimits{assistSpeed=(float)Config.shipAssistSpeed,assistBoost=(float)Config.shipBoostSpeed,acceleration=(float)Config.shipAcceleration,boostAcceleration=(float)Config.shipBoostAcceleration,assistAcceleration=(float)Config.shipAssistAcceleration,assistBraking=(float)Config.shipAssistBraking,warpSpeed=Config.warpSpeed});shipSimulations.Add(state.entity,simulation);
             }
             simulation.ship.SetAssembly(modules);
             if(simulation.restored!=state.physics){simulation.ship.RestoreSimulation(JsonUtility.FromJson<PlanetShipSimulationSnapshot>(state.physics));simulation.restored=state.physics;}
             return simulation;
         }
-        bool ShipPathClear(long moving,int body,Double3 from,Double3 to,double movingRadius=55){
-            if((IsServer?serverContacts:clientContacts).SweptBuildings(body,from,to,movingRadius))return false;
+        bool ShipPathClear(long moving,int body,Double3 from,Double3 to,double movingRadius=55,double? queryTime=null,float queryElapsed=0){
+            if((IsServer?serverContacts:clientContacts).SweptBuildings(body,from,to,movingRadius)||StationSweep(body,from,to,movingRadius,queryTime,queryElapsed))return false;
             IEnumerable<IndustrialMachine> machines=IsServer?authority.World.machines:clientMachines.Values;
             foreach(var machine in machines){if(machine.pose.body!=body||machine.pose.frame!=0||machine.integratedLogistics)continue;
                 if(SegmentDistance(from,to,SurvivalVehicleSimulation.Position(machine.pose))<machine.Definition.Radius+movingRadius)return false;
@@ -85,13 +89,15 @@ namespace MassiveArmy.Networking {
             var p=snapshot.pose.position;state.pose.x=p.x;state.pose.y=p.y;state.pose.z=p.z;var q=snapshot.pose.rotation;
             state.rotationX=q.x;state.rotationY=q.y;state.rotationZ=q.z;state.rotationW=q.w;state.velocityX=snapshot.pose.linearVelocity.x;state.velocityY=snapshot.pose.linearVelocity.y;state.velocityZ=snapshot.pose.linearVelocity.z;
             state.landed=snapshot.landed;state.autoFlight=snapshot.autoFlight;
+            state.recalling=snapshot.recallActive;if(state.recalling||!string.IsNullOrEmpty(state.recallStatus))state.recallStatus=simulation.ship.LandingStatus;
         }
-        void SimulateShip(SurvivalShipState state,ShipAssembly assembly,PlanetDefinition definition,SurvivalInput input,float dt){
-            if(IsServer&&!shipTickBudget.TryAdvance(clock.Tick,state.entity))return;
-            var simulation=GetShipSimulation(state,assembly,definition);var previous=simulation.ship.CaptureSimulation();
-            simulation.ship.StepSimulation(dt,new Vector3(input.x,input.z,input.y),new Vector3(Mathf.Clamp(-input.lookY*.035f/.12f,-1,1),Mathf.Clamp(input.lookX*.035f/.12f,-1,1),input.roll),input.brake,input.boost,input.toggleAssist,input.toggleGear,input.jump,input.cruise,input.matchOrbit);
-            var next=simulation.ship.CaptureSimulation();if(!ShipPathClear(state.entity,state.pose.body,previous.pose.position,next.pose.position,state.collisionRadius)){
-                previous.pose.linearVelocity=default;previous.angularVelocity=Vector3.zero;previous.autoFlight=false;simulation.ship.RestoreSimulation(previous);
+        void SimulateShip(SurvivalShipState state,ShipAssembly assembly,PlanetDefinition definition,SurvivalInput input,float dt,double? simulationTime=null){
+            if(IsServer&&!shipTickBudget.TryAdvance(simulationStep,state.entity))return;
+            if(state.dockedStation!=0){StepDockedShip(state,simulationTime??StationTime());return;}
+            var simulation=GetShipSimulation(state,assembly,definition);simulation.queryTime=simulationTime??StationTime();simulation.queryElapsed=dt;var previous=simulation.ship.CaptureSimulation();
+            simulation.ship.StepSimulation(dt,new Vector3(input.x,input.z,input.y),new Vector3(Mathf.Clamp(-input.lookY*.035f/.12f,-1,1),Mathf.Clamp(input.lookX*.035f/.12f,-1,1),input.roll),input.brake,input.boost,input.toggleAssist,input.toggleGear,input.jump,input.cruise,input.matchOrbit,input.toggleLock,input.toggleOrbit);
+            var next=simulation.ship.CaptureSimulation();if(!ShipPathClear(state.entity,state.pose.body,previous.pose.position,next.pose.position,state.collisionRadius,simulation.queryTime,dt)){
+                previous.pose.linearVelocity=default;previous.angularVelocity=Vector3.zero;previous.autoFlight=previous.recallActive=false;simulation.ship.RestoreSimulation(previous);if(state.recalling)simulation.ship.CancelRecall("RECALL STOPPED · PATH BLOCKED");
             }
             CaptureShip(state,simulation);
         }
@@ -122,6 +128,10 @@ namespace MassiveArmy.Networking {
         }
         void StepServerShips(float dt){
             foreach(var ship in authority.World.multiplayer.ships){
+                // Detailed flight only near connected players. Persistent industrial
+                // work and analytic celestial/station orbits have independent clocks.
+                bool active=ship.recalling;foreach(var peer in peers.Values){var actor=authority.World.Actor(peer.record.actor);if(peer.record.attachedShip==ship.entity||actor.pose.Distance(ship.pose)<=Config.proxyRadius){active=true;break;}}
+                if(!active&&ship.dockedStation==0)continue;
                 if(ship.pilot==0&&(!ship.landed||ship.autoFlight))SimulateShip(ship,authority.World.Ship(ship.owner),surfaces[ship.pose.body].Definition,default,dt);
                 TransitionShipRegion(ship);
                 foreach(var player in authority.World.multiplayer.players)if(player.attachedShip==ship.entity)authority.World.Actor(player.actor).pose=AttachedActorPose(player,ship);

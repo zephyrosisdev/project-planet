@@ -39,7 +39,7 @@ namespace MassiveArmy
             constructionUi=uiRoot.Q("construction");contextUi=uiRoot.Q("context");scoutUi=uiRoot.Q("scout");developerUi=uiRoot.Q("developer");tooltipUi=uiRoot.Q("tooltip");
             foreach(var element in new[]{menuUi,loadingUi,setupUi,modalUi,constructionUi,contextUi,scoutUi,developerUi,uiRoot.Q("top"),uiRoot.Q("bottom"),uiRoot.Q("quick-actions")})ui.Block(element);
             worldDrawing=new RtsUiDrawing();worldDrawing.style.position=Position.Absolute;worldDrawing.StretchToParentSize();uiRoot.Q("overlay").Add(worldDrawing);
-            MakeMenu();MakeLoading();MakeHud();uiScreen=contextKey=buildKey=modalKey=setupKey="";nextUi=nextProgress=0;
+            MakeMenu();MakeLoading();uiScreen=contextKey=buildKey=modalKey=setupKey="";nextUi=nextProgress=0;
         }
         static void Visible(VisualElement e,bool visible){if(e!=null)e.style.display=visible?DisplayStyle.Flex:DisplayStyle.None;}
         static VisualElement Box(VisualElement parent,string classes="")
@@ -83,15 +83,12 @@ namespace MassiveArmy
         {
             menuUi.Clear();L(menuUi,"SYNTHETIC FRONT","heading");var layout=Box(menuUi,"menu-layout");var main=Box(layout,"menu-main");
             L(main,"SYNTHETIC\nFRONT","title");L(main,"Explore. Survive. Build your future among the stars.","heading");
-            L(main,"First person space survival · offline prototype","body");
-            var start=Box(main,"row");B(start,"START SURVIVAL",StartSurvivalGame,"confirm","primary grow");
+            L(main,"First person space survival · single player and multiplayer","body");
+            var start=Box(main,"row");B(start,"SINGLE PLAYER",StartSurvivalGame,"confirm","primary grow");
             B(start,"MULTIPLAYER",ShowMultiplayer,"units");
             B(start,"SETTINGS",()=>SetSettingsOpen(true),"settings");
             L(main,"WASD walk · mouse look · Space jump · F interact\nI inventory · number keys equip · hold LMB to use · H pilot ship","muted");
-            L(main,"Multiplayer development preview � gameplay integration in progress","muted");
-            L(main,"DEVELOPMENT BENCHMARK","subheading");
-            var scales=Box(main,"row");for(int i=0;i<Scales.Length;i++){int index=i;var b=B(scales,new[]{"10K","50K","100K","250K","500K","1M"}[i],()=>{chosenScale=index;foreach(var child in scales.Children())child.EnableInClassList("active",scales.IndexOf(child)==index);},null,"scale-choice");b.EnableInClassList("active",i==chosenScale);}
-            B(main,"DEPLOY STRESS ARMIES",()=>{settings.capacity=Scales[chosenScale];StartBattle(Scales[chosenScale]);},"units");
+            L(main,"Survival development build · offline and multiplayer","muted");
             L(main,"","danger-text body","menu-error");
             var art=Box(layout,"menu-art");Portrait(art,"building-command","hero");L(art,"EXPLORE THE FRONTIER","heading");L(art,"","muted","menu-memory");
         }

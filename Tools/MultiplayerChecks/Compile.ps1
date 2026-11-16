@@ -1,10 +1,13 @@
 param(
     [string]$UnityEditor = $env:UNITY_EDITOR,
-    [ValidateSet('Editor','Client','Server','GraphicsProbe','All')][string]$Target='Editor',
-    [string]$Overlay
+    [ValidateSet('Editor','Client','Server','GraphicsProbe','WeatherTrace','All')][string]$Target='Editor',
+    [string]$Overlay,
+    [string]$ProjectPath
 )
 $ErrorActionPreference = 'Stop'
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
+if($ProjectPath){$taskRoot=[IO.Path]::GetFullPath($ProjectPath)}
+if(!(Test-Path -LiteralPath (Join-Path $taskRoot 'Packages/manifest.json')) -or !(Test-Path -LiteralPath (Join-Path $taskRoot 'Assets'))){throw 'ProjectPath must identify a Unity project with Assets and Packages/manifest.json.'}
 if (-not $UnityEditor) {
     $taskVersion = ((Get-Content -LiteralPath (Join-Path $taskRoot 'ProjectSettings/ProjectVersion.txt') | Select-String '^m_EditorVersion:').Line -split ': ')[1]
     $UnityEditor = Join-Path $env:ProgramFiles "Unity/Hub/Editor/$taskVersion/Editor/Unity.exe"
@@ -30,7 +33,7 @@ if($Overlay){
     if($taskOverlayFiles.Count -eq 0){throw 'Overlay has no C# sources'}
 }
 foreach ($source in Get-ChildItem -LiteralPath (Join-Path $taskRoot 'Assets') -Recurse -Filter '*.cs') {
-    $relative = $source.FullName.Substring($taskRoot.Length + 1).Replace('\','/')
+    $relative = $source.FullName.Substring($taskRoot.Length + 1).Replace([char]92,[char]47)
     if ($relative -match '/Editor/') {continue}
     if($taskOverlayFiles.ContainsKey($source.Name)){
         if(!$taskOverlayUsed.Add($source.Name)){throw "Ambiguous overlay source name: $($source.Name)"}
@@ -40,19 +43,20 @@ foreach ($source in Get-ChildItem -LiteralPath (Join-Path $taskRoot 'Assets') -R
 foreach($name in $taskOverlayFiles.Keys){if(!$taskOverlayUsed.Contains($name)){$taskBaseArguments.Add('"'+$taskOverlayFiles[$name]+'"')}}
 Push-Location -LiteralPath $taskRoot
 try {
-    $taskTargets=if($Target -eq 'All'){@('Editor','Client','Server','GraphicsProbe')}else{@($Target)}
+    $taskTargets=if($Target -eq 'All'){@('Editor','Client','Server','GraphicsProbe','WeatherTrace')}else{@($Target)}
     foreach($taskTarget in $taskTargets){
         $taskArguments=[Collections.Generic.List[string]]::new()
         foreach($line in $taskBaseArguments){
             if($line -match '^[-/]define:(.+)$'){
                 foreach($symbol in ($Matches[1] -split '[;,]')){
-                    if($symbol -eq 'UNITY_SERVER' -or $symbol -eq 'SURVIVAL_GRAPHICS_PROBE' -or ($taskTarget -ne 'Editor' -and $symbol -match '^UNITY_EDITOR(?:_|$)')){continue}
+                    if($symbol -eq 'UNITY_SERVER' -or $symbol -eq 'SURVIVAL_GRAPHICS_PROBE' -or $symbol -eq 'SURVIVAL_WEATHER_TRACE' -or ($taskTarget -ne 'Editor' -and $symbol -match '^UNITY_EDITOR(?:_|$)')){continue}
                     $taskArguments.Add('-define:'+$symbol)
                 }
             }else{$taskArguments.Add($line)}
         }
         if($taskTarget -eq 'Server'){$taskArguments.Add('-define:UNITY_SERVER')}
         if($taskTarget -eq 'GraphicsProbe'){$taskArguments.Add('-define:SURVIVAL_GRAPHICS_PROBE')}
+        if($taskTarget -eq 'WeatherTrace'){$taskArguments.Add('-define:SURVIVAL_WEATHER_TRACE')}
         $taskSuffix=if($taskTarget -eq 'Editor'){''}else{'.'+$taskTarget};if($Overlay){$taskSuffix='.Overlay'+$taskSuffix}
         $taskArguments.Add('-out:"TestResults/Multiplayer/Assembly-CSharp'+$taskSuffix+'.dll"')
         $taskArguments.Add('-warn:0')

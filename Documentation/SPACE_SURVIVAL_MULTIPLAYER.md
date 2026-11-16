@@ -1,5 +1,10 @@
 # Space survival multiplayer plan
 
+The user retired RTS/army modes on November 13, 2026. Current delivery is offline
+Survival plus two-player multiplayer playtesting. Earlier army benchmark and
+hosted-prototype passages below are historical; see the current implementation
+checkpoint and AGENTS.md for the active scope.
+
 The accepted delivery now targets dedicated Windows servers plus offline single
 player, with proximity voice, global text and a measured 100-client goal before
 shared-world sharding. The hosted-prototype sequence below is historical design

@@ -14,12 +14,23 @@ namespace MassiveArmy.Planetary
         public Vector3 Direction=>pose.position.Float.normalized;
         internal GameObject VisualForValidation=>hull;
         public SpacePose Pose=>pose;public ReferenceFrameManager Frames=>frames;
-        public PlanetSpacecraft(PlanetDevelopment world,PlanetSurface surface,FloatingOrigin origin,Camera camera,Transform parent){
+        public PlanetSpacecraft(PlanetDevelopment world,PlanetSurface surface,FloatingOrigin origin,Camera camera,Transform parent,bool includePilotPresentation=true){
             this.world=world;this.surface=surface;this.origin=origin;this.camera=camera;frames=new ReferenceFrameManager{Origin=SimulationDefinition.position};var up=world.Base!=null?world.Base.Offset(new Vector2(0,-240)):(world.Rig.FocusDirection-Vector3.Cross(Vector3.up,world.Rig.FocusDirection).normalized*(240/SimulationDefinition.radius)).normalized;var east=Vector3.Cross(Vector3.up,up).normalized;
             pose=new SpacePose{position=surface.GetSurfacePositionPrecise(up,8),rotation=Quaternion.LookRotation(Vector3.Cross(up,east),up)};shipFrame=new ReferenceFrame(1,0,FrameKind.Ship,pose);frames.Register(shipFrame);
             hull=new GameObject("Pilotable capital ship");hull.transform.SetParent(parent);var shader=Shader.Find("HDRP/Lit");steel=new Material(shader);steel.SetColor("_BaseColor",new Color(.28f,.32f,.4f));steel.SetFloat("_Metallic",.35f);steel.SetFloat("_Smoothness",.4f);glass=new Material(shader);glass.SetColor("_BaseColor",new Color(.02f,.32f,.48f));glass.SetFloat("_Smoothness",.9f);engine=new Material(shader);engine.SetColor("_BaseColor",new Color(.04f,.5f,.9f));
-            BuildInterior();InitializePilotHud();InitializeTrajectory();InitializeWeapons();InitializeLanding();Rebase();
+            BuildInterior();if(includePilotPresentation)InitializePresentationInstruments();Rebase();
         }
+        bool presentationInstruments;
+        void InitializePresentationInstruments(){if(presentationInstruments)return;presentationInstruments=true;InitializePilotHud();InitializeTrajectory();InitializeWeapons();InitializeLanding();}
+        // Presentation only: receives a predicted/replicated state, never reads controls
+        // or integrates flight. The server and prediction adapter remain authoritative.
+        internal void PresentNetwork(MassiveArmy.Industrial.ShipAssembly modules,PlanetShipSimulationSnapshot state,bool rear,bool inner,bool pilot,Double3 position,Quaternion rotation){
+            SetAssembly(modules);RestoreSimulation(state);pose.position=position;pose.rotation=rotation;shipFrame.Pose=pose;
+            if(pilot)InitializePresentationInstruments();active=pilot;
+            hatches[0].requested=rear;hatches[1].requested=inner;
+            Rebase();
+        }
+        internal void NetworkNavigationInput(){var keys=Keyboard.current;if(keys==null)return;if(keys.oKey.wasPressedThisFrame)ShowCelestialOrbits=!ShowCelestialOrbits;if(keys.pKey.wasPressedThisFrame)CycleApproachTarget();}
         public void SetActive(bool value){if(!value){EndCruise();OrbitalVelocityAssistActive=false;}active=value;Cursor.lockState=value?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!value;if(value){nextLandingRefresh=0;nextArcRefresh=0;PresentCamera();}}
         public void StepUnpiloted(float dt){if(world.RemoteView)return;if(!active&&!world.Paused){AdvanceFlight(dt,Vector3.zero,Vector3.zero);}}
         public void Step(float dt){if(!active)return;if(world.Paused){EndCruise();PresentCamera();return;}var k=CockpitPowered?Keyboard.current:null;var mouse=Mouse.current;Vector3 thrust=Vector3.zero,turn=Vector3.zero;bool brake=false,boost=false,cruise=false,matchOrbit=false;
@@ -55,7 +66,7 @@ namespace MassiveArmy.Planetary
         internal void Arrive(SpacePose state,bool assist,bool gear,bool inhibitCruise=false){
             ResetFlightState(state);cruiseInhibited=inhibitCruise;GearDeployed=gear;SetFlightAssistance(assist);PresentCamera();world.Orbitals?.Tick();Rebase();
         }
-        public void Rebase(){if(simulationOnly)return;PresentReentry();bool visible=!world.RemoteView&&(!world.IsSurvival||world.HasRespawnCarrier);if(hull.activeSelf!=visible)hull.SetActive(visible);pilotUi?.Tick();UpdateInterior();hull.transform.SetPositionAndRotation(origin.RenderPosition(SimulationDefinition.position.Add(pose.position)),pose.rotation);}
-        public void Dispose(){if(simulationOnly)return;ReleaseReentryView();SetActive(false);DisposeTrajectory();DisposeWeapons();DisposeLanding();pilotUi?.Dispose();ArmyLifetime.Destroy(hull);DisposeInterior();ArmyLifetime.Destroy(steel);ArmyLifetime.Destroy(glass);ArmyLifetime.Destroy(engine);}
+        public void Rebase(){if(simulationOnly)return;PresentReentry();bool visible=!world.RemoteView&&(world.NetworkPresentation||!world.IsSurvival||world.HasRespawnCarrier);if(hull.activeSelf!=visible)hull.SetActive(visible);pilotUi?.Tick();UpdateInterior();hull.transform.SetPositionAndRotation(origin.RenderPosition(SimulationDefinition.position.Add(pose.position)),pose.rotation);}
+        public void Dispose(){if(simulationOnly)return;ReleaseReentryView();if(!world.NetworkPresentation)SetActive(false);if(presentationInstruments){DisposeTrajectory();DisposeWeapons();DisposeLanding();}pilotUi?.Dispose();ArmyLifetime.Destroy(hull);DisposeInterior();ArmyLifetime.Destroy(steel);ArmyLifetime.Destroy(glass);ArmyLifetime.Destroy(engine);}
     }
 }

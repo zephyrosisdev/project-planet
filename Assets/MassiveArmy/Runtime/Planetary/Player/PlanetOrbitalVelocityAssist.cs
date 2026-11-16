@@ -13,6 +13,7 @@ namespace MassiveArmy.Planetary {
         public double OrbitalVelocityTargetSpeed {get;private set;}
         public const double OrbitalVelocityAssistAcceleration=40;
         public const double OrbitalVelocityAssistBoostAcceleration=160;
+        internal static double MinimumOrbitHoldAltitude(PlanetDefinition body)=>Math.Max(body.ReliefBound+20,body.hasAtmosphere?Math.Min(body.atmosphereHeight,30000):0);
         public void ToggleOrbitalVelocityHold(){
             if(OrbitalVelocityHoldEnabled){StopOrbitalVelocityHold();return;}
             if(CruiseActive){OrbitalVelocityAssistStatus="Release warp before enabling orbit hold";return;}
@@ -45,8 +46,11 @@ namespace MassiveArmy.Planetary {
             var body=SimulationDefinition;mu=body.gravitationalParameter;var model=FlightGalaxy;var bodies=simulationOnly?simulationBodies:world?.SystemRuntime?.Bodies;
             if(model!=null&&instrumentPlanet>=0){var node=model.Nodes[instrumentPlanet];mu=node.mu;if(node.planet>=0&&bodies!=null&&node.planet<bodies.Length)body=bodies[node.planet];}
             double altitude=radial.Magnitude-radius;
-            double minimum=Math.Max(body.ReliefBound+20,body.hasAtmosphere?body.atmosphereHeight:0);
-            if(altitude<=minimum||radial.Magnitude>radius*21||mu<=0){OrbitalVelocityAssistStatus=altitude<=minimum?$"Climb above {Distance(minimum)} around {name}":"Move into planetary orbital range";return false;}return true;
+            // Acquisition can briefly lose altitude while building tangential speed.
+            // Keep an engaged hold running down to terrain clearance so crossing
+            // the engagement altitude by centimetres does not switch it off.
+            double minimum=OrbitalVelocityHoldEnabled?Math.Max(body.ReliefBound+20,0):MinimumOrbitHoldAltitude(body);
+            if(altitude<minimum||radial.Magnitude>radius*21||mu<=0){OrbitalVelocityAssistStatus=altitude<minimum?$"Climb to {Distance(minimum)} around {name}":"Move into planetary orbital range";return false;}return true;
         }
         void ApplyOrbitalVelocityAssist(float dt,bool boost,ref Vector3 thrust){
             EndCruise();if(!OrbitReference(out var radial,out var relativeVelocity,out _,out double mu,out string name)){StopOrbitalVelocityHold();return;}

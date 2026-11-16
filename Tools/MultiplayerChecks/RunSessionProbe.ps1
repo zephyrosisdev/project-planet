@@ -5,27 +5,48 @@ param(
     [switch]$Headless,
     [string]$ResumeFrom,
     [switch]$Chat,
+    [switch]$Performance,
+    [switch]$WaitForPrimaryReady,
+    [ValidateRange(2,30)][int]$PerformanceWarmupSeconds=10,
+    [ValidateRange(5,120)][int]$PerformanceSampleSeconds=30,
+    [switch]$OrbitWeather,
+    [switch]$PilotWeather,
+    [switch]$WeatherTrace,
+    [ValidateSet(1,2,4,8)][int]$TestTimeScale=1,
+    [switch]$TestClockControls,
+    [switch]$PointCloudSampling,
+    [string]$OrbitView,
+    [switch]$ClientBaseline,
+    [switch]$Inventory,
     [switch]$SeparatedRegions,
     [switch]$ListingRecovery,
     [ValidateRange(0,30)][int]$JoinCodeDelaySeconds=0,
     [ValidateRange(2,100)][int]$ClientCount=2,
     [ValidateRange(0,90)][int]$HoldSeconds=0,
-    [ValidateSet('4','5','6','7','8','9','10','11')][string]$ProbeVersion='11',
+    [ValidateSet('4','5','6','7','8','9','10','11','12','13')][string]$ProbeVersion='13',
     [ValidateRange(0,500)][int]$OneWayDelayMs=0,
     [ValidateRange(0,250)][int]$JitterMs=0,
     [ValidateRange(0,15)][int]$LossPercent=0,
+    [string]$DockSpec,
     [string]$InteriorSpec,
     [string]$CombatSpec,
     [string]$FactorySpec,
     [ValidateSet('create','recover')][string]$FactoryPhase='create'
 )
 $ErrorActionPreference='Stop'
+if($Inventory -and ($Headless -or $Performance)){throw 'Inventory UI checks require graphical clients without performance mode'}
+if($OrbitWeather -and !$Performance){throw 'OrbitWeather requires the graphical performance fixture'}
+if($PilotWeather -and (!$Performance -or !$ResumeFrom)){throw 'PilotWeather requires an isolated resumed performance fixture'}
+if($TestClockControls -and !$Performance){throw 'TestClockControls requires the two-client performance fixture'}
+if($ClientBaseline -and !$Performance){throw 'ClientBaseline is a performance-comparison switch only'}
+if($SeparatedRegions -and !$ResumeFrom){throw 'SeparatedRegions requires a prepared multi-planet resume fixture; use RunPlanetProbe.ps1.'}
 $taskRoot=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
-$extraWait=if($InteriorSpec){300}elseif($FactorySpec -and ((Get-Content -LiteralPath $FactorySpec -Raw|ConvertFrom-Json).shipyard -or (Get-Content -LiteralPath $FactorySpec -Raw|ConvertFrom-Json).buildings)){600}else{0}
-if($InteriorSpec -and ($FactorySpec -or $Chat -or $ListingRecovery -or $ServerOnly -or $ClientCount -ne 2 -or !$ResumeFrom -or $ProbeVersion -ne '11')){throw 'Interior probe needs a current isolated two-client resume fixture'}
-if($FactorySpec -and ($Chat -or $ListingRecovery -or $JoinCodeDelaySeconds -gt 0 -or $ServerOnly -or $ClientCount -ne 2 -or !$ResumeFrom -or $ProbeVersion -ne '11')){throw 'Factory probe requires two matching current clients and an isolated resume fixture'}
-if($ListingRecovery){if($ServerOnly -or $ResumeFrom -or $ProbeVersion -ne '11'){throw 'Listing recovery requires a new current-build disposable session with clients'};$HoldSeconds=[Math]::Max(40,$HoldSeconds)}
-if($JoinCodeDelaySeconds -gt 0 -and ($ResumeFrom -or $ProbeVersion -ne '11')){throw 'Join-code delay requires a new current-build diagnostic session'}
+$extraWait=if($DockSpec){180}elseif($InteriorSpec){300}elseif($FactorySpec -and ((Get-Content -LiteralPath $FactorySpec -Raw|ConvertFrom-Json).shipyard -or (Get-Content -LiteralPath $FactorySpec -Raw|ConvertFrom-Json).buildings)){600}else{0}
+if($DockSpec -and ($FactorySpec -or $InteriorSpec -or $CombatSpec -or $Chat -or $ListingRecovery -or $ServerOnly -or $ClientCount -ne 2 -or !$ResumeFrom)){throw 'Dock probe needs an isolated two-client resume fixture'}
+if($InteriorSpec -and ($FactorySpec -or $Chat -or $ListingRecovery -or $ServerOnly -or $ClientCount -ne 2 -or !$ResumeFrom -or $ProbeVersion -ne '13')){throw 'Interior probe needs a current isolated two-client resume fixture'}
+if($FactorySpec -and ($Chat -or $ListingRecovery -or $JoinCodeDelaySeconds -gt 0 -or $ServerOnly -or $ClientCount -ne 2 -or !$ResumeFrom -or $ProbeVersion -ne '13')){throw 'Factory probe requires two matching current clients and an isolated resume fixture'}
+if($ListingRecovery){if($ServerOnly -or $ResumeFrom -or $ProbeVersion -ne '13'){throw 'Listing recovery requires a new current-build disposable session with clients'};$HoldSeconds=[Math]::Max(40,$HoldSeconds)}
+if($JoinCodeDelaySeconds -gt 0 -and ($ResumeFrom -or $ProbeVersion -ne '13')){throw 'Join-code delay requires a new current-build diagnostic session'}
 if($Chat -and ($Headless -or $ServerOnly)){throw 'Chat validation requires two graphics-enabled clients'}
 if(!$ServerExe){$ServerExe=Join-Path $taskRoot 'Builds/WindowsServer/SyntheticFrontServer.exe'}
 if(!$ClientExe){$ClientExe=if($Headless){$ServerExe}else{Join-Path $taskRoot 'TestResults/Multiplayer/GraphicsProbeClient/SyntheticFrontGraphicsProbe.exe'}}
@@ -58,6 +79,7 @@ if($ResumeFrom){
     $config.worldId="probe-$runId";$config.instanceId="probe-$runId";$config.savePath=Join-Path $runRoot 'industry.xml'
 }
 $config.displayName="Session validation $runId";$config.maxPlayers=$ClientCount
+if($TestTimeScale -gt 1 -or $TestClockControls){$config|Add-Member -NotePropertyName allowTestTimeControls -NotePropertyValue $true -Force;$config|Add-Member -NotePropertyName testTimeScale -NotePropertyValue $TestTimeScale -Force}
 $configPath=Join-Path $runRoot 'server.json';$config|ConvertTo-Json|Set-Content -LiteralPath $configPath -Encoding utf8
 $serverReport=Join-Path $runRoot 'server-report.json';$processes=[Collections.Generic.List[Diagnostics.Process]]::new();$clientReports=@();$failure=$null
 $memoryRecords=@{}
@@ -95,14 +117,32 @@ try {
         $report=Join-Path $runRoot "client-$index.json";$clientReports+=$report
         $clientArgs=@('-batchmode','-screen-fullscreen','0','-screen-width','960','-screen-height','540','-survival-probe-report',(Quote-Argument $report),'-survival-probe-profile',$profiles[$index-1],'-survival-probe-code',$ready.relayCode,'-logFile',(Quote-Argument (Join-Path $runRoot "client-$index.log")))
         if($OneWayDelayMs -or $JitterMs -or $LossPercent){$clientArgs+=@('-survival-probe-delay',"$OneWayDelayMs",'-survival-probe-jitter',"$JitterMs",'-survival-probe-loss',"$LossPercent")}
-        if($Headless){$clientArgs+=@('-nographics','-survival-probe-headless')}
+        if($OrbitWeather -and $index -eq 1){$clientArgs=@($clientArgs|Where-Object {$_ -ne '-batchmode'});$clientArgs=@($clientArgs|ForEach-Object {if($_ -eq '960'){'2560'}elseif($_ -eq '540'){'1440'}else{$_}});$clientArgs+='-survival-probe-orbit-weather';if($OrbitView){$clientArgs+=@('-survival-probe-orbit-view',(Quote-Argument ([IO.Path]::GetFullPath($OrbitView))))}}
+        if($PointCloudSampling -and $index -eq 1){$clientArgs+='-survival-probe-point-clouds'}
+        if($PilotWeather -and $index -eq 1){$clientArgs=@($clientArgs|Where-Object {$_ -ne '-batchmode'});$clientArgs=@($clientArgs|ForEach-Object {if($_ -eq '960'){'2560'}elseif($_ -eq '540'){'1440'}else{$_}});$clientArgs+='-survival-probe-pilot-weather'}
+        if($WeatherTrace -and $index -eq 1){$clientArgs+=@('-planet-weather-trace','-planet-weather-trace-output',(Quote-Argument (Join-Path $runRoot 'weather-traces')))}
+        if($Performance){$clientArgs+=@('-survival-probe-performance','-survival-probe-performance-warmup',"$PerformanceWarmupSeconds",'-survival-probe-performance-seconds',"$PerformanceSampleSeconds");if($ClientBaseline){$clientArgs+='-survival-client-baseline'}}
+        if($TestClockControls){$clientArgs+='-survival-probe-test-clock'}
+        if($Headless -or ($Performance -and $index -gt 1)){$clientArgs+=@('-nographics','-survival-probe-headless')}
         if($Chat){$clientArgs+='-survival-probe-chat'}
+        if($Inventory){$clientArgs+='-survival-probe-inventory'}
         if($SeparatedRegions){$clientArgs+='-survival-probe-separated'}
         if($HoldSeconds -gt 0){$clientArgs+=@('-survival-probe-hold-seconds',"$HoldSeconds")}
         if($CombatSpec){$clientArgs+=@('-survival-probe-combat',(Quote-Argument ([IO.Path]::GetFullPath($CombatSpec))))}
+        if($DockSpec){$clientArgs+=@('-survival-probe-dock',(Quote-Argument ([IO.Path]::GetFullPath($DockSpec))))}
         if($InteriorSpec){$clientArgs+=@('-survival-probe-interior',(Quote-Argument ([IO.Path]::GetFullPath($InteriorSpec))))}
         if($FactorySpec){$clientArgs+=@('-survival-probe-factory',(Quote-Argument ([IO.Path]::GetFullPath($FactorySpec))),'-survival-probe-factory-phase',$FactoryPhase,'-survival-probe-factory-state',(Quote-Argument $runRoot))}
-        $client=Start-Process -FilePath $ClientExe -ArgumentList $clientArgs -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru;$processes.Add($client)
+        $launchExe=if($Performance -and $index -gt 1){$ServerExe}else{$ClientExe}
+        $client=Start-Process -FilePath $launchExe -ArgumentList $clientArgs -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru;$processes.Add($client)
+        if($WaitForPrimaryReady -and $Performance -and $index -eq 1){
+            $readyTimer=[Diagnostics.Stopwatch]::StartNew();$primaryReady=$false
+            while($readyTimer.Elapsed.TotalSeconds -lt 120 -and !$client.HasExited){
+                Sample-ProcessMemory
+                if(Test-Path -LiteralPath ($report+'.progress')){try{$state=Get-Content -LiteralPath ($report+'.progress') -Raw|ConvertFrom-Json;$primaryReady=$state.toolkitPresentation -and (!$PilotWeather -or $state.pilotHudPresentation)}catch{$primaryReady=$false}}
+                if($primaryReady){break};Start-Sleep -Milliseconds 500
+            }
+            if(!$primaryReady){throw 'Primary graphical client did not become ready before peer launch'}
+        }
     }
     $timer.Restart()
     while($timer.Elapsed.TotalSeconds -lt (185+$HoldSeconds+$extraWait)){
@@ -111,9 +151,14 @@ try {
         $running=@($processes|Select-Object -Skip 1|Where-Object {!$_.HasExited});if($running.Count -eq 0){break};if($server.HasExited){throw 'Server exited while clients were running'};Start-Sleep -Milliseconds 500
     }
     foreach($report in $clientReports){if(!(Test-Path -LiteralPath $report)){throw "Client did not write $report"};$result=Get-Content -LiteralPath $report -Raw|ConvertFrom-Json;if($result.status -ne 'PASS'){throw "Client failed: $($result.error)"};if($HoldSeconds -gt 0 -and $result.holdSeconds -ne $HoldSeconds){throw 'Client did not execute the required occupied hold interval'}}
+    if($Inventory){foreach($index in 1..$ClientCount){$result=Get-Content -LiteralPath $clientReports[$index-1] -Raw|ConvertFrom-Json;if(!$result.inventorySlotsVerified -or !(Select-String -LiteralPath (Join-Path $runRoot "client-$index.log") -SimpleMatch 'Crafting UI PASS: search, recipe selection and quantity callbacks queued two server jobs; cancellation refunded all inputs' -Quiet)){throw 'The graphical crafting/refund and inventory callbacks were not verified by this client build'}}}
     if(Select-String -LiteralPath (Join-Path $runRoot 'server.log') -SimpleMatch 'send queue full' -Quiet){throw 'Server transport send queue overflowed during this run'}
     if($OneWayDelayMs -or $JitterMs -or $LossPercent){foreach($reportPath in $clientReports){$r=Get-Content -LiteralPath $reportPath -Raw|ConvertFrom-Json;if(!$r.transportSimulationActive -or $r.simulatedDelayMs -ne $OneWayDelayMs -or $r.simulatedJitterMs -ne $JitterMs -or $r.simulatedLossPercent -ne $LossPercent){throw 'Requested UTP network conditions were not active'}}}
     if($Chat){foreach($report in $clientReports){$result=Get-Content -LiteralPath $report -Raw|ConvertFrom-Json;if(!$result.chatRequired -or !$result.peerTextBefore -or !$result.ownTextAcknowledgedBefore -or !$result.peerTextAfter -or !$result.ownTextAcknowledgedAfter -or !$result.voiceBefore -or !$result.voiceAfter -or !$result.mutedBefore -or !$result.mutedAfter){throw 'Client did not complete the required muted voice-channel and bidirectional text checks'}}}
+    if($DockSpec){
+        $spec=Get-Content -LiteralPath $DockSpec -Raw|ConvertFrom-Json
+        foreach($reportPath in $clientReports){$r=Get-Content -LiteralPath $reportPath -Raw|ConvertFrom-Json;if(!$r.dockRequired -or !$r.dockMoored){throw 'Missing station mooring assertions'};if([long]$r.actor -eq [long]$spec.owner){if(!$r.dockUndocked -or !$r.dockAcquired -or !$r.dockReconnect){throw 'Owner docking and reconnect assertions failed'}}elseif(!$r.dockPassengerDenied){throw 'Passenger docking authority rejection was not checked'}}
+    }
     if($InteriorSpec){
         $spec=Get-Content -LiteralPath $InteriorSpec -Raw|ConvertFrom-Json
         foreach($reportPath in $clientReports){$r=Get-Content -LiteralPath $reportPath -Raw|ConvertFrom-Json;if(!$r.interiorRequired -or !$r.interiorBoarded -or !$r.interiorWalked -or !$r.interiorCanonical -or !$r.interiorParentMoved){throw 'Interior walking/moving-parent/canonical assertions failed'};if([long]$r.actor -eq [long]$spec.owner){if(!$r.interiorHatchBlocked -or !$r.interiorPilot -or !$r.interiorReconnect){throw 'Owner hatch/pilot/reconnect assertions failed'}}elseif(!$r.interiorPilotDenied){throw 'Passenger pilot denial was not checked'}}
@@ -158,6 +203,19 @@ finally {
         foreach($reportPath in $clientReports){
             $result=Get-Content -LiteralPath $reportPath -Raw|ConvertFrom-Json;$before=$previousPoses[[long]$result.actor];$actor=$after.IndustrialWorld.actors.IndustrialActor|Where-Object {[long]$_.id -eq [long]$result.actor}
             if(!$before -or !$actor -or $before.body -ne $actor.pose.body -or $before.frame -ne $actor.pose.frame){$failure='Restart lost the canonical character frame';break}
+            if($DockSpec -or $PilotWeather){
+                $player=$after.IndustrialWorld.multiplayer.players.SurvivalPlayerRecord|Where-Object {[long]$_.actor -eq [long]$result.actor}
+                $parentId=if($DockSpec){(Get-Content -LiteralPath $DockSpec -Raw|ConvertFrom-Json).ship}else{$player.attachedShip}
+                $ship=$after.IndustrialWorld.multiplayer.ships.SurvivalShipState|Where-Object {[long]$_.entity -eq [long]$parentId}
+                if(!$player -or !$ship -or $player.interiorWalking -ne 'true' -or [long]$player.attachedShip -ne [long]$ship.entity -or [long]$player.interiorPose.frame -ne [long]$ship.entity -or [int]$actor.pose.body -ne [int]$ship.pose.body){$failure='Moored restart lost ship-local character attachment';break}
+                [double]$lx=$player.interiorPose.x;[double]$ly=$player.interiorPose.y;[double]$lz=$player.interiorPose.z
+                [double]$qx=$ship.rotationX;[double]$qy=$ship.rotationY;[double]$qz=$ship.rotationZ;[double]$qw=$ship.rotationW
+                $tx=2*($qy*$lz-$qz*$ly);$ty=2*($qz*$lx-$qx*$lz);$tz=2*($qx*$ly-$qy*$lx)
+                $ex=[double]$ship.pose.x+$lx+$qw*$tx+$qy*$tz-$qz*$ty;$ey=[double]$ship.pose.y+$ly+$qw*$ty+$qz*$tx-$qx*$tz;$ez=[double]$ship.pose.z+$lz+$qw*$tz+$qx*$ty-$qy*$tx
+                $error=[Math]::Sqrt([Math]::Pow([double]$actor.pose.x-$ex,2)+[Math]::Pow([double]$actor.pose.y-$ey,2)+[Math]::Pow([double]$actor.pose.z-$ez,2))
+                if($error -gt .01){$failure='Moored character checkpoint disagrees with its canonical ship transform';break}
+                continue
+            }
             $dx=[double]$actor.pose.x-[double]$before.x;$dy=[double]$actor.pose.y-[double]$before.y;$dz=[double]$actor.pose.z-[double]$before.z
             if([Math]::Abs([Math]::Sqrt($dx*$dx+$dy*$dy+$dz*$dz)-$result.movementMetres) -gt 3){$failure='Restart did not preserve character position before the new walking segment';break}
         }
@@ -165,6 +223,9 @@ finally {
     $status=if($failure){'FAIL'}else{'PASS'}
     $scope=if($ServerOnly){'Dedicated service startup/cleanup only. No clients or gameplay validation.'}elseif($Headless){'Two headless authenticated production transport/prediction clients only. No rendering, UI, Vivox, full survival or capacity acceptance.'}else{'Two authenticated standalone clients: movement, remote visibility, prediction samples and reconnect only. Not Vivox, full survival, capacity, frame-time or army acceptance.'}
     if(!$Headless -and !$ServerOnly -and (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $ClientExe) 'graphics-probe-only'))){$scope='Two graphics-enabled survival fixtures with offline army kernels omitted. Not release, UI/Vivox, full survival, capacity, rendered frame-time or army acceptance.'}
+    if($Inventory){$scope+=" Includes attached UI Toolkit search/quantity/pointer callbacks, two authoritative crafting jobs with full cancellation refunds, slot split, selection, drop, recovery and item conservation; no physical mouse/keyboard automation."}
+    if($Performance){$scope="One graphical diagnostic client and one headless peer with co-hosted dedicated server, fixed checkpoint, $PerformanceWarmupSeconds-second warmup and $PerformanceSampleSeconds-second sample. Explicit 2560x1440 HDRP render with GPU completion fence. Baseline flag selects prior presentation/UI/cache paths in the current source, not an archived release binary. Not release FPS or capacity acceptance."}
+    if($PilotWeather){$scope+=" Real pilot command, authoritative orbital motion, occupied cockpit and weather depth tracing. Restart checks compare attached character positions with their moving ship; no stationary-ground displacement assertion."}
     if($HoldSeconds -gt 0){$scope+=" Includes $HoldSeconds seconds of stationary occupied simulation per client before reconnect; not full survival load."}
     $scope=$scope.Replace('Two ',"$ClientCount ").Replace('two ',"$ClientCount ")
     if($FactorySpec){$scope+=" Includes real factory $FactoryPhase commands and observer privacy/ownership checks, using offline prepared resources and local diagnostic coordination files. GUI, progression and factory load remain unverified."}

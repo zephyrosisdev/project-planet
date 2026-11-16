@@ -52,7 +52,9 @@ namespace MassiveArmy.Networking {
             var keys=Keyboard.current;if(keys!=null)for(int i=0;i<10;i++)if(keys[WeaponSlots[i]].wasPressedThisFrame)Submit(new SurvivalAction{kind="slot",slot=i});
             if(Mouse.current?.leftButton.isPressed!=true||Time.realtimeSinceStartupAsDouble<nextWeaponInput)return;
             serverItems??=PersonalItemCatalogue.Load();var stack=latest.self.inventory.AtSlot(latest.self.inventory.activeSlot);var definition=serverItems.Find(stack?.item);
-            if(definition==null||definition.kind==PersonalItemKind.Tool||definition.kind==PersonalItemKind.Consumable)return;
+            if(stack?.item=="building-blueprint"&&Mouse.current.leftButton.wasPressedThisFrame){industryOpen=true;UpdateNetworkCursor();return;}
+            if(definition?.kind==PersonalItemKind.Consumable){nextWeaponInput=Time.realtimeSinceStartupAsDouble+Math.Max(.25,definition.useSeconds);Submit(new SurvivalAction{kind="use-equipped"});return;}
+            if(definition==null||definition.kind==PersonalItemKind.Tool)return;
             nextWeaponInput=Time.realtimeSinceStartupAsDouble+Math.Max(.05,definition.useSeconds);Submit(new SurvivalAction{kind="shoot"});
         }
     }

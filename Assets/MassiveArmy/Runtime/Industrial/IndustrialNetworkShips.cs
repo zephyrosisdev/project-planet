@@ -3,16 +3,25 @@ using System.Collections.Generic;
 
 namespace MassiveArmy.Industrial {
     [Serializable] public sealed class SurvivalShipState {
-        public long entity,owner,pilot;public FramePose pose;
+        public long entity,owner,pilot,dockedStation;public FramePose pose;
         public double velocityX,velocityY,velocityZ;
         public float rotationX,rotationY,rotationZ,rotationW=1;
         public bool landed=true,autoFlight,rearOpen,innerOpen;public string physics;
+        public bool recalling;public string recallStatus="";public long recallReadyTick;
         public List<long> invitedActors=new List<long>();
         public double collisionRadius=55;
         public SurvivalShipState Copy(){var copy=(SurvivalShipState)MemberwiseClone();copy.invitedActors=new List<long>(invitedActors);return copy;}
     }
     public static class SurvivalShipAuthority {
         public const int PassengerCapacity=8;
+        public static string BoardingPermission(IndustrialWorld world,long actor,SurvivalShipState ship){
+            if(ship.owner==actor||ship.invitedActors.Contains(actor))return null;
+            var owner=world.multiplayer.players.Find(p=>p.actor==ship.owner);
+            string message="Ship #"+ship.entity+" belongs to "+(owner?.name??"Survivor")+" (survivor #"+ship.owner+"). Ask its owner for a passenger invitation.";
+            var own=world.multiplayer.ships.Find(s=>s.owner==actor);
+            if(own!=null)message+=" Your ship #"+own.entity+" is "+(own.landed?"landed elsewhere.":"still airborne.");
+            return message;
+        }
         public static FramePose SeatFeet(ShipAssembly ship,int seat){
             if(seat<0){var cockpit=ship?.modules.Find(m=>m.definition=="cockpit");return cockpit==null?ShipModules.P(0,-2.7,30):ShipModules.Transform(cockpit.pose,ShipModules.P(0,-1.7,0));}
             if(seat>=PassengerCapacity)throw new ArgumentOutOfRangeException(nameof(seat));
@@ -35,7 +44,7 @@ namespace MassiveArmy.Industrial {
             var actor=world.Actor(player.actor);var ship=world.multiplayer.ships.Find(s=>s.entity==entity);
             if(actor==null||actor.health<=0||ship==null)return "Ship unavailable";
             if(player.controlledEntity!=0||player.controlledShip!=0||player.attachedShip!=0)return "Leave the current seat first";
-            if(!ship.invitedActors.Contains(actor.id))return "The ship owner must invite you aboard";
+            string access=BoardingPermission(world,actor.id,ship);if(access!=null)return access;
             if(!ship.landed||ship.autoFlight||actor.pose.Distance(entry)>12)return "Move within 12 m of the boarding ramp of the landed ship";
             int seat=FreePassengerSeat(world,entity,player.actor,connected);if(seat<0)return "Passenger berths are full";
             player.attachedShip=entity;player.shipSeat=seat;return null;

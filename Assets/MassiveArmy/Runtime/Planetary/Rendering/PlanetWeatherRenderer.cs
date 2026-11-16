@@ -31,6 +31,9 @@ namespace MassiveArmy.Planetary
         readonly CloudLightRefresh lightRefresh=new CloudLightRefresh();
         readonly Vector4[] cachedLightParameters=new Vector4[6];Vector3 cachedSun;float cachedRadius,cachedNoiseSize,cachedNoiseFrequency,cachedNativeDouble;
         RenderTexture localDepth,weather,lightCache;int width,height;
+#if SURVIVAL_GRAPHICS_PROBE
+        internal int DiagnosticStage;internal bool DiagnosticPointNoise;
+#endif
         public bool Enabled=true;
         internal bool ScatteringEnabled=true,ShadowsEnabled=true;
         internal RenderTexture LightForValidation=>lightCache;
@@ -43,6 +46,9 @@ namespace MassiveArmy.Planetary
         public double GpuMilliseconds=>recorder!=null&&recorder.gpuSampleBlockCount>0?recorder.gpuElapsedNanoseconds/1e6:0;
         public PlanetWeatherRenderer(PlanetDevelopment world){
             this.world=world;material=new Material(Resources.Load<Shader>("MassiveArmy/PlanetWeather"));
+#if UNITY_EDITOR || SURVIVAL_GRAPHICS_PROBE || SURVIVAL_WEATHER_TRACE
+            InitializeTrace();
+#endif
             lightCompute=Resources.Load<ComputeShader>("MassiveArmy/PlanetWeatherLight");
             var data=new byte[64*64*64];for(int i=0;i<data.Length;i++)data[i]=(byte)PlanetWeather.Hash((uint)i+8317);
             noise=new Texture3D(64,64,64,TextureFormat.R8,true){name="Shared seamless weather density",wrapMode=TextureWrapMode.Repeat,filterMode=FilterMode.Trilinear};noise.SetPixelData(data,0);noise.Apply(true,true);material.SetTexture("_WeatherNoise",noise);
@@ -131,6 +137,10 @@ namespace MassiveArmy.Planetary
             lighting.z=lightRefresh.Valid?1:0;block.SetVector("_WeatherLighting",lighting);
         }
         public void Draw(CustomPassContext ctx,ScaledSpaceRenderer distant){
+#if SURVIVAL_GRAPHICS_PROBE
+            CoreUtils.SetKeyword(material,"WEATHER_POINT_NOISE",DiagnosticPointNoise);if(DiagnosticPointNoise)lightCompute.EnableKeyword("WEATHER_POINT_NOISE");else lightCompute.DisableKeyword("WEATHER_POINT_NOISE");
+            CoreUtils.SetKeyword(material,"WEATHER_DIAGNOSTIC",DiagnosticStage!=0);material.SetFloat("_WeatherDiagnosticStage",DiagnosticStage);
+#endif
             bool doubles=world.NativePlanetDoubles;var systemBodies=world.SystemRuntime?.Bodies;if(systemBodies!=null)foreach(var body in systemBodies)doubles|=world.NativePlanetDoublesFor(body);
             if(doubles){material.EnableKeyword("PLANET_GPU_DOUBLE");lightCompute.EnableKeyword("PLANET_GPU_DOUBLE");}else{material.DisableKeyword("PLANET_GPU_DOUBLE");lightCompute.DisableKeyword("PLANET_GPU_DOUBLE");}
             VisibleBodies=VolumetricBodies=0;LocalAtmosphereDrawn=false;
@@ -168,20 +178,24 @@ namespace MassiveArmy.Planetary
             cmd.SetGlobalTexture("_WeatherSceneDepth",ctx.cameraDepthBuffer,RenderTextureSubElement.Depth);
             for(int i=VisibleBodies-1;i>=0;i--)if(Properties(blocks[i],bodies[i],observer,camera)){
                 if(bodies[i]==world.definition&&bodies[i].weather.HasClouds){cmd.BeginSample(lightSample);BuildLight(cmd,blocks[i]);cmd.EndSample(lightSample);}
+                // Compute/distant passes and render-target changes can restore a
+                // camera-sized scissor. Own raster state at the actual weather draw.
+                cmd.DisableScissorRect();cmd.SetViewport(new Rect(0,0,weather.width,weather.height));
                 cmd.DrawProcedural(Matrix4x4.identity,material,1,MeshTopology.Triangles,6,1,blocks[i]);}
             cmd.SetGlobalTexture("_WeatherIntegrated",weather);cmd.SetGlobalVector("_WeatherHalfSize",new Vector4(weather.width,weather.height,1f/weather.width,1f/weather.height));
             CoreUtils.SetRenderTarget(cmd,ctx.cameraColorBuffer,ctx.cameraDepthBuffer,ClearFlag.None);cmd.SetViewport(new Rect(0,0,width,height));
+            cmd.DisableScissorRect();
             if(airTransmission!=null){cmd.SetGlobalTexture("_WeatherTransmission",airTransmission);cmd.DrawProcedural(Matrix4x4.identity,material,3,MeshTopology.Triangles,3);cmd.DrawProcedural(Matrix4x4.identity,material,4,MeshTopology.Triangles,3);}
             else cmd.DrawProcedural(Matrix4x4.identity,material,2,MeshTopology.Triangles,3);cmd.EndSample(sample);
-#if UNITY_EDITOR
+#if UNITY_EDITOR || SURVIVAL_GRAPHICS_PROBE || SURVIVAL_WEATHER_TRACE
             TraceWeather(ctx,vp,cabin,cabinEye);
 #endif
         }
         void ReleaseTargets(){lightRefresh.Reset();if(localDepth!=null){localDepth.Release();ArmyLifetime.Destroy(localDepth);}if(weather!=null){weather.Release();ArmyLifetime.Destroy(weather);}if(lightCache!=null){lightCache.Release();ArmyLifetime.Destroy(lightCache);}localDepth=weather=lightCache=null;}
         public void ReleaseView(){ReleaseTargets();ReleaseAir();}
         public void Dispose(){
-#if UNITY_EDITOR
-            traceDisposed=true;
+#if UNITY_EDITOR || SURVIVAL_GRAPHICS_PROBE || SURVIVAL_WEATHER_TRACE
+            ReleaseTrace();
 #endif
             if(recorder!=null)recorder.enabled=false;ReleaseTargets();ReleaseAir();ArmyLifetime.Destroy(noise);ArmyLifetime.Destroy(material);}
     }

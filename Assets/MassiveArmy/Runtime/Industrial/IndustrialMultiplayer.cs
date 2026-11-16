@@ -14,6 +14,7 @@ namespace MassiveArmy.Industrial {
         public List<SurvivalPlayerRecord> players=new List<SurvivalPlayerRecord>();
         public List<SurvivalVehicleState> vehicles=new List<SurvivalVehicleState>();
         public List<SurvivalShipState> ships=new List<SurvivalShipState>();
+        public List<SurvivalStationState> stations=new List<SurvivalStationState>();
     }
     public sealed partial class IndustrialWorld {
         public SurvivalSessionState multiplayer;
@@ -63,15 +64,24 @@ namespace MassiveArmy.Industrial {
     [Serializable] public sealed class SurvivalRegistration {public SurvivalPlayerRecord player;public string worldId,instanceId;public int seed;}
     [Serializable] public sealed class SurvivalServerConfig {
         public string AuthenticationProfile(){using(var hash=System.Security.Cryptography.SHA256.Create())return "server_"+BitConverter.ToString(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(instanceId))).Replace("-","").Substring(0,23);}
-        public const int Protocol=7;public const string Content="survival-2";
+        public const int Protocol=13;public const string Content="survival-5";
+        public bool allowTestTimeControls=false;public int testTimeScale=1;
+        public static bool ValidTestTimeScale(long value)=>value==1||value==2||value==4||value==8;
+        public static int AdjacentTestTimeScale(int value,int direction)=>direction>0?Math.Min(8,value*2):Math.Max(1,value/2);
         public string worldId="survival",instanceId="region-1",displayName="Synthetic Front",region="",environment="production",savePath="";
         public int maxPlayers=100,tickRate=30,snapshotRate=10,seed=73129,packetBytesPerSecond=65536;
+        public float systemSizeMultiplier=0;public string worldPresetPath="";
         public double surfaceRadius=500,shipRadius=5000,proxyRadius=100000,hysteresis=100;
         public double walkSnap=3,vehicleSnap=10,shipSnap=50,walkSpeed=7;
         public double walkAcceleration=40,walkBraking=60,vehicleSpeed=10,workVehicleSpeed=5,vehicleAcceleration=3,vehicleBraking=7;
         public double shipAssistSpeed=120,shipBoostSpeed=360,shipAcceleration=40,shipBoostAcceleration=160,shipAssistAcceleration=80,shipAssistBraking=160,warpSpeed=100000000;
+        public float shipRecallSpeed=1000;
         public void Validate(){
+            if(!Finite(shipRecallSpeed)||shipRecallSpeed<10||shipRecallSpeed>10000)throw new ArgumentException("Ship recall speed must be between 10 and 10000 m/s");
+            if(!ValidTestTimeScale(testTimeScale)||!allowTestTimeControls&&testTimeScale!=1)throw new ArgumentException("Test time scale must be 1, 2, 4 or 8; enable allowTestTimeControls for accelerated time");
             if(string.IsNullOrWhiteSpace(worldId)||string.IsNullOrWhiteSpace(instanceId)||worldId.Length>64||instanceId.Length>64)throw new ArgumentException("World and instance IDs are required (maximum 64 characters)");
+            if(!Finite(systemSizeMultiplier)||systemSizeMultiplier!=0&&(systemSizeMultiplier<1||systemSizeMultiplier>1000))throw new ArgumentException("System scale must be 1–1000, or 0 to inherit the shared preset");
+            if(worldPresetPath?.Length>4096)throw new ArgumentException("World preset path is too long");
             if(maxPlayers<1||maxPlayers>149)throw new ArgumentOutOfRangeException(nameof(maxPlayers),"Relay capacity must leave room for the allocating server (1–149 clients)");
             if(tickRate<10||tickRate>60||snapshotRate<1||snapshotRate>tickRate)throw new ArgumentException("Invalid tick/snapshot rates");
             foreach(double n in new[]{surfaceRadius,shipRadius,proxyRadius,walkSnap,vehicleSnap,shipSnap,walkSpeed})if(!Finite(n)||n<=0)throw new ArgumentException("Distances and speeds must be finite and positive");
@@ -82,8 +92,9 @@ namespace MassiveArmy.Industrial {
         public static bool Finite(double n)=>!double.IsNaN(n)&&!double.IsInfinity(n);
     }
     [Serializable] public struct SurvivalInput {
-        public uint sequence;public long epoch;public float x,y,z,roll,lookX,lookY;public bool jump,brake,boost,toggleAssist,toggleGear,cruise,matchOrbit;
+        public uint sequence;public long epoch;public float x,y,z,roll,lookX,lookY;public bool jump,brake,boost,toggleAssist,toggleGear,toggleLock,toggleOrbit,cruise,matchOrbit;
         public bool Valid=>sequence!=0&&SurvivalServerConfig.Finite(x)&&SurvivalServerConfig.Finite(y)&&SurvivalServerConfig.Finite(z)&&SurvivalServerConfig.Finite(roll)&&SurvivalServerConfig.Finite(lookX)&&SurvivalServerConfig.Finite(lookY)&&Math.Abs(x)<=1&&Math.Abs(y)<=1&&Math.Abs(z)<=1&&Math.Abs(roll)<=1&&Math.Abs(lookX)<=180&&Math.Abs(lookY)<=180;
+        public SurvivalInput Substep(int index){var input=this;if(index>0){input.lookX=input.lookY=0;input.jump=input.toggleAssist=input.toggleGear=input.toggleLock=input.toggleOrbit=input.matchOrbit=false;}return input;}
     }
     /// <summary>Admission and tick budget only. Packet arrival never advances simulation.</summary>
     public sealed class SurvivalInputQueue {
@@ -95,11 +106,11 @@ namespace MassiveArmy.Industrial {
             if(++received>tickRate*3||pending.Count>=tickRate*2)return false;
             newest=input.sequence;pending.Enqueue(input);return true;
         }
-        public SurvivalInput Next(){
+        public SurvivalInput Next(bool brakeOnLoss=true){
             if(pending.Count>0){held=pending.Dequeue();stale=0;return held;}
             // Lost packets must not leave jump/look edges or a stuck movement key.
-            held.jump=held.toggleAssist=held.toggleGear=false;held.lookX=held.lookY=0;
-            if(++stale>6){held.x=held.y=held.z=held.roll=0;held.boost=held.cruise=held.matchOrbit=false;held.brake=true;}return held;
+            held.jump=held.toggleAssist=held.toggleGear=held.toggleLock=held.toggleOrbit=false;held.lookX=held.lookY=0;
+            if(++stale>6){held.x=held.y=held.z=held.roll=0;held.boost=held.cruise=held.matchOrbit=false;held.brake=brakeOnLoss;}return held;
         }
         public void Clear(){pending.Clear();held=default;stale=0;}
     }

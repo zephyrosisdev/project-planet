@@ -6,6 +6,11 @@ float4 _AirScattering;
 float4 _AirVariation,_AirGravityTide;
 struct AirIntegral {float3 light;float3 transmission;};
 AirIntegral EmptyAir(){AirIntegral a;a.light=0;a.transmission=1;return a;}
+struct SplitAirIntegral {AirIntegral front;AirIntegral back;};
+void AccumulateAir(inout AirIntegral a,float3 extinction,float3 source,float distance){
+ if(distance<=0)return;float3 segment=exp(-extinction*distance);
+ a.light+=a.transmission*(1-segment)/max(extinction,1e-8)*source;a.transmission*=segment;
+}
 float AirHeightAlongRay(float3 ray,float t){
  float3 eye=-_WeatherCentre,delta=ray*t;
  return max(0,_WeatherEyeAltitude+(2*dot(eye,delta)+dot(delta,delta))/(length(eye+delta)+length(eye)));
@@ -27,8 +32,8 @@ float3 AirSunTransmission(float3 up,float h,float variation){
  return visibility*exp((-columns.x*float3(.0464,.108,.264)*_AirScattering.z-columns.y*.024*_AirScattering.w)*variation);
 }
 float3 AirSunTransmission(float3 up,float h){return AirSunTransmission(up,h,AirTideVariation(up));}
-AirIntegral ScatterAir(float3 ray,float start,float end,int samples){
- AirIntegral a=EmptyAir();if(end<=start)return a;
+SplitAirIntegral ScatterAirSplit(float3 ray,float start,float end,int samples,float split){
+ SplitAirIntegral a;a.front=EmptyAir();a.back=EmptyAir();if(end<=start)return a;
  float2 scale=max(float2(1e-8,1e-8),_WeatherAtmosphere.x*float2(.125,.01875));
  float3 betaR=float3(.0464,.108,.264)*_AirScattering.z/scale.x;
  float betaM=.024*_AirScattering.w/scale.y;
@@ -45,13 +50,15 @@ AirIntegral ScatterAir(float3 ray,float start,float end,int samples){
   float top=_WeatherAtmosphere.x*min(1,.98+(variation-1)*.25);
   float2 density=exp(-h/scale)*variation*(1-smoothstep(top*.7,top,h));
   float3 extinction=betaR*density.x+betaM*density.y;
-  float3 segment=exp(-extinction*step);
   float3 source=betaR*density.x*phaseR+betaM*density.y*.9*phaseM;
-  // Analytically integrate constant coefficients within each of the existing six steps.
-  float3 integral=(1-segment)/max(extinction,1e-8);
-  a.light+=a.transmission*integral*source*AirSunTransmission(up,h,variation)*_WeatherSunColour*20;
-  a.transmission*=segment;
+  // Keep all sample positions fixed. Partition the one straddling segment
+  // analytically, so a vanishing cloud cannot change the air quadrature.
+  float frontLength=clamp(split-(start+i*step),0,step);
+  float3 litSource=source*AirSunTransmission(up,h,variation)*_WeatherSunColour*20;
+  AccumulateAir(a.front,extinction,litSource,frontLength);
+  AccumulateAir(a.back,extinction,litSource,step-frontLength);
  }
  return a;
 }
+AirIntegral ScatterAir(float3 ray,float start,float end,int samples){SplitAirIntegral a=ScatterAirSplit(ray,start,end,samples,end);return a.front;}
 #endif

@@ -13,7 +13,7 @@ namespace MassiveArmy.Planetary {
     }
     /// <summary>Retained UI only; bounded ephemeris references, no GPU readbacks or world marker objects.</summary>
     internal sealed class PlanetNavigationCompass:VisualElement {
-        const int PlanetLimit=12,MarkerLimit=14;
+        const int PlanetLimit=12,MarkerLimit=20;
         enum Icon {Planet,Ship,Order}
         struct Marker {internal long id;internal float x,y,size,bearing,pitch;internal Color color;internal Icon icon;internal bool hidden;}
         sealed class Tape:VisualElement {
@@ -56,13 +56,19 @@ namespace MassiveArmy.Planetary {
         }
         void AddMarker(long id,Double3 delta,Vector3 right,Vector3 forward,Vector3 up,double pitch,string title,double range,Icon icon,Color color){if(tape.count>=MarkerLimit)return;var projection=NavigationCompassMath.Project(Dot(delta,right),Dot(delta,forward),Dot(delta,up),pitch);if(!projection.valid)return;for(int old=0;old<previousCount;old++)if(previousIds[old]==id){projection=new CompassProjection(NavigationCompassMath.StableBearing(projection.bearing,previousBearings[old]),projection.pitchError,projection.scale,true);break;}int at=tape.count++;projections[at]=projection;names[at]=title;ranges[at]=Math.Max(0,range);tape.markers[at]=new Marker{id=id,bearing=(float)projection.bearing,pitch=(float)projection.pitchError,size=21*(float)projection.scale,color=color,icon=icon};}
         public void Refresh(){
-            bool visible=world.showNavigationCompass&&world.Ready&&world.ResidentActive&&!world.LocalPlayerDead&&!world.PersonalMenuOpen&&(flight?world.IsPiloting:world.IsFirstPerson||world.IsDriving);style.display=visible?DisplayStyle.Flex:DisplayStyle.None;if(!visible||world.View==null||parent==null)return;
+            bool visible=world.showNavigationCompass&&world.Ready&&world.ResidentActive&&!world.LocalPlayerDead&&!world.PersonalMenuOpen&&(flight?world.IsPiloting:!world.IsPiloting&&(world.IsFirstPerson||world.IsDriving));style.display=visible?DisplayStyle.Flex:DisplayStyle.None;if(!visible||world.View==null||parent==null)return;
             float parentWidth=parent.resolvedStyle.width;if(!(parentWidth>0))return;float width=Mathf.Max(1,Mathf.Min(parentWidth-24,Mathf.Clamp(parentWidth*.48f,300,740)));if(width<180){style.display=DisplayStyle.None;return;}if(width!=lastWidth){style.width=width;style.left=(parentWidth-width)*.5f;lastWidth=width;}
             var camera=world.View.transform;var observer=world.ObserverPosition;var bodyOffset=observer.RelativeTo(world.definition.position);bool local=bodyOffset.Magnitude<world.definition.radius*20;var up=local?PlanetPrecisionPolicy.Direction(bodyOffset):Vector3.up;
             var north=Vector3.ProjectOnPlane(Vector3.up,up);if(north.sqrMagnitude<1e-6f)north=Vector3.ProjectOnPlane(lastNorth,up);if(north.sqrMagnitude<1e-6f)north=Vector3.ProjectOnPlane(Vector3.forward,up);north.Normalize();lastNorth=north;
             var flat=Vector3.ProjectOnPlane(camera.forward,up);float flatLength=flat.magnitude;if(flatLength<.015f)flat=Vector3.ProjectOnPlane(lastForward,up);if(flat.sqrMagnitude<1e-6f)flat=north;flat.Normalize();lastForward=flat;var right=Vector3.Cross(up,flat).normalized;double pitch=Math.Atan2(Vector3.Dot(camera.forward,up),flatLength)*180/Math.PI;var east=Vector3.Cross(up,north);float heading=Mathf.Repeat(Mathf.Atan2(Vector3.Dot(flat,east),Vector3.Dot(flat,north))*Mathf.Rad2Deg,360);tape.heading=heading;
             previousCount=tape.count;for(int i=0;i<previousCount;i++){previousIds[i]=tape.markers[i].id;previousBearings[i]=tape.markers[i].bearing;}tape.count=0;var carrierWorld=world.SystemRuntime?.RespawnCarrierWorld??world;var ship=carrierWorld?.ShipForValidation;
-            if(!flight&&ship!=null&&carrierWorld.HasRespawnCarrier){var delta=ship.Position.RelativeTo(observer);if(delta.Magnitude>3)AddMarker(-1,delta,right,flat,up,pitch,"YOUR SHIP",delta.Magnitude,Icon.Ship,new Color(.45f,1,.9f));}
+            if(world.NetworkPresentation){
+                var session=MassiveArmy.Networking.SurvivalNetworkSession.Active;long owned=0;
+                if(session!=null){
+                    if(session.TryOwnedShipNavigation(out var position,out owned)&&session.OccupiedNavigationShip!=owned){var delta=position.RelativeTo(observer);if(delta.Magnitude>3)AddMarker(-1000-owned,delta,right,flat,up,pitch,"YOUR SHIP",delta.Magnitude,Icon.Ship,new Color(.45f,1,.9f));}
+                    int count=0;foreach(var nearby in session.NearbyNavigationShips){if(nearby.entity==owned||nearby.entity==session.OccupiedNavigationShip||!session.TryNearbyShipNavigation(nearby,out var target))continue;var delta=target.RelativeTo(observer);if(delta.Magnitude<=3)continue;AddMarker(-1000-nearby.entity,delta,right,flat,up,pitch,"SHIP #"+nearby.entity,delta.Magnitude,Icon.Ship,new Color(.6f,.9f,.95f));if(++count>=5)break;}
+                }
+            }else if(!flight&&ship!=null&&carrierWorld.HasRespawnCarrier){var delta=ship.Position.RelativeTo(observer);if(delta.Magnitude>3)AddMarker(-1,delta,right,flat,up,pitch,"YOUR SHIP",delta.Magnitude,Icon.Ship,new Color(.45f,1,.9f));}
             if(world.CompassOrder(out var orderPosition,out string orderName)){var delta=orderPosition.RelativeTo(observer);AddMarker(-2,delta,right,flat,up,pitch,orderName,delta.Magnitude,Icon.Order,new Color(1,.75f,.3f));}
             SelectPlanets(observer);var model=world.SystemRuntime?.Galaxy;
             for(int i=0;i<planetCount;i++){var body=planets[i];if(body==null)continue;var delta=body.position.RelativeTo(observer);bool selected=model!=null&&model.NodeFor(body)==selectedNode;AddMarker((long)body.bodyId+1,delta,right,flat,up,pitch,body.displayName,Math.Max(0,delta.Magnitude-body.radius),Icon.Planet,selected?new Color(1,.85f,.4f):new Color(.6f,.8f,1));}

@@ -55,19 +55,19 @@ namespace MassiveArmy.Networking {
             peer.record.interiorWalking=peer.motion.interior=false;peer.motion.ship=null;peer.motion.vehicle=null;peer.motion.vehicleDefinition=null;ResetWalking(peer);peer.motion.pose=exit;peer.motion.pitch=peer.motion.viewYaw=0;peer.motion.verticalSpeed=0;peer.motion.grounded=true;peer.motion.epoch++;peer.input.Clear();return null;
         }
         void RespawnPointsGUI(bool dead){
-            if(dead){GUILayout.Label("Choose a respawn location");if(GUILayout.Button("Home region"))Submit(new SurvivalAction{kind="respawn"});}
-            else GUILayout.Label("YOUR RESPAWN POINTS");
+            if(dead){networkUi.Label("Choose a respawn location");if(networkUi.Button("Home region"))Submit(new SurvivalAction{kind="respawn"});}
+            else networkUi.Label("YOUR RESPAWN POINTS");
             foreach(var point in latest.respawnPoints){
-                double cooldown=point.RemainingSeconds(latest.industryTick);GUILayout.Label(point.name+(cooldown>0?" · ready in "+Math.Ceiling(cooldown)+" s":""));
-                if(dead){GUI.enabled=cooldown<=0;if(GUILayout.Button("Respawn here"))Submit(new SurvivalAction{kind="respawn",entity=point.id});GUI.enabled=true;}
+                double cooldown=point.RemainingSeconds(latest.industryTick);networkUi.Label(point.name+(cooldown>0?" · ready in "+Math.Ceiling(cooldown)+" s":""));
+                if(dead){networkUi.Enabled=cooldown<=0;if(networkUi.Button("Respawn here"))Submit(new SurvivalAction{kind="respawn",entity=point.id});networkUi.Enabled=true;}
                 else if(latest.self.pose.Distance(ClientRespawnPose(point))<=12){
-                    GUILayout.BeginHorizontal();if(GUILayout.Button("Rename")){renamingRespawn=point.id;respawnName=point.name;}if(GUILayout.Button("Pack"))Submit(new SurvivalAction{kind="respawn-pack",entity=point.id});GUILayout.EndHorizontal();
-                    if(renamingRespawn==point.id){respawnName=GUILayout.TextField(respawnName,48);if(GUILayout.Button("Save name")){Submit(new SurvivalAction{kind="respawn-rename",entity=point.id,item=respawnName});renamingRespawn=0;}}
+                    networkUi.BeginHorizontal();if(networkUi.Button("Rename")){renamingRespawn=point.id;respawnName=point.name;}if(networkUi.Button("Pack"))Submit(new SurvivalAction{kind="respawn-pack",entity=point.id});networkUi.EndHorizontal();
+                    if(renamingRespawn==point.id){respawnName=networkUi.TextField(respawnName,48);if(networkUi.Button("Save name")){Submit(new SurvivalAction{kind="respawn-rename",entity=point.id,item=respawnName});renamingRespawn=0;}}
                 }
             }
         }
         void DeadRespawnGUI(){
-            var panel=new Rect(Screen.width/2-220,Screen.height/2-200,440,400);GUI.Box(panel,"YOU DIED");GUILayout.BeginArea(new Rect(panel.x+12,panel.y+30,panel.width-24,panel.height-44));respawnScroll=GUILayout.BeginScrollView(respawnScroll);RespawnPointsGUI(true);GUILayout.Space(12);if(GUILayout.Button("Disconnect"))_ = Disconnect();GUILayout.EndScrollView();GUILayout.EndArea();
+            var panel=new Rect(networkUi.ViewWidth/2-220,networkUi.ViewHeight/2-200,440,400);networkUi.Box(panel,"YOU DIED");networkUi.BeginArea(new Rect(panel.x+12,panel.y+30,panel.width-24,panel.height-44));respawnScroll=networkUi.BeginScrollView(respawnScroll);RespawnPointsGUI(true);networkUi.Space(12);if(networkUi.Button("Disconnect"))_ = Disconnect();networkUi.EndScrollView();networkUi.EndArea();
         }
     }
 }

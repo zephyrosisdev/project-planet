@@ -59,6 +59,7 @@ namespace MassiveArmy
                 if(element.resolvedStyle.display!=DisplayStyle.None&&element.visible&&element.worldBound.Contains(p))return true;
             return false;
         }
+        public void SetSortOrder(int order){panel.sortingOrder=order;}
         public void SetScale(float scale){Scale=Mathf.Clamp(scale,.85f,1.25f);panel.scale=Scale;}
         public void SetRenderTarget(RenderTexture target){panel.targetTexture=target;panel.clearColor=target!=null;panel.colorClearValue=Color.clear;}
         public void Tick(){if(Root!=null)refresh();}

@@ -34,8 +34,9 @@ namespace MassiveArmy.Networking {
             return null;
         }
         void BeginMachinePlacement(ItemStack stack,string definition){
-            if(stack.slot!=0)Submit(new SurvivalAction{kind="inventory-move",from=new InventoryAddress{slot=stack.slot},to=new InventoryAddress{slot=0},count=stack.count});
-            Submit(new SurvivalAction{kind="slot",slot=0});placingMachine=definition;placementTurn=0;placementPose=null;inventoryOpen=industryOpen=false;UpdateNetworkCursor();nextPlacementProbe=0;
+            int slot=stack.slot;
+            if(slot<0||slot>=10){slot=-1;for(int i=0;i<10;i++)if(latest.self.inventory.AtSlot(i)==null){slot=i;break;}if(slot<0){Status="Make room in the action bar before placing this item";return;}Submit(new SurvivalAction{kind="inventory-move",from=new InventoryAddress{slot=stack.slot},to=new InventoryAddress{slot=slot},count=stack.count,item=stack.item});}
+            if(latest.self.inventory.activeSlot!=slot)Submit(new SurvivalAction{kind="slot",slot=slot});placingMachine=definition;placementTurn=0;placementPose=null;inventoryOpen=industryOpen=false;UpdateNetworkCursor();nextPlacementProbe=0;
         }
         void PlacementInput(){
             if(placingMachine==null||ChatInputCaptured||ClientMenuOpen||!Application.isFocused)return;var keys=Keyboard.current;var mouse=Mouse.current;
@@ -67,14 +68,14 @@ namespace MassiveArmy.Networking {
         }
         void MachineControlsGUI(){
             foreach(var machine in clientMachines.Values){if(machine.owner!=ActorId||ClientDistance(machine.pose)>12)continue;
-                GUILayout.Label(machine.definition+" #"+machine.id+" · "+machine.status);
-                GUILayout.BeginHorizontal();if(GUILayout.Button(machine.enabled?"DISABLE":"ENABLE"))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="toggle",target=machine.id}});
-                if(machine.Definition.Vehicle&&GUILayout.Button("DRIVE")){Submit(new SurvivalAction{kind="enter-driver",entity=machine.id});industryOpen=false;UpdateNetworkCursor();}
-                if(GUILayout.Button("PACK"))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="pack",target=machine.id}});GUILayout.EndHorizontal();
-                foreach(var stack in latest.self.inventory.items){if(GUILayout.Button("Deposit "+stack.item+" ×"+Math.Min(10,stack.count)))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="deposit-item",target=machine.id,item=stack.item,count=Math.Min(10,stack.count)}});}
-                foreach(var stack in machine.input.items){if(GUILayout.Button("Take input "+stack.item+" ×"+Math.Min(10,stack.count)))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="withdraw-input",source=machine.id,item=stack.item,count=Math.Min(10,stack.count)}});}
-                foreach(var stack in machine.output.items){if(GUILayout.Button("Take output "+stack.item+" ×"+Math.Min(10,stack.count)))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="withdraw-item",source=machine.id,item=stack.item,count=Math.Min(10,stack.count)}});}
-                foreach(var recipe in IndustrialCatalog.Recipes.Values)if(IndustrialCatalog.Supports(machine.definition,recipe.id)&&!IndustrialCatalog.RetiredConstructionRecipe(recipe.id)&&GUILayout.Button("Recipe: "+recipe.id))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="recipe",target=machine.id,item=recipe.id}});
+                networkUi.Label(machine.definition+" #"+machine.id+" · "+machine.status);
+                networkUi.BeginHorizontal();if(networkUi.Button(machine.enabled?"DISABLE":"ENABLE"))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="toggle",target=machine.id}});
+                if(machine.Definition.Vehicle&&networkUi.Button("DRIVE")){Submit(new SurvivalAction{kind="enter-driver",entity=machine.id});industryOpen=false;UpdateNetworkCursor();}
+                if(networkUi.Button("PACK"))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="pack",target=machine.id}});networkUi.EndHorizontal();
+                foreach(var stack in latest.self.inventory.items){if(networkUi.Button("Deposit "+stack.item+" ×"+Math.Min(10,stack.count)))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="deposit-item",target=machine.id,item=stack.item,count=Math.Min(10,stack.count)}});}
+                foreach(var stack in machine.input.items){if(networkUi.Button("Take input "+stack.item+" ×"+Math.Min(10,stack.count)))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="withdraw-input",source=machine.id,item=stack.item,count=Math.Min(10,stack.count)}});}
+                foreach(var stack in machine.output.items){if(networkUi.Button("Take output "+stack.item+" ×"+Math.Min(10,stack.count)))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="withdraw-item",source=machine.id,item=stack.item,count=Math.Min(10,stack.count)}});}
+                foreach(var recipe in IndustrialCatalog.Recipes.Values)if(IndustrialCatalog.Supports(machine.definition,recipe.id)&&!IndustrialCatalog.RetiredConstructionRecipe(recipe.id)&&networkUi.Button("Recipe: "+recipe.id))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="recipe",target=machine.id,item=recipe.id}});
             }
         }
     }

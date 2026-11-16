@@ -52,20 +52,20 @@ namespace MassiveArmy.Networking {
         long yardModule,yardPowerSource;string yardDefinition="corridor";readonly List<FramePose> yardRoute=new List<FramePose>();
         void ShipyardGUI(){
             if(latest.ownedShip==0||!clientShipAssemblies.TryGetValue(latest.ownedShip,out var assembly)||!clientShips.TryGetValue(latest.ownedShip,out var state))return;
-            GUILayout.Space(12);GUILayout.Label("OWNED SHIP · ASSEMBLY & POWER");
-            bool before=GUI.enabled;GUI.enabled=before&&state.landed&&!state.autoFlight&&state.pilot==0;
-            foreach(var module in assembly.modules){GUILayout.BeginHorizontal();GUILayout.Label("#"+module.id+" "+module.definition);if(GUILayout.Button("SELECT",GUILayout.Width(70)))yardModule=module.id;if(module.parent!=0&&GUILayout.Button("RECOVER",GUILayout.Width(80)))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="ship-remove",source=module.id}});GUILayout.EndHorizontal();}
+            networkUi.Space(12);networkUi.Label("OWNED SHIP · ASSEMBLY & POWER");
+            bool before=networkUi.Enabled;networkUi.Enabled=before&&state.landed&&!state.autoFlight&&state.pilot==0;
+            foreach(var module in assembly.modules){networkUi.BeginHorizontal();networkUi.Label("#"+module.id+" "+module.definition);if(networkUi.Button("SELECT",networkUi.Width(70)))yardModule=module.id;if(module.parent!=0&&networkUi.Button("RECOVER",networkUi.Width(80)))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="ship-remove",source=module.id}});networkUi.EndHorizontal();}
             var selected=assembly.Module(yardModule);
             if(selected!=null){
-                GUILayout.Label("Selected #"+selected.id+" · choose a section, then a structural socket");
-                foreach(var definition in ShipModules.Definitions.Values)if(definition.id!="hangar"&&GUILayout.Button((yardDefinition==definition.id?"✓ ":"")+definition.id))yardDefinition=definition.id;
-                var specification=ShipModules.Definitions[yardDefinition];string cost="Cost: ";foreach(var item in specification.cost)cost+=item.count+" "+item.item+"  ";GUILayout.Label(cost);
-                foreach(var output in ShipModules.Definitions[selected.definition].sockets){if(assembly.Occupied(selected.id,output.name)||selected.parent!=0&&selected.inputSocket==output.name)continue;var input=Array.Find(specification.sockets,pin=>pin.kind==output.kind&&!pin.kind.StartsWith("Power",StringComparison.Ordinal));if(input!=null&&GUILayout.Button("BUILD "+yardDefinition+" AT "+output.name))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="ship-place",source=selected.id,item=output.name,definition=yardDefinition,operationRole=input.name}});}
-                if(ShipModules.Definitions[selected.definition].generation>0&&GUILayout.Button("SELECT THIS POWER CORE")){yardPowerSource=selected.id;yardRoute.Clear();}
-                if(yardPowerSource!=0){GUILayout.Label("Power core #"+yardPowerSource+" · "+yardRoute.Count+" routing points");if(yardRoute.Count<8&&GUILayout.Button("ADD ROUTING POINT AT MY POSITION")){var p=ShipLocal(state,latest.self.pose);yardRoute.Add(new FramePose{body=state.pose.body,frame=state.entity,x=p.x,y=p.y+1,z=p.z});}if(yardRoute.Count>0&&GUILayout.Button("UNDO ROUTING POINT"))yardRoute.RemoveAt(yardRoute.Count-1);if(ShipModules.Definitions[selected.definition].power>0&&GUILayout.Button("CONNECT CORE TO SELECTED SYSTEM")){Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="ship-wire",source=yardPowerSource,target=selected.id,route=new List<FramePose>(yardRoute)}});yardRoute.Clear();}}
-                foreach(var cable in assembly.wires)if(cable.target==selected.id&&GUILayout.Button("RECOVER POWER CABLE FROM #"+cable.source))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="ship-unwire",source=cable.source,target=cable.target}});
+                networkUi.Label("Selected #"+selected.id+" · choose a section, then a structural socket");
+                foreach(var definition in ShipModules.Definitions.Values)if(definition.id!="hangar"&&networkUi.Button((yardDefinition==definition.id?"✓ ":"")+definition.id))yardDefinition=definition.id;
+                var specification=ShipModules.Definitions[yardDefinition];string cost="Cost: ";foreach(var item in specification.cost)cost+=item.count+" "+item.item+"  ";networkUi.Label(cost);
+                foreach(var output in ShipModules.Definitions[selected.definition].sockets){if(assembly.Occupied(selected.id,output.name)||selected.parent!=0&&selected.inputSocket==output.name)continue;var input=Array.Find(specification.sockets,pin=>pin.kind==output.kind&&!pin.kind.StartsWith("Power",StringComparison.Ordinal));if(input!=null&&networkUi.Button("BUILD "+yardDefinition+" AT "+output.name))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="ship-place",source=selected.id,item=output.name,definition=yardDefinition,operationRole=input.name}});}
+                if(ShipModules.Definitions[selected.definition].generation>0&&networkUi.Button("SELECT THIS POWER CORE")){yardPowerSource=selected.id;yardRoute.Clear();}
+                if(yardPowerSource!=0){networkUi.Label("Power core #"+yardPowerSource+" · "+yardRoute.Count+" routing points");if(yardRoute.Count<8&&networkUi.Button("ADD ROUTING POINT AT MY POSITION")){var p=ShipLocal(state,latest.self.pose);yardRoute.Add(new FramePose{body=state.pose.body,frame=state.entity,x=p.x,y=p.y+1,z=p.z});}if(yardRoute.Count>0&&networkUi.Button("UNDO ROUTING POINT"))yardRoute.RemoveAt(yardRoute.Count-1);if(ShipModules.Definitions[selected.definition].power>0&&networkUi.Button("CONNECT CORE TO SELECTED SYSTEM")){Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="ship-wire",source=yardPowerSource,target=selected.id,route=new List<FramePose>(yardRoute)}});yardRoute.Clear();}}
+                foreach(var cable in assembly.wires)if(cable.target==selected.id&&networkUi.Button("RECOVER POWER CABLE FROM #"+cable.source))Submit(new SurvivalAction{kind="industrial",command=new IndustrialCommand{kind="ship-unwire",source=cable.source,target=cable.target}});
             }
-            GUI.enabled=before;
+            networkUi.Enabled=before;
         }
     }
 }

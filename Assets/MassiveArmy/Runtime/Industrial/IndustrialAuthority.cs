@@ -8,6 +8,7 @@ namespace MassiveArmy.Industrial {
     [Serializable] public sealed class IndustrialDepositProjection {public int layoutVersion;public long id;public FramePose pose;}
     [Serializable] public sealed class IndustrialActorCheckpoint {public long id;public FramePose pose;public double health;public double collisionRadius=.35;public FramePose vehicleObstacle;public double vehicleObstacleRadius;}
     [Serializable] public sealed class IndustrialJournalEntry {
+        public SurvivalStationState stationDeployment;
         public SurvivalWeaponAttack weaponAttack;public SurvivalRegistration registration;public SurvivalUniverseState universe;
         public long networkActor,networkSequence;public bool survivalCheckpoint;public SurvivalSessionState survival;public TribeCombatDamage playerCombat;public List<InventoryDropPosition> dropPositions;public InventoryTransaction inventory;public RespawnTransaction respawn;public long serial,actor,allocatedId,vehicleId;public FramePose vehiclePose;public FramePose actorPose;public IndustrialCommand command;public int steps,buildBody,stoneCost;public string buildJson,constructionItem;public int constructionCount;public double constructionActivity;public List<IndustrialConstructionSource> constructionSources;public bool constructionRefund,typedConstruction,kitRules,resourceRules,resourcePayment;public List<ItemStack> constructionPayment;public List<IndustrialMount> mounts;public List<IndustrialActorCheckpoint> actors;public List<IndustrialPowerEnvironment> powerEnvironments;public List<IndustrialHaulObstacle> haulObstacles;public bool logisticsRules;public List<IndustrialModulePorts> logisticsPorts;public bool miningWorkflowEnabled;public IndustrialWasteSite wasteSite;public IndustrialHaulReplan haulReplan;public List<IndustrialDepositProjection> depositProjections;
     }
@@ -78,6 +79,7 @@ namespace MassiveArmy.Industrial {
                     if(e.serial<=world.journalSequence)continue;if(e.serial!=world.journalSequence+1)throw new InvalidDataException("Industrial journal has a sequence gap");
                     if(e.universe!=null){if(world.universe!=null)throw new InvalidDataException("Duplicate universe initialization");world.universe=e.universe;}
                     else if(e.registration!=null)ApplySurvivorRegistration(world,e.registration);
+                    else if(e.stationDeployment!=null)ApplyStationDeployment(world,e.stationDeployment);
                     else if(e.survivalCheckpoint){world.multiplayer=e.survival;world.RestoreNetworkVehiclePoses();foreach(var state in e.actors){var who=world.Actor(state.id)??throw new InvalidDataException("Missing survivor");who.pose=state.pose;who.health=state.health;}}
                     else if(e.weaponAttack!=null)ApplySurvivalWeapon(world,e.weaponAttack);
                     else if(e.playerCombat!=null)ApplyPlayerCombat(world,e.playerCombat);

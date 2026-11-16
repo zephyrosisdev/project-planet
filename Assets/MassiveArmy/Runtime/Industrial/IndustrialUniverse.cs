@@ -5,7 +5,7 @@ namespace MassiveArmy.Industrial {
     // Static universe metadata belongs in the existing world checkpoint/journal,
     // outside the frequently journalled dynamic multiplayer session record.
     [Serializable] public sealed class SurvivalUniverseState {
-        public int version=1,seed,homeBody=1;public string worldId,generator="kepler-1",systemJson,galaxyJson;
+        public int version=1,seed,homeBody=1;public string worldId,generator="kepler-1",systemJson,galaxyJson,presetJson;
         public List<SurvivalBodyDefinition> bodies=new List<SurvivalBodyDefinition>();
         public List<SurvivalRegionOwnership> regions=new List<SurvivalRegionOwnership>();
     }

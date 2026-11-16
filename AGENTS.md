@@ -1,16 +1,21 @@
-# Project performance policy
+# Survival direction and performance
 
-Preserve the GPU-authoritative army architecture: no CPU unit mirror or per-unit
-GameObjects. Performance takes priority over cosmetic fidelity and engine fashion.
-Target 60 FPS at 2560x1440 on RTX 3070, with a preserved million-unit stress path.
-This is an acceptance target, not a claim that all existing builds attain it.
+The product is offline single-player survival and authoritative survival
+multiplayer. On 2026-11-13 the user explicitly authorized completely retiring RTS.
+Do not restore RTS/army game modes, army shader variants or million-unit stress
+benchmarks. Those former acceptance gates no longer apply to this product.
+Shared terrain, geometry and item definitions may still use legacy type names;
+preserve their survival behavior when removing unused strategy dependencies.
 
-Compare equivalent standalone scenarios before and after substantive simulation
-changes. Report median/p95 frame time, simulation rate and measured memory.
-Reject army-simulation regressions above 5% against an equivalent baseline and
-target at most 3 ms p95 total fog cost. Reduce cosmetic cost before gameplay
-correctness. Never silently reduce the target or army scale to report a pass.
+Preserve GPU terrain/rendering and independent CPU headless contact queries.
+Performance takes priority over cosmetic fidelity. Target 60 FPS at 2560x1440 on
+RTX 3070 in survival; this is an acceptance target, not a measured pass.
 
-If a future request conflicts with these priorities, explain the measured or
-expected cost and explicitly ask the human whether to accept that tradeoff.
-Sales or popularity alone are never grounds to replace an existing technique.
+Compare equivalent standalone survival scenarios around substantive simulation
+changes. Report median/p95 frame time, server simulation rate, measured memory
+and networking costs. Reduce cosmetic cost before gameplay correctness and never
+claim an unmeasured performance pass.
+
+The current delivery is a two-player playtest. The intended future 100-player
+single-instance goal remains unvalidated and its capacity matrix is deferred by
+the user. Cross-shard transfers and automatic provisioning remain future work.

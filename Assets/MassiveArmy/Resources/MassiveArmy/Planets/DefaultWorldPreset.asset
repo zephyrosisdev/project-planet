@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4530163ebabe4cfbab7ccdf5411f70b2, type: 3}
+  m_Name: DefaultWorldPreset
+  m_EditorClassIdentifier:
+  presetId: default-survival
+  revision: 1
+  homePlanet: {fileID: 11400000, guid: 58b16eef0a36453198d093c43ca067e6, type: 2}
+  system: {fileID: 11400000, guid: 0a963882f2e64733a1cdf92e1c02fdb0, type: 2}

@@ -86,10 +86,7 @@ namespace MassiveArmy
         void LateUpdate(){if(lightingRig!=null&&lastShadows!=settings.shadows){lightingRig.Configure(View,settings.shadows);lastShadows=settings.shadows;}}
         public void StartBattle(int count)
         {
-            if(State=="loading")return;
-            settings.baseBuilding=false;settings.swarmMode=false;settings.spectatorMode=false;settings.activeUnits=count;settings.capacity=Mathf.Max(count,settings.capacity);settings.Validate();
-            settings.ScaleWorld();
-            activeLoad=StartCoroutine(LoadBattle());
+            throw new NotSupportedException("RTS and army modes have been retired. Use Single Player Survival or Multiplayer.");
         }
         IEnumerator LoadBattle()
         {
