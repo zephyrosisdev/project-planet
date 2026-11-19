@@ -24,7 +24,7 @@ MonoBehaviour:
   axialTilt: 0
   hasAtmosphere: 1
   breathable: 1
-  atmosphereHeight: 66000
+  atmosphereHeight: 88000
   surfacePressure: 1
   oxygenLevel: 0.21
   weather:
